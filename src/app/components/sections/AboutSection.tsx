@@ -47,41 +47,9 @@ export function AboutSection() {
           </div>
         </div>
 
-        {/* Property Features */}
-        <div className="max-w-4xl mx-auto">
-          <h3 className="text-3xl text-center mb-8 text-gray-900">Property Features</h3>
-          <div className="bg-white p-8 rounded-lg shadow-md">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {features.map((feature, index) => (
-                <div key={index} className="flex items-center gap-3">
-                  <div className="w-2 h-2 bg-green-700 rounded-full flex-shrink-0"></div>
-                  <span className="text-gray-700">{feature}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
 
-        {/* Location */}
-        <div className="mt-16 text-center max-w-3xl mx-auto space-y-4">
-          <h3 className="text-3xl text-gray-900">Location</h3>
-          <p className="text-xl text-green-700">Malvar, Batangas, Philippines</p>
-          <p className="text-gray-600">
-            Conveniently located in Malvar, Batangas, Ohannah Cabin is easily accessible from Manila
-            and surrounding areas. The location offers the perfect balance of privacy and accessibility,
-            with local attractions and amenities within reach.
-          </p>
-          <div className="pt-8 space-y-2">
-            <p className="text-gray-700">
-              <strong>Approximate travel times:</strong>
-            </p>
-            <ul className="text-gray-600 space-y-1">
-              <li>• From Manila: 1.5 - 2 hours</li>
-              <li>• From Lipa City: 30 minutes</li>
-              <li>• From Tagaytay: 45 minutes</li>
-            </ul>
-          </div>
-        </div>
+
+
       </div>
     </section>
   );

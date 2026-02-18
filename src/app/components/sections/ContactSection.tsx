@@ -29,7 +29,7 @@ export function ContactSection() {
     <section id="contact" className="py-16 bg-white scroll-mt-20">
       <div className="max-w-7xl mx-auto px-6">
         <h2 className="text-4xl text-center mb-12 text-gray-900">Contact Us</h2>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
           {/* Contact Information */}
           <div className="lg:col-span-1 space-y-6">
@@ -47,7 +47,7 @@ export function ContactSection() {
                     <div>
                       <h3 className="text-sm mb-1 text-gray-900">Address</h3>
                       <p className="text-sm text-gray-600">
-                        Malvar, Batangas<br />
+                        CP Reyes, Malvar, Batangas<br />
                         Philippines
                       </p>
                     </div>
@@ -60,7 +60,7 @@ export function ContactSection() {
                     <div>
                       <h3 className="text-sm mb-1 text-gray-900">Phone</h3>
                       <p className="text-sm text-gray-600">
-                        +63 XXX XXX XXXX
+                        0956 816 2888
                       </p>
                     </div>
                   </div>
@@ -72,7 +72,7 @@ export function ContactSection() {
                     <div>
                       <h3 className="text-sm mb-1 text-gray-900">Email</h3>
                       <p className="text-sm text-gray-600">
-                        info@ohannahcabin.com
+                        ohannahcabin@gmail.com
                       </p>
                     </div>
                   </div>
@@ -120,7 +120,7 @@ export function ContactSection() {
                         <Input
                           id="name"
                           type="text"
-                          placeholder="John Doe"
+                          placeholder="Enter your name"
                           value={name}
                           onChange={(e) => setName(e.target.value)}
                           required
@@ -131,7 +131,7 @@ export function ContactSection() {
                         <Input
                           id="email"
                           type="email"
-                          placeholder="john@example.com"
+                          placeholder="yourname@gmail.com"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           required
@@ -177,28 +177,7 @@ export function ContactSection() {
           </div>
         </div>
 
-        {/* FAQ Section */}
-        <div className="max-w-4xl mx-auto">
-          <h3 className="text-3xl text-center mb-8 text-gray-900">Frequently Asked Questions</h3>
-          <div className="space-y-6">
-            <div className="border-b pb-6">
-              <h4 className="text-lg text-gray-900 mb-2">What is the check-in and check-out time?</h4>
-              <p className="text-gray-600">Check-in is from 2:00 PM and check-out is until 12:00 PM. Early check-in or late check-out may be arranged upon request.</p>
-            </div>
-            <div className="border-b pb-6">
-              <h4 className="text-lg text-gray-900 mb-2">How many guests can the cabin accommodate?</h4>
-              <p className="text-gray-600">Ohannah Cabin can comfortably accommodate 8-10 guests with multiple bedrooms.</p>
-            </div>
-            <div className="border-b pb-6">
-              <h4 className="text-lg text-gray-900 mb-2">Is the property pet-friendly?</h4>
-              <p className="text-gray-600">Yes, we welcome pets with prior arrangement. Please contact us in advance.</p>
-            </div>
-            <div className="pb-6">
-              <h4 className="text-lg text-gray-900 mb-2">What is your cancellation policy?</h4>
-              <p className="text-gray-600">We offer flexible cancellation up to 7 days before your check-in date.</p>
-            </div>
-          </div>
-        </div>
+
       </div>
     </section>
   );

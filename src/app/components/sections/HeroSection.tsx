@@ -82,7 +82,7 @@ export function HeroSection({ onBookClick }: HeroSectionProps) {
             <div className="relative rounded-3xl overflow-hidden shadow-2xl">
               <div className="aspect-[4/3] relative">
                 <img
-                  src="src/assets/oh.jpg"
+                  src="/gallery/cabin.jpg"
                   alt="Ohannah Cabin - Modern A-frame architecture"
                   className="w-full h-full object-cover"
                 />

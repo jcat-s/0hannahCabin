@@ -7,7 +7,7 @@ import { AmenitiesSection } from "./components/sections/AmenitiesSection";
 import { GallerySection } from "./components/sections/GallerySection";
 import { ContactSection } from "./components/sections/ContactSection";
 import { Footer } from "./components/Footer";
-import { BookingModal } from "./components/BookingModal";
+
 
 export default function App() {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
@@ -15,7 +15,7 @@ export default function App() {
   return (
     <div className="min-h-screen">
       <Header onBookClick={() => setIsBookingModalOpen(true)} />
-      
+
       <main>
         <HeroSection onBookClick={() => setIsBookingModalOpen(true)} />
         <FeaturesSection />
@@ -27,10 +27,7 @@ export default function App() {
 
       <Footer />
 
-      <BookingModal 
-        isOpen={isBookingModalOpen} 
-        onClose={() => setIsBookingModalOpen(false)} 
-      />
+
     </div>
   );
 }

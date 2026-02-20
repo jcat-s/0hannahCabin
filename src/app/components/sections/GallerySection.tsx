@@ -12,7 +12,7 @@ export function GallerySection() {
     { src: "/gallery/bedroom1.png", alt: "Bedroom 1" },
     { src: "/gallery/bedroom2.png", alt: "Bedroom 2" },
     { src: "/gallery/cr.png", alt: "Comfort Room" },
-    { src: "/gallery/diningarea.png", alt: "Kitchen & Dining" },
+    { src: "/gallery/diningarea.png", alt: "Dining Room" },
     { src: "/gallery/firepit.png", alt: "Firepit" },
     { src: "/gallery/livingroom.png", alt: "Living Room" },
   ];
@@ -24,6 +24,7 @@ export function GallerySection() {
           Photo Gallery
         </h2>
 
+        {/* GALLERY GRID */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {images.map((image, index) => (
             <div
@@ -34,31 +35,29 @@ export function GallerySection() {
               <img
                 src={image.src}
                 alt={image.alt}
-                className="w-full h-64 sm:h-72 md:h-80 object-cover hover:scale-105 transition-transform duration-300"
+                className="w-full h-auto object-contain transition-transform duration-300 hover:scale-105"
               />
             </div>
           ))}
         </div>
       </div>
 
+      {/* FULLSCREEN MODAL */}
       {selectedImage && (
         <div
-          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/90 flex flex-col items-center justify-center z-50 p-4"
           onClick={() => setSelectedImage(null)}
         >
-          <div
-            className="bg-white rounded-lg max-w-3xl w-full overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <img
-              src={selectedImage.src}
-              alt={selectedImage.alt}
-              className="w-full h-auto"
-            />
-            <p className="text-center text-lg font-semibold p-4">
-              {selectedImage.alt}
-            </p>
-          </div>
+          <img
+            src={selectedImage.src}
+            alt={selectedImage.alt}
+            className="max-h-[80vh] max-w-[95vw] object-contain"
+          />
+
+          {/* IMAGE NAME */}
+          <p className="text-white text-lg font-semibold mt-6">
+            {selectedImage.alt}
+          </p>
         </div>
       )}
     </section>

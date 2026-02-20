@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Bell, User, Menu, X } from "lucide-react";
+const logoImage = "/section/logo.png";
 
-const logoImage = "src/assets/logo.png";
 
 interface HeaderProps {
   onBookClick: () => void;
@@ -60,9 +60,12 @@ export function Header({ onBookClick }: HeaderProps) {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? "bg-white shadow-md" : "bg-white"
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
+        ? "bg-white/40 backdrop-blur-md shadow-md"
+        : "bg-transparent"
         }`}
     >
+
       <nav className="max-w-7xl mx-auto px-6 py-2 flex items-center justify-between">
         {/* Logo */}
         <button
@@ -100,14 +103,6 @@ export function Header({ onBookClick }: HeaderProps) {
           </button>
           <button className="hidden md:block p-2 hover:bg-gray-100 rounded-full transition-colors">
             <User className="w-6 h-6 text-gray-600" />
-          </button>
-
-          {/* Book Now Button */}
-          <button
-            onClick={onBookClick}
-            className="hidden md:block px-6 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800 transition-colors"
-          >
-            Book Now
           </button>
 
           {/* Mobile Menu Button */}

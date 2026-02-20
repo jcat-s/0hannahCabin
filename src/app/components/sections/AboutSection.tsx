@@ -9,7 +9,7 @@ export function AboutSection() {
 
     <section id="about" className="py-16 bg-gray-50 scroll-mt-20">
 
-      <h2 className="text-4xl text-center mb-12 text-gray-900">About Ohannah Cabin</h2>
+      <h2 className="text-4xl text-center mb-12 text-gray-900">Enjoy a Stunning A-Frame Cabin in Malvar, Batangas</h2>
 
 
       {/* Details Section */}
@@ -17,7 +17,7 @@ export function AboutSection() {
         <div className="grid md:grid-cols-2 gap-12 mb-16">
           <div>
             <h2 className="text-3xl font-semibold mb-4">
-              Enjoy a Stunning A-Frame Cabin in Malvar, Batangas
+
             </h2>
 
             <p className="text-neutral-600 mb-4">
@@ -60,7 +60,7 @@ export function AboutSection() {
 
           <div className="rounded-lg overflow-hidden shadow-xl">
             <img
-              src="/gallery/about.jpg"
+              src="/section/about.jpg"
               alt="Ohannah Cabin exterior"
               className="w-full h-full object-cover aspect-[4/3]"
             />

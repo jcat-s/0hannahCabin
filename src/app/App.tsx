@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Header } from "./components/Header";
 import { HeroSection } from "./components/sections/HeroSection";
-import { FeaturesSection } from "./components/sections/FeaturesSection";
 import { AboutSection } from "./components/sections/AboutSection";
 import { AmenitiesSection } from "./components/sections/AmenitiesSection";
 import { GallerySection } from "./components/sections/GallerySection";
@@ -18,7 +17,6 @@ export default function App() {
 
       <main>
         <HeroSection onBookClick={() => setIsBookingModalOpen(true)} />
-        <FeaturesSection />
         <AboutSection />
         <AmenitiesSection />
         <GallerySection />

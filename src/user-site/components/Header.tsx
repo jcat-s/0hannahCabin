@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Bell, User, Menu, X } from "lucide-react";
-import { useAuth } from "../../context/AuthContext";
-import { useNotifications } from "../../context/NotificationContext";
+import { useAuth } from "../../shared/context/AuthContext";
+import { useNotifications } from "../../shared/context/NotificationContext";
 import { AuthModal } from "./AuthModal";
 const logoImage = "/section/logo.png";
 

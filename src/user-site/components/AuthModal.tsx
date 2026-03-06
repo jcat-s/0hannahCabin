@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useId, useRef, useState } from "react";
 import { X } from "lucide-react";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../shared/context/AuthContext"
 
 interface AuthModalProps {
   open: boolean;

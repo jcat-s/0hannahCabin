@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { MapPin, Phone, Mail, Clock, Send, Check } from "lucide-react";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
-import { Textarea } from "../ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { Button } from "../../shared/components/ui/button";
+import { Input } from "../../shared/components/ui/input";
+import { Label } from "../../shared/components/ui/label";
+import { Textarea } from "../../shared/components/ui/textarea";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../shared/components/ui/card";
 
 export function ContactSection() {
   const [name, setName] = useState("");

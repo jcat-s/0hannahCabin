@@ -2,22 +2,21 @@ import { useEffect, useState } from "react";
 import { Bell, User, Menu, X } from "lucide-react";
 import { useAuth } from "../../shared/context/AuthContext";
 import { useNotifications } from "../../shared/context/NotificationContext";
-import { AuthModal } from "./AuthModal";
 const logoImage = "/section/logo.png";
 
 
 interface HeaderProps {
   onBookClick: () => void;
+  onAuthClick: () => void;
 }
 
-export function Header({ onBookClick }: HeaderProps) {
+export function Header({ onBookClick, onAuthClick }: HeaderProps) {
   const { user, logout } = useAuth();
   const { hasUnread } = useNotifications();
 
   const [activeSection, setActiveSection] = useState("home");
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -120,7 +119,7 @@ export function Header({ onBookClick }: HeaderProps) {
               className="p-2 hover:bg-gray-100 rounded-full transition-colors"
               onClick={() => {
                 if (!user) {
-                  setIsAuthModalOpen(true);
+                  onAuthClick();
                 } else {
                   setIsUserMenuOpen((prev) => !prev);
                 }
@@ -169,7 +168,7 @@ export function Header({ onBookClick }: HeaderProps) {
               onClick={() => {
                 setIsMobileMenuOpen(false);
                 setIsUserMenuOpen(false);
-                setIsAuthModalOpen(true);
+                onAuthClick();
               }}
               aria-label="Sign in"
             >
@@ -199,8 +198,8 @@ export function Header({ onBookClick }: HeaderProps) {
             {!user ? (
               <button
                 onClick={() => {
-                  setIsAuthModalOpen(true);
                   setIsMobileMenuOpen(false);
+                  onAuthClick();
                 }}
                 className="w-full px-6 py-3 border border-gray-300 text-gray-900 rounded-lg hover:bg-gray-50 transition-colors"
               >
@@ -247,9 +246,6 @@ export function Header({ onBookClick }: HeaderProps) {
           </div>
         </div>
       )}
-
-      {/* Auth Modal */}
-      <AuthModal open={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </header>
   );
 }

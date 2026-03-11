@@ -1,13 +1,12 @@
-import { FormEvent, useEffect, useId, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { FormEvent, useId, useRef, useState } from "react";
 import { useAuth } from "../../shared/context/AuthContext"
+import React from "react";
 
-interface AuthModalProps {
-  open: boolean;
-  onClose: () => void;
+interface AuthPageProps {
+  onBack: () => void;
 }
 
-export function AuthModal({ open, onClose }: AuthModalProps) {
+export function AuthPage({ onBack }: AuthPageProps) {
   const { loading, loginWithEmail, signupWithEmail, loginWithGoogle } =
     useAuth();
 
@@ -18,27 +17,6 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSubmitting, setAuthSubmitting] = useState(false);
-
-  // Prevent background scroll and allow ESC to close.
-  // Keep this lightweight (no focus trap) but still accessible.
-  useEffect(() => {
-    if (!open) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKeyDown);
-
-    // Focus the first field for keyboard users.
-    window.setTimeout(() => emailInputRef.current?.focus(), 0);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open, onClose]);
 
   const getAuthErrorMessage = (error: unknown) => {
     const err = error as { code?: string; message?: string } | undefined;
@@ -74,7 +52,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
       } else {
         await signupWithEmail(authEmail, authPassword);
       }
-      onClose();
+      onBack();
       setAuthEmail("");
       setAuthPassword("");
     } catch (error: unknown) {
@@ -90,7 +68,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
     setAuthError(null);
     try {
       await loginWithGoogle();
-      onClose();
+      onBack();
     } catch (error: unknown) {
       setAuthError(getAuthErrorMessage(error));
     } finally {
@@ -98,22 +76,13 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
     }
   };
 
-  if (!open) return null;
-
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm overflow-y-auto"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby={titleId}
+      className="w-full max-w-3xl mx-auto rounded-2xl bg-white text-neutral-900 shadow-2xl border border-black/10 overflow-hidden"
     >
-      <div className="min-h-full flex items-start sm:items-center justify-center p-4 sm:p-6">
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby={titleId}
-          className="w-full max-w-3xl max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] overflow-y-auto rounded-2xl bg-white text-neutral-900 shadow-2xl border border-black/10"
-        >
           <div className="sticky top-0 z-10 flex items-center justify-between gap-4 px-5 sm:px-7 py-4 bg-white/90 backdrop-blur border-b border-black/10">
             <div className="min-w-0">
               <p className="text-[11px] tracking-[0.28em] uppercase text-neutral-500">
@@ -126,10 +95,9 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
             <button
               type="button"
               className="shrink-0 inline-flex items-center justify-center h-9 w-9 rounded-full border border-black/10 bg-white hover:bg-neutral-50 transition"
-              onClick={onClose}
-              aria-label="Close"
+              onClick={onBack}
             >
-              <X className="w-5 h-5 text-neutral-700" />
+              <span className="text-xs font-medium text-neutral-700">Back</span>
             </button>
           </div>
 
@@ -245,8 +213,6 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
               </div>
             </div>
           </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -10,8 +10,8 @@ import { ContactSection } from "./user-site/sections/ContactSection";
 import { AuthPage } from "./user-site/Page/AuthPage";
 import { BookingPage } from "./user-site/Page/BookingPage";
 
-import { AuthProvider } from "./shared/context/AuthContext"
-import { NotificationProvider } from "./shared/context/NotificationContext"
+import { AuthProvider } from "./shared/context/AuthContext";
+import { NotificationProvider } from "./shared/context/NotificationContext";
 
 export default function App() {
   const [activePage, setActivePage] = useState<"home" | "auth" | "booking">("home");
@@ -43,7 +43,10 @@ export default function App() {
               </div>
             )}
             {activePage === "booking" && (
-              <BookingPage onBack={() => setActivePage("home")} />
+              <BookingPage
+                onBack={() => setActivePage("home")}
+                onRequireAuth={() => setActivePage("auth")}
+              />
             )}
           </main>
 

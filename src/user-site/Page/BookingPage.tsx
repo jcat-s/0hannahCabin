@@ -25,6 +25,10 @@ import {
   Clock,
   CheckCircle2
 } from "lucide-react";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useAuth } from "../../shared/context/AuthContext";
+import { useNotifications } from "../../shared/context/NotificationContext";
+import { db } from "../../shared/lib/firebase";
 
 // --- Configuration ---
 const PRICING = {
@@ -54,7 +58,14 @@ const EXISTING_BOOKINGS = [
   { color: "red", start: "2026-03-13", end: "2026-03-15" },
 ];
 
-export function BookingPage({ onBack }: { onBack: () => void }) {
+interface BookingPageProps {
+  onBack: () => void;
+  onRequireAuth?: () => void;
+}
+
+export function BookingPage({ onBack, onRequireAuth }: BookingPageProps) {
+  const { user } = useAuth();
+  const { addNotification } = useNotifications();
   const [currentViewDate, setCurrentViewDate] = useState(new Date(2026, 2, 1));
   const [cabin, setCabin] = useState("ohannah");
   const [stayType, setStayType] = useState("full");
@@ -65,6 +76,7 @@ export function BookingPage({ onBack }: { onBack: () => void }) {
   const [selectedColor, setSelectedColor] = useState("");
   const [showPriceList, setShowPriceList] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   // --- LOGIC: Auto-adjust Dates ---
   useEffect(() => {
@@ -147,7 +159,60 @@ export function BookingPage({ onBack }: { onBack: () => void }) {
     return (baseRate * durationCount) + extraPaxFee + petFee;
   }, [cabin, stayType, checkIn, guests, pets, durationCount]);
 
-  const canBook = isDateRangeValid && selectedColor !== "" && guests > 0;
+  const canBookCore = isDateRangeValid && selectedColor !== "" && guests > 0;
+  const canBook = canBookCore && !!user && !submitting;
+
+  const handleSubmitBooking = async () => {
+    if (!canBookCore) return;
+    if (!user) {
+      if (onRequireAuth) {
+        onRequireAuth();
+      }
+      return;
+    }
+    if (!db) {
+      console.warn("[Booking] Firestore is not configured. Booking will not be saved.");
+      setShowSuccessPopup(true);
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const bookingsRef = collection(db, "bookings");
+      await addDoc(bookingsRef, {
+        userId: user.uid,
+        userEmail: user.email ?? null,
+        cabin,
+        stayType,
+        checkIn,
+        checkOut,
+        guests,
+        pets,
+        color: selectedColor,
+        totalPrice,
+        status: "Pending",
+        createdAt: serverTimestamp(),
+      });
+
+      addNotification({
+        title: "Booking request sent",
+        description:
+          "Your booking will be reviewed by the admin. Watch out for confirmation updates.",
+        read: false,
+      });
+
+      setShowSuccessPopup(true);
+    } catch (error) {
+      console.error("[Booking] Failed to save booking:", error);
+      addNotification({
+        title: "Booking failed",
+        description: "Something went wrong while saving your booking. Please try again.",
+        read: false,
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#fcfaf7] pb-12 font-sans relative">
@@ -322,17 +387,21 @@ export function BookingPage({ onBack }: { onBack: () => void }) {
             </div>
 
             <button
-              disabled={!canBook}
-              onClick={() => setShowSuccessPopup(true)}
+              disabled={!canBookCore || submitting}
+              onClick={handleSubmitBooking}
               className={`w-full py-5 rounded-2xl font-black text-base transition-all shadow-xl active:scale-95 ${(!canBook) ? 'bg-stone-800 text-stone-600 cursor-not-allowed' : 'bg-white text-stone-900 hover:bg-stone-100'}`}
             >
-              {guests === 0
-                ? 'ENTER PAX'
+              {submitting
+                ? "SENDING..."
+                : guests === 0
+                ? "ENTER PAX"
                 : !selectedColor
-                  ? 'PICK A COLOR SLOT'
-                  : !isDateRangeValid
-                    ? 'DATE TAKEN'
-                    : 'BOOK NOW'}
+                ? "PICK A COLOR SLOT"
+                : !isDateRangeValid
+                ? "DATE TAKEN"
+                : !user
+                ? "SIGN IN TO BOOK"
+                : "BOOK NOW"}
             </button>
             <p className="text-center text-[9px] text-stone-600 mt-6 font-bold uppercase tracking-widest">50% Downpayment is Required</p>
           </div>

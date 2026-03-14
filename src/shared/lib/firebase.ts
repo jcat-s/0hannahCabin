@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -21,15 +22,19 @@ let app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 let authInstance;
 let googleProviderInstance;
+let dbInstance;
 
 try {
   authInstance = getAuth(app);
   googleProviderInstance = new GoogleAuthProvider();
+  dbInstance = getFirestore(app);
 } catch (error) {
   console.error("[Firebase] Failed to initialize auth:", error);
   authInstance = undefined;
   googleProviderInstance = undefined;
+  dbInstance = undefined;
 }
 
 export const auth = authInstance;
 export const googleProvider = googleProviderInstance;
+export const db = dbInstance;

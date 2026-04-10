@@ -8,11 +8,13 @@ const logoImage = "/section/logo.png";
 
 interface HeaderProps {
   onBookClick: () => void;
-  onAuthClick: () => void;
+  // onAuthClick is now optional or can be removed if you only want Google Login
+  onAuthClick?: () => void;
 }
 
 export function Header({ onBookClick, onAuthClick }: HeaderProps) {
-  const { user, logout } = useAuth();
+  // Kinuha natin ang loginWithGoogle mula sa useAuth
+  const { user, logout, loginWithGoogle } = useAuth();
   const { hasUnread } = useNotifications();
 
   const [activeSection, setActiveSection] = useState("home");
@@ -23,7 +25,6 @@ export function Header({ onBookClick, onAuthClick }: HeaderProps) {
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
-
       const sections = ["home", "about", "amenities", "gallery", "contact"];
       const current = sections.find((section) => {
         const element = document.getElementById(section);
@@ -33,9 +34,7 @@ export function Header({ onBookClick, onAuthClick }: HeaderProps) {
         }
         return false;
       });
-      if (current) {
-        setActiveSection(current);
-      }
+      if (current) setActiveSection(current);
     };
 
     window.addEventListener("scroll", handleScroll);
@@ -48,11 +47,7 @@ export function Header({ onBookClick, onAuthClick }: HeaderProps) {
       const offset = 80;
       const elementPosition = element.getBoundingClientRect().top;
       const offsetPosition = elementPosition + window.pageYOffset - offset;
-
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: "smooth",
-      });
+      window.scrollTo({ top: offsetPosition, behavior: "smooth" });
     }
     setIsMobileMenuOpen(false);
   };
@@ -73,7 +68,6 @@ export function Header({ onBookClick, onAuthClick }: HeaderProps) {
         }`}
     >
       <nav className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-        {/* Logo with slight hover lift */}
         <button
           onClick={() => scrollToSection("home")}
           className="flex-shrink-0 transition-transform hover:scale-105 focus:outline-none"
@@ -85,28 +79,24 @@ export function Header({ onBookClick, onAuthClick }: HeaderProps) {
           />
         </button>
 
-        {/* Desktop Navigation - Clean & Elegant */}
         <div className="hidden md:flex items-center gap-10">
           {navLinks.map((link) => (
             <button
               key={link.id}
               onClick={() => scrollToSection(link.id)}
-              className={`text-[11px] uppercase tracking-[0.25em] transition-all relative group ${activeSection === link.id
-                  ? "text-black font-bold"
-                  : "text-zinc-500 hover:text-black"
+              className={`text-[11px] uppercase tracking-[0.25em] transition-all relative group ${activeSection === link.id ? "text-black font-bold" : "text-zinc-500 hover:text-black"
                 }`}
             >
               {link.label}
-              {/* Gold Underline for Active/Hover */}
-              <span className={`absolute -bottom-1 left-0 h-[1.5px] bg-[#D4AF37] transition-all duration-300 ${activeSection === link.id ? "w-full" : "w-0 group-hover:w-full"
-                }`}></span>
+              <span
+                className={`absolute -bottom-1 left-0 h-[1.5px] bg-[#D4AF37] transition-all duration-300 ${activeSection === link.id ? "w-full" : "w-0 group-hover:w-full"
+                  }`}
+              ></span>
             </button>
           ))}
         </div>
 
-        {/* Right Side Tools */}
         <div className="flex items-center gap-3">
-          {/* Notifications */}
           {user && (
             <button className="p-2 hover:bg-zinc-100 rounded-full transition-colors relative">
               <Bell className="w-5 h-5 text-zinc-700" strokeWidth={1.5} />
@@ -116,20 +106,31 @@ export function Header({ onBookClick, onAuthClick }: HeaderProps) {
             </button>
           )}
 
-          {/* User Profile / Auth Button */}
           <div className="relative">
             <button
-              className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all duration-300 ${isScrolled
-                  ? "border-zinc-200 hover:border-black"
-                  : "border-black/10 hover:border-black"
+              className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all duration-300 ${isScrolled ? "border-zinc-200 hover:border-black" : "border-black/10 hover:border-black"
                 }`}
-              onClick={() => (!user ? onAuthClick() : setIsUserMenuOpen(!isUserMenuOpen))}
+              onClick={async () => {
+                if (!user) {
+                  // DITO ANG MAGIC: Deretsong tawag sa Google Login
+                  try {
+                    await loginWithGoogle();
+                  } catch (err) {
+                    alert("Failed to sign in with Google");
+                  }
+                } else {
+                  setIsUserMenuOpen(!isUserMenuOpen);
+                }
+              }}
             >
               <User className="w-4 h-4 text-zinc-800" strokeWidth={1.5} />
-              {!user && <span className="text-[10px] uppercase tracking-widest font-bold text-zinc-800">Sign In</span>}
+              {!user && (
+                <span className="text-[10px] uppercase tracking-widest font-bold text-zinc-800">
+                  Sign In
+                </span>
+              )}
             </button>
 
-            {/* Premium User Dropdown */}
             {user && isUserMenuOpen && (
               <div className="absolute right-0 mt-3 w-56 bg-white border border-zinc-100 rounded-xl shadow-2xl py-2 overflow-hidden animate-in fade-in slide-in-from-top-2">
                 <div className="px-4 py-3 border-b border-zinc-50">
@@ -138,13 +139,19 @@ export function Header({ onBookClick, onAuthClick }: HeaderProps) {
                 </div>
                 <button
                   className="w-full text-left px-4 py-3 text-sm hover:bg-zinc-50 transition-colors"
-                  onClick={() => { setIsUserMenuOpen(false); scrollToSection("bookings"); }}
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    scrollToSection("bookings");
+                  }}
                 >
                   My Reservations
                 </button>
                 <button
                   className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-red-50 transition-colors"
-                  onClick={async () => { setIsUserMenuOpen(false); await logout(); }}
+                  onClick={async () => {
+                    setIsUserMenuOpen(false);
+                    await logout();
+                  }}
                 >
                   Logout
                 </button>
@@ -152,7 +159,6 @@ export function Header({ onBookClick, onAuthClick }: HeaderProps) {
             )}
           </div>
 
-          {/* Mobile Menu Toggle */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="md:hidden p-2 text-zinc-800"
@@ -162,7 +168,6 @@ export function Header({ onBookClick, onAuthClick }: HeaderProps) {
         </div>
       </nav>
 
-      {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div className="md:hidden fixed inset-0 top-[60px] bg-white z-50 p-8 space-y-8 animate-in slide-in-from-right">
           <div className="flex flex-col gap-6">
@@ -170,7 +175,8 @@ export function Header({ onBookClick, onAuthClick }: HeaderProps) {
               <button
                 key={link.id}
                 onClick={() => scrollToSection(link.id)}
-                className={`text-2xl font-serif text-left ${activeSection === link.id ? "text-[#D4AF37] italic" : "text-black"}`}
+                className={`text-2xl font-serif text-left ${activeSection === link.id ? "text-[#D4AF37] italic" : "text-black"
+                  }`}
                 style={{ fontFamily: "'Playfair Display', serif" }}
               >
                 {link.label}

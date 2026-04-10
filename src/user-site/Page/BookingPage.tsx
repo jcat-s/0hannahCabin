@@ -1,49 +1,17 @@
 import React, { useState, useMemo, useEffect } from "react";
-import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  eachDayOfInterval,
-  parseISO,
-  isWeekend,
-  isAfter,
-  isBefore,
-  addDays,
-  subDays,
-  isSameDay,
-  differenceInDays,
-  addMonths,
-  subMonths,
-} from "date-fns";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Calendar as CalendarIcon,
-  Users,
-  X,
-  Clock,
-  CheckCircle2,
-  Info,
-  ShieldCheck,
-  Image as ImageIcon
-} from "lucide-react";
-import { collection, addDoc, serverTimestamp, query, onSnapshot } from "firebase/firestore";
+import { format, addDays, parseISO, isWeekend, differenceInDays } from "date-fns";
+import { ChevronLeft, Clock, Calendar as CalendarIcon, Users } from "lucide-react";
+import { collection, addDoc, serverTimestamp, query, onSnapshot, doc } from "firebase/firestore";
+import { db } from "../../shared/lib/firebase";
 import { useAuth } from "../../shared/context/AuthContext";
 import { useNotifications } from "../../shared/context/NotificationContext";
-import { db } from "../../shared/lib/firebase";
 
-// --- Configuration ---
+import { PriceSummary } from "./PriceSummary";
+import { CalendarBooked, checkIsHoliday } from "./CalendarBooked";
+
 const PRICING = {
-  ohannah: {
-    day: { weekday: 5500, weekend: 6000 },
-    evening: { weekday: 7500, weekend: 8000 },
-    full: { weekday: 10000, weekend: 11000 },
-  },
-  dream: {
-    day: { weekday: 6000, weekend: 7000 },
-    evening: { weekday: 8000, weekend: 9000 },
-    full: { weekday: 12000, weekend: 13000 },
-  }
+  ohannah: { day: { weekday: 5500, weekend: 6000 }, evening: { weekday: 7500, weekend: 8000 }, full: { weekday: 10000, weekend: 11000 } },
+  dream: { day: { weekday: 6000, weekend: 7000 }, evening: { weekday: 8000, weekend: 9000 }, full: { weekday: 12000, weekend: 13000 } }
 };
 
 const BOOKING_COLORS = [
@@ -57,69 +25,61 @@ const BOOKING_COLORS = [
   { id: "violet", label: "Violet Slot", bg: "bg-violet-400" },
 ];
 
-interface BookingPageProps {
-  onBack: () => void;
-  onRequireAuth?: () => void;
-}
-
-export function BookingPage({ onBack, onRequireAuth }: BookingPageProps) {
+export function BookingPage({ onBack, onRequireAuth }: { onBack: () => void; onRequireAuth?: () => void }) {
   const { user } = useAuth();
   const { addNotification } = useNotifications();
+  const todayStr = format(new Date(), "yyyy-MM-dd");
 
-  // --- Dynamic Dates (Today Setup) ---
-  const today = new Date();
-  const todayStr = format(today, "yyyy-MM-dd");
-  const defaultCheckOutStr = format(addDays(today, 2), "yyyy-MM-dd");
-
-  // States
-  const [currentViewDate, setCurrentViewDate] = useState(today);
   const [cabin, setCabin] = useState("ohannah");
   const [stayType, setStayType] = useState("full");
   const [checkIn, setCheckIn] = useState(todayStr);
-  const [checkOut, setCheckOut] = useState(defaultCheckOutStr);
+  const [checkOut, setCheckOut] = useState(format(addDays(new Date(), 2), "yyyy-MM-dd"));
   const [guests, setGuests] = useState(4);
   const [pets, setPets] = useState(0);
   const [selectedColor, setSelectedColor] = useState("");
-  const [showPriceList, setShowPriceList] = useState(false);
-  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [currentViewDate, setCurrentViewDate] = useState(new Date());
   const [dbBookings, setDbBookings] = useState<any[]>([]);
+  const [dbHolidays, setDbHolidays] = useState<string[]>([]); // State for holidays from DB
+  const [submitting, setSubmitting] = useState(false);
 
-  // Strict Max 12 Handler
-  const handlePaxInput = (val: string, type: 'guests' | 'pets') => {
-    let num = parseInt(val);
-    if (isNaN(num)) num = 0;
-    if (num > 12) num = 12; // Force cap at 12
-    if (num < 0) num = 0;
-
-    if (type === 'guests') setGuests(num);
-    else setPets(num);
-  };
-
+  // 1. Listen for Bookings
   useEffect(() => {
     if (!db) return;
     const q = query(collection(db, "bookings"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const bookingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setDbBookings(bookingsData);
+    const unsubscribe = onSnapshot(q, (snap) => {
+      setDbBookings(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
     return () => unsubscribe();
   }, []);
 
-  const filteredBookings = useMemo(() => {
-    return dbBookings.filter(b => b.cabin === cabin && b.status !== "Cancelled");
-  }, [cabin, dbBookings]);
-
+  // 2. Listen for Movable Holidays
   useEffect(() => {
-    const start = parseISO(checkIn);
-    if (stayType === "day") setCheckOut(checkIn);
-    else if (stayType === "evening") setCheckOut(format(addDays(start, 1), "yyyy-MM-dd"));
-    else if (stayType === "full") {
-      if (isSameDay(start, parseISO(checkOut)) || isBefore(parseISO(checkOut), start)) {
-        setCheckOut(format(addDays(start, 1), "yyyy-MM-dd"));
-      }
-    }
-  }, [stayType, checkIn, checkOut]);
+    if (!db) return;
+    const unsub = onSnapshot(doc(db, "metadata", "holidays"), (docSnap) => {
+      if (docSnap.exists()) setDbHolidays(docSnap.data().dates || []);
+    });
+    return () => unsub();
+  }, []);
+
+  const filteredBookings = useMemo(() =>
+    dbBookings.filter(b => b.cabin === cabin && (b.status === "Approved" || b.status === "Confirmed")),
+    [cabin, dbBookings]);
+
+  const durationCount = useMemo(() =>
+    stayType === "full" ? Math.max(differenceInDays(parseISO(checkOut), parseISO(checkIn)), 1) : 1,
+    [checkIn, checkOut, stayType]);
+
+  // CALCULATION LOGIC
+  const totalPrice = useMemo(() => {
+    const checkInDate = parseISO(checkIn);
+    const isHoliday = checkIsHoliday(checkInDate, dbHolidays);
+    const isHighRate = isWeekend(checkInDate) || isHoliday;
+
+    // @ts-ignore
+    const base = PRICING[cabin][stayType][isHighRate ? "weekend" : "weekday"];
+    const extraPax = guests > 4 ? (guests - 4) * (stayType === 'full' ? 500 : 300) : 0;
+    return (base * durationCount) + extraPax + (pets * 250);
+  }, [cabin, stayType, checkIn, guests, pets, durationCount, dbHolidays]);
 
   const isDateRangeValid = useMemo(() => {
     const start = parseISO(checkIn);
@@ -130,156 +90,64 @@ export function BookingPage({ onBack, onRequireAuth }: BookingPageProps) {
   const dynamicColors = useMemo(() => {
     const start = parseISO(checkIn);
     const end = parseISO(checkOut);
-    const dayBefore = subDays(start, 1);
-    const dayAfter = addDays(end, 1);
-    const blockedColors = new Set();
-    filteredBookings.forEach(b => {
-      const bStart = parseISO(b.checkIn);
-      const bEnd = parseISO(b.checkOut);
-      if (isSameDay(dayBefore, bEnd) || isSameDay(dayAfter, bStart) || (start <= bEnd && end >= bStart)) {
-        blockedColors.add(b.color);
-      }
-    });
-    return BOOKING_COLORS.map(c => ({ ...c, isBlocked: blockedColors.has(c.id) }));
+    const blocked = new Set(filteredBookings.filter(b => (start <= parseISO(b.checkOut) && end >= parseISO(b.checkIn))).map(b => b.color));
+    return BOOKING_COLORS.map(c => ({ ...c, isBlocked: blocked.has(c.id) }));
   }, [checkIn, checkOut, filteredBookings]);
 
-  const durationCount = useMemo(() => {
-    if (stayType !== "full") return 1;
-    const diff = differenceInDays(parseISO(checkOut), parseISO(checkIn));
-    return diff > 0 ? diff : 1;
-  }, [checkIn, checkOut, stayType]);
-
-  const totalPrice = useMemo(() => {
-    const start = parseISO(checkIn);
-    const dayName = isWeekend(start) ? "weekend" : "weekday";
-    // @ts-ignore
-    const baseRate = PRICING[cabin][stayType][dayName];
-    const extraPaxFee = guests > 4 ? (guests - 4) * (stayType === 'full' ? 500 : 300) : 0;
-    const petFee = pets * 250;
-    return (baseRate * durationCount) + extraPaxFee + petFee;
-  }, [cabin, stayType, checkIn, guests, pets, durationCount]);
-
-  const canBookCore = isDateRangeValid && selectedColor !== "" && guests > 0;
-
-  const handleSubmitBooking = async () => {
-    if (!canBookCore) return;
-    if (!user) { onRequireAuth?.(); return; }
+  const handleBooking = async () => {
+    if (!user) return onRequireAuth?.();
+    setSubmitting(true);
     try {
-      setSubmitting(true);
       await addDoc(collection(db, "bookings"), {
-        userId: user.uid,
-        userEmail: user.email || "Guest",
-        cabin, stayType, checkIn, checkOut, guests, pets,
-        color: selectedColor, totalPrice, status: "Pending",
-        createdAt: serverTimestamp(),
+        userId: user.uid, cabin, stayType, checkIn, checkOut, guests, pets,
+        color: selectedColor, totalPrice, status: "Pending", createdAt: serverTimestamp()
       });
-      setShowSuccessPopup(true);
-    } catch (e) {
-      addNotification("Error saving booking", "error");
-    } finally { setSubmitting(false); }
+      addNotification({ title: "Success", description: "Booking Request Sent!", read: false });
+    } catch (err) {
+      addNotification({ title: "Error", description: "Failed to save booking", read: false });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFCFB] pb-24 font-sans selection:bg-[#D4AF37]/30">
-
-      {/* SUCCESS & PRICE MODALS (Condensed for space) */}
-      {showPriceList && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-xl" onClick={() => setShowPriceList(false)}>
-          <div className="bg-white rounded-[3rem] w-full max-w-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="relative h-96 bg-zinc-900 flex items-center justify-center">
-              <div className="absolute inset-0 opacity-100 bg-cover bg-center" style={{ backgroundImage: "url('/section/price.jpg')" }} />
-              <button onClick={() => setShowPriceList(false)} className="absolute top-6 right-6 p-2 bg-white/10 text-white rounded-full backdrop-blur-md"><X size={20} /></button>
-              <h2 className="relative text-4xl font-serif italic text-white" style={{ fontFamily: "'Playfair Display', serif" }}>Rates & <span className="text-[#D4AF37]">Packages</span></h2>
-            </div>
-            <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-8">
-              {Object.entries(PRICING).map(([id, rates]) => (
-                <div key={id} className="space-y-4">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#D4AF37] border-b border-zinc-100 pb-2">{id === 'ohannah' ? 'Ohannah Original' : 'The Dream'}</h3>
-                  <div className="space-y-2">
-                    <PriceDetail label="Day Lounge" weekday={rates.day.weekday} weekend={rates.day.weekend} />
-                    <PriceDetail label="Evening Chill" weekday={rates.evening.weekday} weekend={rates.evening.weekend} />
-                    <PriceDetail label="Full Stay" weekday={rates.full.weekday} weekend={rates.full.weekend} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showSuccessPopup && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-zinc-950/90 backdrop-blur-md">
-          <div className="bg-white rounded-[3rem] p-12 max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-500">
-            <div className="w-24 h-24 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-8 border border-emerald-100">
-              <CheckCircle2 size={48} strokeWidth={1.5} />
-            </div>
-            <h2 className="text-3xl font-serif italic mb-4" style={{ fontFamily: "'Playfair Display', serif" }}>Reserved.</h2>
-            <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-widest leading-loose mb-10">
-              Your request for <span className="text-zinc-900 underline">{cabin}</span> is being processed.
-            </p>
-            <button onClick={() => setShowSuccessPopup(false)} className="w-full py-5 bg-zinc-950 text-white rounded-2xl font-bold uppercase tracking-[0.3em] text-[10px]">Understood</button>
-          </div>
-        </div>
-      )}
-
-      {/* NAV */}
-      <nav className="bg-white/80 backdrop-blur-xl border-b border-zinc-100 px-8 py-6 flex items-center justify-between sticky top-0 z-50">
+    <div className="min-h-screen bg-[#FDFCFB] pb-24 text-zinc-900">
+      <nav className="bg-white/80 backdrop-blur-xl border-b px-8 py-6 flex items-center justify-between sticky top-0 z-50">
         <button onClick={onBack} className="flex items-center gap-3 text-zinc-400 hover:text-zinc-950 group">
           <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
           <span className="text-[10px] font-black uppercase tracking-[0.3em]">Exit</span>
         </button>
-        <h1 className="text-sm font-serif italic tracking-widest" style={{ fontFamily: "'Playfair Display', serif" }}>
-          Ohannah <span className="text-[#D4AF37]">Reservation</span>
-        </h1>
-
       </nav>
 
       <div className="max-w-7xl mx-auto px-6 mt-12 grid grid-cols-1 lg:grid-cols-12 gap-12">
         <div className="lg:col-span-8 space-y-12">
-
+          {/* Cabin Selection */}
           <section className="bg-zinc-950 p-2 rounded-[2rem] flex gap-2 shadow-2xl">
-            {["ohannah", "dream"].map((c) => (
-              <button
-                key={c}
-                onClick={() => { setCabin(c); setSelectedColor(""); }}
-                className={`flex-1 py-4 rounded-[1.6rem] text-[10px] font-bold uppercase tracking-[0.3em] transition-all ${cabin === c ? 'bg-white text-zinc-950 shadow-lg' : 'text-zinc-500 hover:text-white'}`}
-              >
+            {["ohannah", "dream"].map(c => (
+              <button key={c} onClick={() => { setCabin(c); setSelectedColor(""); }}
+                className={`flex-1 py-4 rounded-[1.6rem] text-[10px] font-bold uppercase tracking-[0.3em] transition-all ${cabin === c ? 'bg-white text-zinc-950' : 'text-zinc-500 hover:text-white'}`}>
                 {c === 'ohannah' ? 'Ohannah Cabin' : 'The Dream by Ohannah'}
               </button>
             ))}
           </section>
 
-          {/* CALENDAR */}
-          <section className="bg-white rounded-[3rem] shadow-[0_20px_80px_rgba(0,0,0,0.03)] border border-zinc-100 overflow-hidden">
-            <div className="p-8 border-b border-zinc-50 flex justify-between items-center bg-zinc-50/30">
-              <div className="flex items-center gap-8">
-                <button onClick={() => setCurrentViewDate(subMonths(currentViewDate, 1))} className="p-3 hover:bg-white rounded-full border border-zinc-200 shadow-sm"><ChevronLeft size={16} /></button>
-                <h2 className="text-xl font-serif italic text-zinc-900" style={{ fontFamily: "'Playfair Display', serif" }}>{format(currentViewDate, "MMMM yyyy")}</h2>
-                <button onClick={() => setCurrentViewDate(addMonths(currentViewDate, 1))} className="p-3 hover:bg-white rounded-full border border-zinc-200 shadow-sm"><ChevronRight size={16} /></button>
-              </div>
-              <div className="text-[9px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                <ShieldCheck size={14} className="text-emerald-500" /> Availability Sync Active
-              </div>
-            </div>
-            <div className="p-10">
-              <div className="grid grid-cols-7 gap-4">
-                {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map(d => (
-                  <div key={d} className="text-center text-[10px] font-bold text-zinc-300 uppercase tracking-widest pb-8">{d}</div>
-                ))}
-                {renderCalendarDays(currentViewDate, filteredBookings)}
-              </div>
-            </div>
-          </section>
+          {/* Calendar Component */}
+          <CalendarBooked
+            currentViewDate={currentViewDate}
+            setCurrentViewDate={setCurrentViewDate}
+            filteredBookings={filteredBookings}
+            bookingColors={BOOKING_COLORS}
+          />
 
-          {/* INPUT FORM */}
-          <section className="bg-white rounded-[3rem] shadow-[0_20px_80px_rgba(0,0,0,0.03)] border border-zinc-100 p-12 space-y-12">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
-
-              {/* Left Column */}
+          {/* Booking Inputs */}
+          <section className="bg-white rounded-[3rem] p-12 border border-zinc-100 space-y-12 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
               <div className="space-y-10">
                 <div className="space-y-4">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] flex items-center gap-2"><Clock size={14} className="text-[#D4AF37]" /> Stay Category</label>
-                  <select value={stayType} onChange={(e) => setStayType(e.target.value)} className="w-full p-5 rounded-2xl bg-zinc-50 border-none outline-none text-[11px] font-bold text-zinc-800 uppercase tracking-widest focus:ring-2 focus:ring-[#D4AF37]/20 transition-all">
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                    <Clock size={14} className="text-[#D4AF37]" /> Stay Category
+                  </label>
+                  <select value={stayType} onChange={(e) => setStayType(e.target.value)} className="w-full p-5 rounded-2xl bg-zinc-50 border-none outline-none text-[11px] font-bold uppercase focus:ring-2 focus:ring-[#D4AF37]/20">
                     <option value="full">🏠 Full Stay (Overnight)</option>
                     <option value="day">☀️ Day Lounge (9am-5pm)</option>
                     <option value="evening">🌙 Evening Chill (8pm-7am)</option>
@@ -287,54 +155,42 @@ export function BookingPage({ onBack, onRequireAuth }: BookingPageProps) {
                 </div>
 
                 <div className="space-y-4">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] flex items-center gap-2"><CalendarIcon size={14} className="text-[#D4AF37]" /> Check-in/Out</label>
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                    <CalendarIcon size={14} className="text-[#D4AF37]" /> Check-in/Out
+                  </label>
                   <div className="grid grid-cols-2 gap-4">
-                    <input type="date" min={todayStr} value={checkIn} onChange={(e) => setCheckIn(e.target.value)} className="w-full p-4 rounded-xl bg-zinc-50 border-none text-[11px] font-bold uppercase" />
-                    <input type="date" value={checkOut} disabled={stayType !== "full"} min={checkIn} onChange={(e) => setCheckOut(e.target.value)} className="w-full p-4 rounded-xl bg-zinc-50 border-none text-[11px] font-bold uppercase disabled:opacity-30" />
+                    <input type="date" value={checkIn} min={todayStr} onChange={(e) => setCheckIn(e.target.value)} className="w-full p-4 rounded-xl bg-zinc-50 border-none text-[11px] font-bold" />
+                    <input type="date" value={checkOut} disabled={stayType !== "full"} min={checkIn} onChange={(e) => setCheckOut(e.target.value)} className="w-full p-4 rounded-xl bg-zinc-50 border-none text-[11px] font-bold disabled:opacity-30" />
                   </div>
                 </div>
               </div>
 
-              {/* Right Column: FIXED PAX & PETS */}
               <div className="space-y-4">
-                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] flex items-center gap-2"><Users size={14} className="text-[#D4AF37]" /> Pax & Pets (Max 12)</label>
+                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                  <Users size={14} className="text-[#D4AF37]" /> Pax & Pets
+                </label>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="relative group">
-                    <input
-                      type="number"
-                      value={guests}
-                      onChange={(e) => handlePaxInput(e.target.value, 'guests')}
-                      className="w-full p-5 pt-7 rounded-2xl bg-zinc-50 border-none outline-none text-[13px] font-black text-zinc-800 focus:ring-2 focus:ring-[#D4AF37]/20 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                    <span className="absolute top-2.5 left-5 text-[8px] font-black text-zinc-300 uppercase tracking-widest pointer-events-none">Guests</span>
+                  <div className="space-y-2">
+                    <span className="text-[8px] text-zinc-400 font-bold uppercase">Guests</span>
+                    <input type="number" value={guests} onChange={(e) => setGuests(Math.min(Number(e.target.value), 12))} className="w-full p-5 rounded-2xl bg-zinc-50 border-none text-[13px] font-black" />
                   </div>
-                  <div className="relative group">
-                    <input
-                      type="number"
-                      value={pets}
-                      onChange={(e) => handlePaxInput(e.target.value, 'pets')}
-                      className="w-full p-5 pt-7 rounded-2xl bg-zinc-50 border-none outline-none text-[13px] font-black text-zinc-800 focus:ring-2 focus:ring-[#D4AF37]/20 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                    <span className="absolute top-2.5 left-5 text-[8px] font-black text-zinc-300 uppercase tracking-widest pointer-events-none">Pets</span>
+                  <div className="space-y-2">
+                    <span className="text-[8px] text-zinc-400 font-bold uppercase">Pets</span>
+                    <input type="number" value={pets} onChange={(e) => setPets(Math.min(Number(e.target.value), 12))} className="w-full p-5 rounded-2xl bg-zinc-50 border-none text-[13px] font-black" />
                   </div>
                 </div>
               </div>
-
             </div>
 
-            {/* COLOR SLOTS */}
+            {/* Color Selector */}
             <div className="pt-12 border-t border-zinc-50">
               <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em] block mb-8 text-center">Select Personal Slot Color</label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {dynamicColors.map((c) => (
-                  <button
-                    key={c.id}
-                    disabled={c.isBlocked}
-                    onClick={() => setSelectedColor(c.id)}
-                    className={`px-4 py-4 rounded-2xl border-2 text-[9px] font-black transition-all flex flex-col items-center gap-2 ${selectedColor === c.id ? 'border-zinc-950 bg-zinc-950 text-white scale-105 shadow-xl' : 'border-zinc-50 bg-white text-zinc-400'} ${c.isBlocked ? 'opacity-10 cursor-not-allowed grayscale' : 'hover:border-zinc-200 uppercase tracking-[0.1em]'}`}
-                  >
-                    <span className={`w-4 h-4 rounded-full ${c.bg} shadow-sm border border-black/5`} />
-                    {c.label}
+                {dynamicColors.map(c => (
+                  <button key={c.id} disabled={c.isBlocked} onClick={() => setSelectedColor(c.id)}
+                    className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${selectedColor === c.id ? 'bg-zinc-950 text-white border-zinc-950 scale-105 shadow-xl' : 'bg-white text-zinc-400 border-zinc-50 hover:border-zinc-200'} ${c.isBlocked ? 'opacity-10 grayscale cursor-not-allowed' : ''}`}>
+                    <span className={`w-4 h-4 rounded-full ${c.bg} border border-black/5`} />
+                    <span className="text-[9px] font-black uppercase">{c.label}</span>
                   </button>
                 ))}
               </div>
@@ -342,80 +198,18 @@ export function BookingPage({ onBack, onRequireAuth }: BookingPageProps) {
           </section>
         </div>
 
-        {/* RIGHT SUMMARY */}
-        <div className="lg:col-span-4">
-          <div className="bg-zinc-950 rounded-[3.5rem] p-12 text-white sticky top-32 shadow-[0_40px_100px_rgba(0,0,0,0.4)] border border-white/5 overflow-hidden">
-            <div className="absolute top-0 right-0 w-40 h-40 bg-[#D4AF37]/10 blur-[80px] rounded-full -mr-20 -mt-20" />
-            <div className="flex justify-between items-center mb-12 border-b border-white/10 pb-8">
-              <h3 className="text-lg font-serif italic" style={{ fontFamily: "'Playfair Display', serif" }}>Price Summary</h3>
-              <button onClick={() => setShowPriceList(true)} className="p-2 hover:bg-white/10 rounded-full text-[#D4AF37]"><ImageIcon size={20} /></button>
-            </div>
-            <div className="space-y-6 mb-12">
-              <SummaryRow label="Property" value={cabin === 'ohannah' ? 'Ohannah Original' : 'The Dream'} />
-              <SummaryRow label="Stay Plan" value={stayType.toUpperCase()} />
-              <SummaryRow label="Pax Details" value={`${guests} Pax / ${pets} Pets`} />
-              <SummaryRow label="Total Time" value={`${durationCount} ${stayType === 'full' ? 'Night(s)' : 'Session'}`} />
-            </div>
-            <div className="bg-white/5 rounded-[2.5rem] p-10 mb-12 border border-white/5 text-center">
-              <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.4em]">Total Amount</span>
-              <div className="text-5xl font-serif italic mt-4 text-[#D4AF37]">₱{totalPrice.toLocaleString()}</div>
-            </div>
-            <button
-              disabled={!canBookCore || submitting}
-              onClick={handleSubmitBooking}
-              className={`w-full py-6 rounded-2xl font-black text-[11px] tracking-[0.4em] uppercase shadow-2xl ${(!canBookCore) ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed opacity-50' : 'bg-white text-zinc-950 hover:bg-[#D4AF37] hover:text-white'}`}
-            >
-              {submitting ? "Processing..." : !selectedColor ? "Select Slot" : !isDateRangeValid ? "Date Taken" : "Confirm Booking"}
-            </button>
-          </div>
+        {/* Price Summary Panel */}
+        <div className="lg:col-span-4 h-fit sticky top-32">
+          <PriceSummary
+            cabin={cabin} stayType={stayType} guests={guests} pets={pets}
+            durationCount={durationCount} totalPrice={totalPrice}
+            canBookCore={isDateRangeValid && selectedColor !== ""}
+            submitting={submitting} selectedColor={selectedColor}
+            isDateRangeValid={isDateRangeValid} onShowPriceList={() => { }}
+            onSubmit={handleBooking}
+          />
         </div>
       </div>
-    </div>
-  );
-}
-
-// Helpers
-function PriceDetail({ label, weekday, weekend }: { label: string, weekday: number, weekend: number }) {
-  return (
-    <div className="flex justify-between items-center text-[11px]">
-      <span className="text-zinc-400 font-bold uppercase tracking-widest">{label}</span>
-      <div className="text-zinc-800 font-black tracking-tighter">
-        ₱{weekday.toLocaleString()} / <span className="text-[#D4AF37]">₱{weekend.toLocaleString()}</span>
-      </div>
-    </div>
-  );
-}
-
-function renderCalendarDays(viewDate: Date, bookings: any[]) {
-  const start = startOfMonth(viewDate);
-  const end = endOfMonth(viewDate);
-  const days = eachDayOfInterval({ start, end });
-  const firstDow = (start.getDay() + 6) % 7;
-  const cells = [];
-  for (let i = 0; i < firstDow; i++) cells.push(<div key={`pad-${i}`} />);
-  days.forEach(d => {
-    const booking = bookings.find(b => {
-      const bStart = parseISO(b.checkIn);
-      const bEnd = parseISO(b.checkOut);
-      return (isSameDay(d, bStart) || isSameDay(d, bEnd) || (d >= bStart && d <= bEnd));
-    });
-    const color = booking ? BOOKING_COLORS.find(c => c.id === booking.color) : null;
-    cells.push(
-      <div key={d.toString()} className={`h-20 sm:h-12 border border-zinc-50 flex flex-col items-center justify-center rounded-[1.5rem] relative transition-all duration-700 ${color ? `${color.bg} text-white shadow-xl z-10 scale-[1.03] ring-4 ring-white` : "hover:bg-zinc-50 text-zinc-400"}`}>
-        <span className="text-sm font-bold tracking-tighter">{format(d, "d")}</span>
-        {color && <span className="text-[7px] uppercase font-black tracking-widest opacity-80 mt-1">Booked</span>}
-        {isWeekend(d) && !color && <div className="absolute top-3 right-3 w-1.5 h-1.5 rounded-full bg-[#D4AF37]/30" />}
-      </div>
-    );
-  });
-  return cells;
-}
-
-function SummaryRow({ label, value }: { label: string, value: string }) {
-  return (
-    <div className="flex justify-between items-center">
-      <span className="text-zinc-500 font-bold uppercase text-[9px] tracking-[0.3em]">{label}</span>
-      <span className="font-bold text-zinc-100 text-[10px] tracking-widest">{value}</span>
     </div>
   );
 }

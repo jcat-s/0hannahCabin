@@ -6,6 +6,7 @@ import React, {
   useState,
 } from "react";
 
+// 1. Define the Item Structure
 export interface NotificationItem {
   id: string;
   title: string;
@@ -14,6 +15,7 @@ export interface NotificationItem {
   createdAt: Date;
 }
 
+// 2. Define the Context Value Interface
 interface NotificationContextValue {
   notifications: NotificationItem[];
   hasUnread: boolean;
@@ -21,10 +23,12 @@ interface NotificationContextValue {
   addNotification: (notification: Omit<NotificationItem, "id" | "createdAt">) => void;
 }
 
+// 3. Create the Context
 const NotificationContext = createContext<NotificationContextValue | undefined>(
   undefined
 );
 
+// 4. The Provider Component
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
@@ -64,6 +68,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// 5. The Hook (EXPORTED CORRECTLY)
 export function useNotifications() {
   const ctx = useContext(NotificationContext);
   if (!ctx) {
@@ -73,4 +78,3 @@ export function useNotifications() {
   }
   return ctx;
 }
-

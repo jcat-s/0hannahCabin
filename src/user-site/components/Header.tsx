@@ -3,8 +3,8 @@ import { Bell, User, Menu, X } from "lucide-react";
 import { useAuth } from "../../shared/context/AuthContext";
 import { useNotifications } from "../../shared/context/NotificationContext";
 import React from "react";
-const logoImage = "/section/logo.png";
 
+const logoImage = "/section/logo.png";
 
 interface HeaderProps {
   onBookClick: () => void;
@@ -24,7 +24,6 @@ export function Header({ onBookClick, onAuthClick }: HeaderProps) {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
 
-      // Update active section based on scroll position
       const sections = ["home", "about", "amenities", "gallery", "contact"];
       const current = sections.find((section) => {
         const element = document.getElementById(section);
@@ -46,7 +45,7 @@ export function Header({ onBookClick, onAuthClick }: HeaderProps) {
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
     if (element) {
-      const offset = 80; // Account for sticky header
+      const offset = 80;
       const elementPosition = element.getBoundingClientRect().top;
       const offsetPosition = elementPosition + window.pageYOffset - offset;
 
@@ -68,93 +67,84 @@ export function Header({ onBookClick, onAuthClick }: HeaderProps) {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
-        ? "bg-white/40 backdrop-blur-md shadow-md"
-        : "bg-transparent"
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled
+          ? "bg-white/80 backdrop-blur-lg border-b border-zinc-100 py-3 shadow-sm"
+          : "bg-transparent py-5"
         }`}
     >
-
-      <nav className="max-w-7xl mx-auto px-6 py-2 flex items-center justify-between">
-        {/* Logo */}
+      <nav className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+        {/* Logo with slight hover lift */}
         <button
           onClick={() => scrollToSection("home")}
-          className="flex-shrink-0 focus:outline-none"
+          className="flex-shrink-0 transition-transform hover:scale-105 focus:outline-none"
         >
           <img
             src={logoImage}
             alt="Ohannah Cabin"
-            className="h-10 md:h-12 w-auto"
+            className={`transition-all duration-300 ${isScrolled ? "h-10" : "h-12"} w-auto`}
           />
         </button>
 
-        {/* Desktop Navigation Links */}
-        <div className="hidden md:flex items-center gap-6">
+        {/* Desktop Navigation - Clean & Elegant */}
+        <div className="hidden md:flex items-center gap-10">
           {navLinks.map((link) => (
             <button
               key={link.id}
               onClick={() => scrollToSection(link.id)}
-              className={`text-base transition-colors ${activeSection === link.id
-                ? "text-gray-900 font-medium"
-                : "text-gray-600 hover:text-gray-900"
+              className={`text-[11px] uppercase tracking-[0.25em] transition-all relative group ${activeSection === link.id
+                  ? "text-black font-bold"
+                  : "text-zinc-500 hover:text-black"
                 }`}
             >
               {link.label}
+              {/* Gold Underline for Active/Hover */}
+              <span className={`absolute -bottom-1 left-0 h-[1.5px] bg-[#D4AF37] transition-all duration-300 ${activeSection === link.id ? "w-full" : "w-0 group-hover:w-full"
+                }`}></span>
             </button>
           ))}
         </div>
 
-        {/* Right Side Icons */}
-        <div className="relative flex items-center gap-4">
-          {/* Bell: only when logged in */}
+        {/* Right Side Tools */}
+        <div className="flex items-center gap-3">
+          {/* Notifications */}
           {user && (
-            <button className="hidden md:block p-2 hover:bg-gray-100 rounded-full transition-colors relative">
-              <Bell className="w-6 h-6 text-gray-600" />
+            <button className="p-2 hover:bg-zinc-100 rounded-full transition-colors relative">
+              <Bell className="w-5 h-5 text-zinc-700" strokeWidth={1.5} />
               {hasUnread && (
-                <span className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full" />
+                <span className="absolute top-2 right-2 w-2 h-2 bg-[#D4AF37] rounded-full border-2 border-white" />
               )}
             </button>
           )}
-          {/* User icon */}
-          <div className="hidden md:block relative">
+
+          {/* User Profile / Auth Button */}
+          <div className="relative">
             <button
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              onClick={() => {
-                if (!user) {
-                  onAuthClick();
-                } else {
-                  setIsUserMenuOpen((prev) => !prev);
-                }
-              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all duration-300 ${isScrolled
+                  ? "border-zinc-200 hover:border-black"
+                  : "border-black/10 hover:border-black"
+                }`}
+              onClick={() => (!user ? onAuthClick() : setIsUserMenuOpen(!isUserMenuOpen))}
             >
-              <User className="w-6 h-6 text-gray-600" />
+              <User className="w-4 h-4 text-zinc-800" strokeWidth={1.5} />
+              {!user && <span className="text-[10px] uppercase tracking-widest font-bold text-zinc-800">Sign In</span>}
             </button>
-            {/* Dropdown when logged in */}
+
+            {/* Premium User Dropdown */}
             {user && isUserMenuOpen && (
-              <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-lg shadow-lg py-1 text-sm">
+              <div className="absolute right-0 mt-3 w-56 bg-white border border-zinc-100 rounded-xl shadow-2xl py-2 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                <div className="px-4 py-3 border-b border-zinc-50">
+                  <p className="text-[10px] text-zinc-400 uppercase tracking-tighter">Account</p>
+                  <p className="text-sm font-medium truncate">{user.email}</p>
+                </div>
                 <button
-                  className="w-full text-left px-4 py-2 hover:bg-gray-100"
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    scrollToSection("profile");
-                  }}
+                  className="w-full text-left px-4 py-3 text-sm hover:bg-zinc-50 transition-colors"
+                  onClick={() => { setIsUserMenuOpen(false); scrollToSection("bookings"); }}
                 >
-                  Profile
+                  My Reservations
                 </button>
                 <button
-                  className="w-full text-left px-4 py-2 hover:bg-gray-100"
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    scrollToSection("bookings");
-                  }}
-                >
-                  My Bookings
-                </button>
-                <button
-                  className="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100"
-                  onClick={async () => {
-                    setIsUserMenuOpen(false);
-                    await logout();
-                  }}
+                  className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                  onClick={async () => { setIsUserMenuOpen(false); await logout(); }}
                 >
                   Logout
                 </button>
@@ -162,92 +152,39 @@ export function Header({ onBookClick, onAuthClick }: HeaderProps) {
             )}
           </div>
 
-          {/* Mobile auth shortcut */}
-          {!user && (
-            <button
-              className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              onClick={() => {
-                setIsMobileMenuOpen(false);
-                setIsUserMenuOpen(false);
-                onAuthClick();
-              }}
-              aria-label="Sign in"
-            >
-              <User className="w-6 h-6 text-gray-600" />
-            </button>
-          )}
-
-          {/* Mobile Menu Button */}
+          {/* Mobile Menu Toggle */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="md:hidden p-2 text-zinc-800"
           >
-            {isMobileMenuOpen ? (
-              <X className="w-6 h-6 text-gray-600" />
-            ) : (
-              <Menu className="w-6 h-6 text-gray-600" />
-            )}
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
       </nav>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className="md:hidden bg-white border-t border-gray-200">
-          <div className="max-w-7xl mx-auto px-6 py-4 space-y-4">
-            {/* Auth / account row */}
-            {!user ? (
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onAuthClick();
-                }}
-                className="w-full px-6 py-3 border border-gray-300 text-gray-900 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Sign in / Create account
-              </button>
-            ) : (
-              <div className="w-full rounded-lg border border-gray-200 px-4 py-3">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {user.email ?? "Signed in"}
-                </p>
-                <button
-                  className="mt-2 text-sm text-red-600 hover:text-red-700"
-                  onClick={async () => {
-                    setIsMobileMenuOpen(false);
-                    await logout();
-                  }}
-                >
-                  Logout
-                </button>
-              </div>
-            )}
-
+        <div className="md:hidden fixed inset-0 top-[60px] bg-white z-50 p-8 space-y-8 animate-in slide-in-from-right">
+          <div className="flex flex-col gap-6">
             {navLinks.map((link) => (
               <button
                 key={link.id}
                 onClick={() => scrollToSection(link.id)}
-                className={`block w-full text-left py-2 text-lg transition-colors ${activeSection === link.id
-                  ? "text-gray-900 font-medium"
-                  : "text-gray-600"
-                  }`}
+                className={`text-2xl font-serif text-left ${activeSection === link.id ? "text-[#D4AF37] italic" : "text-black"}`}
+                style={{ fontFamily: "'Playfair Display', serif" }}
               >
                 {link.label}
               </button>
             ))}
-            <button
-              onClick={() => {
-                onBookClick();
-                setIsMobileMenuOpen(false);
-              }}
-              className="w-full px-6 py-3 bg-green-700 text-white rounded-lg hover:bg-green-800 transition-colors"
-            >
-              Book Now
-            </button>
           </div>
+          <button
+            onClick={onBookClick}
+            className="w-full py-4 bg-black text-white text-xs uppercase tracking-[0.3em] font-bold border border-[#D4AF37]"
+          >
+            Reserve Now
+          </button>
         </div>
       )}
     </header>
   );
 }
-

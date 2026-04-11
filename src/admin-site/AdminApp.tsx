@@ -41,7 +41,7 @@ export default function AdminApp() {
   // Sync with Firestore
   useEffect(() => {
     const q = query(collection(db, "bookings"), orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubsAcribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -117,7 +117,7 @@ export default function AdminApp() {
                         {booking.cabin === 'ohannah' ? 'Ohannah Original' : 'The Dream'}
                       </span>
                       <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-tighter ${booking.status === 'Confirmed' ? 'bg-emerald-50 text-emerald-600' :
-                          booking.status === 'Cancelled' ? 'bg-red-50 text-red-600' : 'bg-orange-50 text-orange-600'
+                        booking.status === 'Cancelled' ? 'bg-red-50 text-red-600' : 'bg-orange-50 text-orange-600'
                         }`}>
                         {booking.status}
                       </span>

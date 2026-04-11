@@ -7,27 +7,33 @@ import { AboutSection } from "./user-site/sections/AboutSection";
 import { AmenitiesSection } from "./user-site/sections/AmenitiesSection";
 import { GallerySection } from "./user-site/sections/GallerySection";
 import { ContactSection } from "./user-site/sections/ContactSection";
+
 import { AuthPage } from "./user-site/Page/AuthPage";
 import { BookingPage } from "./user-site/Page/BookingPage";
+import { ProfilePage } from "./user-site/Page/ProfilePage"; // Siguraduhing imported ito
 
 import { AuthProvider } from "./shared/context/AuthContext";
 import { NotificationProvider } from "./shared/context/NotificationContext";
 
 export default function App() {
-  const [activePage, setActivePage] = useState<"home" | "auth" | "booking">("home");
+  // Dagdagan ng "profile" sa types
+  const [activePage, setActivePage] = useState<"home" | "auth" | "booking" | "profile">("home");
+
+  const goBack = () => setActivePage("home");
 
   return (
     <AuthProvider>
       <NotificationProvider>
-        <div className="min-h-screen">
-          {activePage === "home" && (
-            <Header
-              onBookClick={() => setActivePage("booking")}
-              onAuthClick={() => setActivePage("auth")}
-            />
-          )}
+        <div className="min-h-screen bg-[#FDFCFB]">
+
+          {/* HEADER: Dapat laging visible o depende sa page */}
+          <Header
+            onBookClick={() => setActivePage("booking")}
+            onNavigate={(page: any) => setActivePage(page)}
+          />
 
           <main>
+            {/* HOME PAGE */}
             {activePage === "home" && (
               <>
                 <HeroSection onBookClick={() => setActivePage("booking")} />
@@ -35,25 +41,31 @@ export default function App() {
                 <AmenitiesSection />
                 <GallerySection />
                 <ContactSection />
+                <Footer />
               </>
             )}
+
+            {/* AUTH PAGE / GUEST PORTAL */}
             {activePage === "auth" && (
-              <div className="py-24 px-4 sm:px-6 lg:px-8 bg-neutral-100 min-h-screen">
-                <AuthPage onBack={() => setActivePage("home")} />
-              </div>
+              <AuthPage />
             )}
+
+            {/* BOOKING PAGE */}
             {activePage === "booking" && (
               <BookingPage
-                onBack={() => setActivePage("home")}
+                onBack={goBack}
                 onRequireAuth={() => setActivePage("auth")}
               />
             )}
+
+            {/* PROFILE PAGE */}
+            {activePage === "profile" && (
+              <ProfilePage onBack={goBack} />
+            )}
           </main>
 
-          {activePage === "home" && <Footer />}
         </div>
       </NotificationProvider>
     </AuthProvider>
   );
 }
-

@@ -1,55 +1,41 @@
 import { useEffect, useState } from "react";
-import { Bell, User, Menu, X } from "lucide-react";
+import { Bell, User, Menu, X, LogOut, Calendar, CircleUser } from "lucide-react";
 import { useAuth } from "../../shared/context/AuthContext";
 import { useNotifications } from "../../shared/context/NotificationContext";
 import React from "react";
 
-const logoImage = "/section/logo.png";
-
 interface HeaderProps {
   onBookClick: () => void;
-  // onAuthClick is now optional or can be removed if you only want Google Login
-  onAuthClick?: () => void;
+  onNavigate: (page: "home" | "auth" | "booking" | "profile") => void;
 }
 
-export function Header({ onBookClick, onAuthClick }: HeaderProps) {
-  // Kinuha natin ang loginWithGoogle mula sa useAuth
-  const { user, logout, loginWithGoogle } = useAuth();
+export function Header({ onBookClick, onNavigate }: HeaderProps) {
+  const { user, logout } = useAuth();
   const { hasUnread } = useNotifications();
-
-  const [activeSection, setActiveSection] = useState("home");
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-      const sections = ["home", "about", "amenities", "gallery", "contact"];
-      const current = sections.find((section) => {
-        const element = document.getElementById(section);
-        if (element) {
-          const rect = element.getBoundingClientRect();
-          return rect.top <= 150 && rect.bottom >= 150;
-        }
-        return false;
-      });
-      if (current) setActiveSection(current);
-    };
-
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      const offset = 80;
-      const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - offset;
-      window.scrollTo({ top: offsetPosition, behavior: "smooth" });
-    }
-    setIsMobileMenuOpen(false);
+  // Helper function para sa scrolling links
+  const handleNavClick = (id: string) => {
+    // 1. Lipat muna sa Home page
+    onNavigate('home');
+
+    // 2. Wait sandali para mag-render ang sections bago mag-scroll
+    setTimeout(() => {
+      const element = document.getElementById(id);
+      if (element) {
+        const offset = 80;
+        const elementPosition = element.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - offset;
+        window.scrollTo({ top: offsetPosition, behavior: "smooth" });
+      }
+    }, 100);
   };
 
   const navLinks = [
@@ -61,136 +47,82 @@ export function Header({ onBookClick, onAuthClick }: HeaderProps) {
   ];
 
   return (
-    <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled
-          ? "bg-white/80 backdrop-blur-lg border-b border-zinc-100 py-3 shadow-sm"
-          : "bg-transparent py-5"
-        }`}
-    >
-      <nav className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-        <button
-          onClick={() => scrollToSection("home")}
-          className="flex-shrink-0 transition-transform hover:scale-105 focus:outline-none"
-        >
-          <img
-            src={logoImage}
-            alt="Ohannah Cabin"
-            className={`transition-all duration-300 ${isScrolled ? "h-10" : "h-12"} w-auto`}
-          />
+    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled ? "bg-white/90 backdrop-blur-xl py-3 shadow-sm border-b border-zinc-100" : "bg-transparent py-6"
+      }`}>
+      <nav className="max-w-7xl mx-auto px-8 flex items-center justify-between">
+
+        {/* LOGO */}
+        <button onClick={() => onNavigate('home')} className="flex-shrink-0 transition-transform hover:scale-105">
+          <img src="/section/logo.png" alt="Logo" className="h-10 w-auto" />
         </button>
 
+        {/* NAV LINKS - Ibinalik natin dito */}
         <div className="hidden md:flex items-center gap-10">
           {navLinks.map((link) => (
             <button
               key={link.id}
-              onClick={() => scrollToSection(link.id)}
-              className={`text-[11px] uppercase tracking-[0.25em] transition-all relative group ${activeSection === link.id ? "text-black font-bold" : "text-zinc-500 hover:text-black"
-                }`}
+              onClick={() => handleNavClick(link.id)}
+              className="text-[10px] uppercase tracking-[0.3em] font-bold text-zinc-400 hover:text-black transition-colors"
             >
               {link.label}
-              <span
-                className={`absolute -bottom-1 left-0 h-[1.5px] bg-[#D4AF37] transition-all duration-300 ${activeSection === link.id ? "w-full" : "w-0 group-hover:w-full"
-                  }`}
-              ></span>
             </button>
           ))}
         </div>
 
-        <div className="flex items-center gap-3">
-          {user && (
-            <button className="p-2 hover:bg-zinc-100 rounded-full transition-colors relative">
-              <Bell className="w-5 h-5 text-zinc-700" strokeWidth={1.5} />
-              {hasUnread && (
-                <span className="absolute top-2 right-2 w-2 h-2 bg-[#D4AF37] rounded-full border-2 border-white" />
-              )}
-            </button>
-          )}
-
+        <div className="flex items-center gap-4">
           <div className="relative">
-            <button
-              className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all duration-300 ${isScrolled ? "border-zinc-200 hover:border-black" : "border-black/10 hover:border-black"
-                }`}
-              onClick={async () => {
-                if (!user) {
-                  // DITO ANG MAGIC: Deretsong tawag sa Google Login
-                  try {
-                    await loginWithGoogle();
-                  } catch (err) {
-                    alert("Failed to sign in with Google");
-                  }
-                } else {
-                  setIsUserMenuOpen(!isUserMenuOpen);
-                }
-              }}
-            >
-              <User className="w-4 h-4 text-zinc-800" strokeWidth={1.5} />
-              {!user && (
-                <span className="text-[10px] uppercase tracking-widest font-bold text-zinc-800">
-                  Sign In
+            {user ? (
+              /* ICON LANG - HINDI PROFILE PIC */
+              <button
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="flex items-center gap-2 p-2 rounded-full hover:bg-zinc-100 transition-all"
+              >
+                <CircleUser size={24} strokeWidth={1.5} className="text-zinc-800" />
+                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">
+                  {user.displayName?.split(' ')[0]}
                 </span>
-              )}
-            </button>
+              </button>
+            ) : (
+              <button
+                className="flex items-center gap-2 px-6 py-2.5 rounded-full border border-black/20 hover:bg-black hover:text-white transition-all group"
+                onClick={() => onNavigate('auth')}
+              >
+                <User size={14} />
+                <span className="text-[10px] uppercase tracking-[0.2em] font-black">Sign In</span>
+              </button>
+            )}
 
+            {/* DROPDOWN */}
             {user && isUserMenuOpen && (
-              <div className="absolute right-0 mt-3 w-56 bg-white border border-zinc-100 rounded-xl shadow-2xl py-2 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                <div className="px-4 py-3 border-b border-zinc-50">
-                  <p className="text-[10px] text-zinc-400 uppercase tracking-tighter">Account</p>
-                  <p className="text-sm font-medium truncate">{user.email}</p>
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setIsUserMenuOpen(false)} />
+                <div className="absolute right-0 mt-4 w-64 bg-white border border-zinc-100 rounded-[1.5rem] shadow-2xl py-3 z-20 animate-in fade-in slide-in-from-top-2">
+                  <div className="px-5 py-4 border-b border-zinc-50 mb-2">
+                    <p className="text-[9px] text-[#D4AF37] font-black uppercase tracking-widest">Account Overview</p>
+                    <p className="text-sm font-bold text-zinc-900 truncate">{user.email}</p>
+                  </div>
+
+                  <button
+                    className="w-full text-left px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-zinc-600 hover:bg-zinc-50 flex items-center gap-3 transition-colors"
+                    onClick={() => { setIsUserMenuOpen(false); onNavigate('profile'); }}
+                  >
+                    <Calendar size={14} className="text-[#D4AF37]" /> My Reservations
+                  </button>
+
+                  <div className="border-t border-zinc-50 mt-2 pt-2">
+                    <button
+                      className="w-full text-left px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-red-500 hover:bg-red-50 flex items-center gap-3 transition-colors"
+                      onClick={async () => { await logout(); onNavigate('home'); }}
+                    >
+                      <LogOut size={14} /> Logout
+                    </button>
+                  </div>
                 </div>
-                <button
-                  className="w-full text-left px-4 py-3 text-sm hover:bg-zinc-50 transition-colors"
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    scrollToSection("bookings");
-                  }}
-                >
-                  My Reservations
-                </button>
-                <button
-                  className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-red-50 transition-colors"
-                  onClick={async () => {
-                    setIsUserMenuOpen(false);
-                    await logout();
-                  }}
-                >
-                  Logout
-                </button>
-              </div>
+              </>
             )}
           </div>
-
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 text-zinc-800"
-          >
-            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
         </div>
       </nav>
-
-      {isMobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 top-[60px] bg-white z-50 p-8 space-y-8 animate-in slide-in-from-right">
-          <div className="flex flex-col gap-6">
-            {navLinks.map((link) => (
-              <button
-                key={link.id}
-                onClick={() => scrollToSection(link.id)}
-                className={`text-2xl font-serif text-left ${activeSection === link.id ? "text-[#D4AF37] italic" : "text-black"
-                  }`}
-                style={{ fontFamily: "'Playfair Display', serif" }}
-              >
-                {link.label}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={onBookClick}
-            className="w-full py-4 bg-black text-white text-xs uppercase tracking-[0.3em] font-bold border border-[#D4AF37]"
-          >
-            Reserve Now
-          </button>
-        </div>
-      )}
     </header>
   );
 }

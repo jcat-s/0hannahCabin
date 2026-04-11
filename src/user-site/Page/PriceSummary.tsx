@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Image as ImageIcon, X } from "lucide-react";
 
-// Local Pricing Data para sa Modal
+// Updated Pricing Data
 const PRICING_DATA = {
     ohannah: {
         day: { weekday: 5500, weekend: 6000 },
@@ -12,44 +12,51 @@ const PRICING_DATA = {
         day: { weekday: 6000, weekend: 7000 },
         evening: { weekday: 8000, weekend: 9000 },
         full: { weekday: 12000, weekend: 13000 },
-    }
+    },
 };
 
-interface SummaryRowProps {
-    label: string;
-    value: string;
-}
-
-const SummaryRow = ({ label, value }: SummaryRowProps) => (
-    <div className="flex justify-between items-center">
-        <span className="text-zinc-500 font-bold uppercase text-[9px] tracking-[0.3em]">{label}</span>
-        <span className="font-bold text-zinc-100 text-[10px] tracking-widest">{value}</span>
-    </div>
-);
-
 interface PriceSummaryProps {
-    cabin: string;
-    stayType: string;
+    cabin: "ohannah" | "dream";
+    stayType: "day" | "evening" | "full";
     guests: number;
     pets: number;
     durationCount: number;
-    totalPrice: number;
+    isHighRate: boolean;
     canBookCore: boolean;
     submitting: boolean;
     selectedColor: string;
     isDateRangeValid: boolean;
-    onSubmit: () => void;
+    onSubmit: (totalPrice: number) => void;
 }
 
 export function PriceSummary({
-    cabin, stayType, guests, pets, durationCount, totalPrice,
-    canBookCore, submitting, selectedColor, isDateRangeValid, onSubmit
+    cabin, stayType, guests, pets, durationCount, isHighRate,
+    canBookCore, submitting, selectedColor, isDateRangeValid, onSubmit,
 }: PriceSummaryProps) {
     const [showModal, setShowModal] = useState(false);
 
+    // Dynamic Calculation Logic
+    const totalPrice = useMemo(() => {
+        const base = PRICING_DATA[cabin][stayType][isHighRate ? "weekend" : "weekday"];
+
+        // Extra Pax: Full stay = 500, Sessions = 300
+        const extraPaxRate = stayType === "full" ? 500 : 300;
+        const extraPaxTotal = guests > 4 ? (guests - 4) * extraPaxRate : 0;
+
+        // Pet Fee: Ohannah (150/250) vs Dream (250/500)
+        let petRate = 0;
+        if (cabin === "ohannah") {
+            petRate = stayType === "full" ? 250 : 150;
+        } else {
+            petRate = stayType === "full" ? 500 : 250;
+        }
+
+        return (base * durationCount) + extraPaxTotal + (pets * petRate);
+    }, [cabin, stayType, guests, pets, durationCount, isHighRate]);
+
     return (
         <>
-            {/* MAIN SUMMARY CARD */}
+            {/* MAIN SUMMARY CARD (Original Structure) */}
             <div className="bg-zinc-950 rounded-[3.5rem] p-12 text-white sticky top-32 shadow-[0_40px_100px_rgba(0,0,0,0.4)] border border-white/5 overflow-hidden">
                 <div className="absolute top-0 right-0 w-40 h-40 bg-[#D4AF37]/10 blur-[80px] rounded-full -mr-20 -mt-20" />
 
@@ -65,8 +72,11 @@ export function PriceSummary({
 
                 <div className="space-y-6 mb-12">
                     <SummaryRow label="Property" value={cabin === 'ohannah' ? 'Ohannah Cabin' : 'The Dream by Ohannah'} />
-                    <SummaryRow label="Stay Plan" value={stayType.toUpperCase()} />
-                    <SummaryRow label="Pax Details" value={`${guests} Pax / ${pets} Pets`} />
+                    <SummaryRow
+                        label="Stay Plan"
+                        value={stayType === "full" ? "FULL STAY" : stayType === "day" ? "DAY LOUNGE" : "EVENING CHILL"}
+                    />
+                    <SummaryRow label="Pax Details" value={`${guests} Pax / ${pets} ${pets === 1 ? 'Pet' : 'Pets'}`} />
                     <SummaryRow label="Total Time" value={`${durationCount} ${stayType === 'full' ? 'Night(s)' : 'Session'}`} />
                 </div>
 
@@ -79,7 +89,7 @@ export function PriceSummary({
 
                 <button
                     disabled={!canBookCore || submitting}
-                    onClick={onSubmit}
+                    onClick={() => onSubmit(totalPrice)}
                     className={`w-full py-6 rounded-2xl font-black text-[11px] tracking-[0.4em] uppercase shadow-2xl transition-all ${(!canBookCore)
                         ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed opacity-50'
                         : 'bg-white text-zinc-950 hover:bg-[#D4AF37] hover:text-white active:scale-[0.98]'
@@ -89,55 +99,30 @@ export function PriceSummary({
                 </button>
             </div>
 
-            {/* FULL IMAGE PRICE LIST MODAL */}
+            {/* REVISED MODAL (Clean Full View) */}
             {showModal && (
                 <div
-                    className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-8 bg-zinc-950/90 backdrop-blur-xl animate-in fade-in duration-300"
+                    className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-zinc-950/90 backdrop-blur-xl animate-in fade-in duration-300"
                     onClick={() => setShowModal(false)}
                 >
+                    {/* Modernized Close Button */}
+                    <button
+                        onClick={() => setShowModal(false)}
+                        className="absolute top-8 right-8 z-[210] p-3 text-white hover:text-[#D4AF37] transition-all"
+                    >
+                        <X size={32} />
+                    </button>
+
+                    {/* Image container (maximized) */}
                     <div
-                        className="bg-white rounded-[2.5rem] md:rounded-[3.5rem] w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl relative"
+                        className="w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-[1.5rem]"
                         onClick={e => e.stopPropagation()}
                     >
-                        {/* Close Button */}
-                        <button
-                            onClick={() => setShowModal(false)}
-                            className="fixed md:absolute top-8 right-8 z-[210] p-3 bg-zinc-900/80 text-white rounded-full backdrop-blur-md hover:bg-zinc-900 transition-all shadow-xl"
-                        >
-                            <X size={24} />
-                        </button>
-
-                        {/* Image Container - h-auto ensures no cropping */}
-                        <div className="w-full">
-                            <img
-                                src="/section/price.jpg"
-                                alt="Ohannah Rates"
-                                className="w-full h-auto block"
-                                loading="lazy"
-                            />
-                        </div>
-
-                        {/* Additional Info Section */}
-                        <div className="p-10 md:p-14 bg-white border-t border-zinc-50">
-
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {Object.entries(PRICING_DATA).map(([id, rates]) => (
-                                    <div key={id} className="space-y-5 bg-zinc-50 p-8 rounded-[2rem]">
-                                        <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-[#D4AF37] border-b border-zinc-200 pb-3">
-                                            {id === 'ohannah' ? 'Ohannah Cabin' : 'The Dream by Ohannah'}
-                                        </h3>
-                                        <div className="space-y-3">
-                                            <PriceRow label="Day Lounge" weekday={rates.day.weekday} weekend={rates.day.weekend} />
-                                            <PriceRow label="Evening Chill" weekday={rates.evening.weekday} weekend={rates.evening.weekend} />
-                                            <PriceRow label="Full Stay" weekday={rates.full.weekday} weekend={rates.full.weekend} />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-
-                        </div>
+                        <img
+                            src="/section/price.jpg"
+                            alt="Rates Sheet"
+                            className="w-full h-auto block rounded-[1.5rem]"
+                        />
                     </div>
                 </div>
             )}
@@ -145,14 +130,12 @@ export function PriceSummary({
     );
 }
 
-// Internal Helper for Price Rows in Modal
-function PriceRow({ label, weekday, weekend }: { label: string, weekday: number, weekend: number }) {
+// Helpers (Original)
+function SummaryRow({ label, value }: { label: string; value: string }) {
     return (
-        <div className="flex justify-between items-center text-[12px]">
-            <span className="text-zinc-500 font-bold uppercase tracking-widest">{label}</span>
-            <div className="text-zinc-900 font-black">
-                ₱{weekday.toLocaleString()} <span className="text-zinc-300 mx-1">/</span> <span className="text-[#D4AF37]">₱{weekend.toLocaleString()}</span>
-            </div>
+        <div className="flex justify-between items-center">
+            <span className="text-zinc-500 font-bold uppercase text-[9px] tracking-[0.3em]">{label}</span>
+            <span className="font-bold text-zinc-100 text-[10px] tracking-widest text-right">{value}</span>
         </div>
     );
 }

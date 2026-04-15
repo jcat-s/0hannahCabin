@@ -1,141 +1,123 @@
-import React, { useState, useMemo } from "react";
-import { Image as ImageIcon, X } from "lucide-react";
-
-// Updated Pricing Data
-const PRICING_DATA = {
-    ohannah: {
-        day: { weekday: 5500, weekend: 6000 },
-        evening: { weekday: 7500, weekend: 8000 },
-        full: { weekday: 10000, weekend: 11000 },
-    },
-    dream: {
-        day: { weekday: 6000, weekend: 7000 },
-        evening: { weekday: 8000, weekend: 9000 },
-        full: { weekday: 12000, weekend: 13000 },
-    },
-};
+import React, { useMemo, useState } from "react";
+import { Image as ImageIcon, X, Receipt, Info, PartyPopper, ShieldCheck } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { CabinId, StayType, calculateTotal } from "../../shared/lib/bookingPricing";
 
 interface PriceSummaryProps {
-    cabin: "ohannah" | "dream";
-    stayType: "day" | "evening" | "full";
-    guests: number;
-    pets: number;
-    durationCount: number;
-    isHighRate: boolean;
-    canBookCore: boolean;
-    submitting: boolean;
-    selectedColor: string;
-    isDateRangeValid: boolean;
-    onSubmit: (totalPrice: number) => void;
+    cabin: CabinId; stayType: StayType; guests: number; kids: number;
+    pets: number; checkIn: string; checkOut: string;
+    specialOccasion?: string; durationCount: number;
+    isHighRate: boolean; canBookCore: boolean;
+    submitting: boolean; onSubmit: (total: number) => void;
 }
 
 export function PriceSummary({
-    cabin, stayType, guests, pets, durationCount, isHighRate,
-    canBookCore, submitting, selectedColor, isDateRangeValid, onSubmit,
+    cabin, stayType, guests, kids, pets, checkIn, checkOut, specialOccasion,
+    durationCount, isHighRate, canBookCore, submitting, onSubmit
 }: PriceSummaryProps) {
     const [showModal, setShowModal] = useState(false);
 
-    // Dynamic Calculation Logic
-    const totalPrice = useMemo(() => {
-        const base = PRICING_DATA[cabin][stayType][isHighRate ? "weekend" : "weekday"];
+    // Dito kinakalikot ang presyo. Tandaan: Kids = Free kaya hindi sila kailangang i-multiply sa calculateTotal
+    const pricing = useMemo(() =>
+        calculateTotal(cabin, stayType, guests, pets, isHighRate, durationCount),
+        [cabin, stayType, guests, pets, isHighRate, durationCount]
+    );
 
-        // Extra Pax: Full stay = 500, Sessions = 300
-        const extraPaxRate = stayType === "full" ? 500 : 300;
-        const extraPaxTotal = guests > 4 ? (guests - 4) * extraPaxRate : 0;
-
-        // Pet Fee: Ohannah (150/250) vs Dream (250/500)
-        let petRate = 0;
-        if (cabin === "ohannah") {
-            petRate = stayType === "full" ? 250 : 150;
-        } else {
-            petRate = stayType === "full" ? 500 : 250;
-        }
-
-        return (base * durationCount) + extraPaxTotal + (pets * petRate);
-    }, [cabin, stayType, guests, pets, durationCount, isHighRate]);
+    const stayLabels = {
+        day: { label: "Day Lounge", time: "9AM - 5PM" },
+        evening: { label: "Evening Chill", time: "8PM - 7AM" },
+        full: { label: "Full Stay", time: "9AM-7AM / 8PM-5PM" }
+    };
 
     return (
-        <>
-            {/* MAIN SUMMARY CARD (Original Structure) */}
-            <div className="bg-zinc-950 rounded-[3.5rem] p-12 text-white sticky top-32 shadow-[0_40px_100px_rgba(0,0,0,0.4)] border border-white/5 overflow-hidden">
-                <div className="absolute top-0 right-0 w-40 h-40 bg-[#D4AF37]/10 blur-[80px] rounded-full -mr-20 -mt-20" />
-
-                <div className="flex justify-between items-center mb-12 border-b border-white/10 pb-8">
-                    <h3 className="text-lg font-serif italic" style={{ fontFamily: "'Playfair Display', serif" }}>Price Summary</h3>
-                    <button
-                        onClick={() => setShowModal(true)}
-                        className="p-2 hover:bg-white/10 rounded-full text-[#D4AF37] transition-all active:scale-90"
-                    >
-                        <ImageIcon size={20} />
-                    </button>
+        <div className="bg-zinc-950 rounded-[3.5rem] p-10 text-white sticky top-32 border border-white/5 shadow-[0_40px_100px_rgba(0,0,0,0.6)]">
+            <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-6">
+                <div className="flex items-center gap-3">
+                    <Receipt size={22} className="text-[#D4AF37]" />
+                    <h3 className="text-xl font-serif italic tracking-tight">Booking Confirmation</h3>
                 </div>
-
-                <div className="space-y-6 mb-12">
-                    <SummaryRow label="Property" value={cabin === 'ohannah' ? 'Ohannah Cabin' : 'The Dream by Ohannah'} />
-                    <SummaryRow
-                        label="Stay Plan"
-                        value={stayType === "full" ? "FULL STAY" : stayType === "day" ? "DAY LOUNGE" : "EVENING CHILL"}
-                    />
-                    <SummaryRow label="Pax Details" value={`${guests} Pax / ${pets} ${pets === 1 ? 'Pet' : 'Pets'}`} />
-                    <SummaryRow label="Total Time" value={`${durationCount} ${stayType === 'full' ? 'Night(s)' : 'Session'}`} />
-                </div>
-
-                <div className="bg-white/5 rounded-[2.5rem] p-10 mb-12 border border-white/5 text-center">
-                    <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.4em]">Total Amount</span>
-                    <div className="text-5xl font-serif italic mt-4 text-[#D4AF37]">
-                        ₱{totalPrice.toLocaleString()}
-                    </div>
-                </div>
-
-                <button
-                    disabled={!canBookCore || submitting}
-                    onClick={() => onSubmit(totalPrice)}
-                    className={`w-full py-6 rounded-2xl font-black text-[11px] tracking-[0.4em] uppercase shadow-2xl transition-all ${(!canBookCore)
-                        ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed opacity-50'
-                        : 'bg-white text-zinc-950 hover:bg-[#D4AF37] hover:text-white active:scale-[0.98]'
-                        }`}
-                >
-                    {submitting ? "Processing..." : !selectedColor ? "Select Slot Color" : !isDateRangeValid ? "Date Taken" : "Confirm Booking"}
+                <button onClick={() => setShowModal(true)} className="text-[#D4AF37] hover:scale-110 transition-transform">
+                    <ImageIcon size={20} />
                 </button>
             </div>
 
-            {/* REVISED MODAL (Clean Full View) */}
-            {showModal && (
-                <div
-                    className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-zinc-950/90 backdrop-blur-xl animate-in fade-in duration-300"
-                    onClick={() => setShowModal(false)}
-                >
-                    {/* Modernized Close Button */}
-                    <button
-                        onClick={() => setShowModal(false)}
-                        className="absolute top-8 right-8 z-[210] p-3 text-white hover:text-[#D4AF37] transition-all"
-                    >
-                        <X size={32} />
-                    </button>
+            <div className="space-y-5 mb-10">
+                <SummaryRow label="Property" value={cabin === 'ohannah' ? 'Ohannah Cabin' : 'The Dream'} />
 
-                    {/* Image container (maximized) */}
-                    <div
-                        className="w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-[1.5rem]"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <img
-                            src="/section/price.jpg"
-                            alt="Rates Sheet"
-                            className="w-full h-auto block rounded-[1.5rem]"
-                        />
+                <div className="grid grid-cols-2 gap-4 py-2 border-y border-white/5">
+                    <div className="flex flex-col">
+                        <span className="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Check-in</span>
+                        <span className="text-[10px] font-bold">{checkIn ? format(parseISO(checkIn), "MMM dd, yyyy") : "---"}</span>
+                    </div>
+                    <div className="flex flex-col text-right">
+                        <span className="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Check-out</span>
+                        <span className="text-[10px] font-bold">{checkOut ? format(parseISO(checkOut), "MMM dd, yyyy") : "---"}</span>
                     </div>
                 </div>
+
+                <SummaryRow label="Stay" value={`${durationCount} ${stayLabels[stayType].label}`} />
+
+                <div className="pt-2 space-y-3">
+                    <SummaryRow label="Adults" value={`${guests} Pax`} />
+                    {/* Pakita natin ang Kids dito para alam ng customer na na-record sila */}
+                    {kids > 0 && (
+                        <SummaryRow label="Kids (Free)" value={`${kids} Pax`} />
+                    )}
+                    {pets > 0 && (
+                        <SummaryRow label="Pets" value={`${pets} Pax`} />
+                    )}
+                </div>
+
+                {specialOccasion && (
+                    <div className="mt-4 bg-white/5 p-3 rounded-xl border border-white/5 flex items-center gap-2">
+                        <PartyPopper size={12} className="text-[#D4AF37]" />
+                        <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-tighter">Occasion: {specialOccasion}</span>
+                    </div>
+                )}
+            </div>
+
+            <div className="bg-white/5 rounded-[2.5rem] p-8 text-center border border-white/5 mb-8">
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Total Amount</span>
+                <div className="text-5xl font-serif italic text-[#D4AF37] mt-2">
+                    ₱{pricing.grandTotal.toLocaleString()}
+                </div>
+                <div className="mt-4 flex flex-col gap-1 text-[8px] text-zinc-500 uppercase font-bold tracking-widest">
+                    <span>Base: ₱{pricing.basePrice.toLocaleString()}</span>
+                    {pricing.extraPaxTotal > 0 && <span>Extra Pax: +₱{pricing.extraPaxTotal.toLocaleString()}</span>}
+                    {pricing.petTotal > 0 && <span>Pets: +₱{pricing.petTotal.toLocaleString()}</span>}
+                </div>
+            </div>
+
+            <div className="mb-8 flex items-start gap-3 bg-white/5 p-4 rounded-2xl border border-white/5">
+                <ShieldCheck size={16} className="text-[#D4AF37] shrink-0" />
+                <p className="text-[8px] text-zinc-400 uppercase tracking-widest leading-relaxed">
+                    Note: Refundable <b>₱2,000</b> security deposit to be settled upon check-in.
+                </p>
+            </div>
+
+            <button
+                disabled={!canBookCore || submitting}
+                onClick={() => onSubmit(pricing.grandTotal)}
+                className="w-full py-6 rounded-2xl bg-white text-black font-black uppercase tracking-[0.3em] text-[11px] hover:bg-[#D4AF37] hover:text-white transition-all disabled:opacity-20 active:scale-95 shadow-xl"
+            >
+                {submitting ? "Processing..." : "Confirm Booking"}
+            </button>
+
+            {showModal && (
+                <div className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-6" onClick={() => setShowModal(false)}>
+                    <X className="absolute top-10 right-10 text-white cursor-pointer" size={32} />
+                    <img src="/section/price.jpg" className="max-w-4xl w-full rounded-2xl" alt="Rates" />
+                </div>
             )}
-        </>
+        </div>
     );
 }
 
-// Helpers (Original)
 function SummaryRow({ label, value }: { label: string; value: string }) {
     return (
         <div className="flex justify-between items-center">
-            <span className="text-zinc-500 font-bold uppercase text-[9px] tracking-[0.3em]">{label}</span>
-            <span className="font-bold text-zinc-100 text-[10px] tracking-widest text-right">{value}</span>
+            <span className="text-zinc-500 font-black uppercase text-[9px] tracking-[0.2em]">{label}</span>
+            <span className="font-bold text-zinc-100 text-[10px] uppercase">{value}</span>
         </div>
     );
 }

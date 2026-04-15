@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from "react";
-import { format, addDays, parseISO, differenceInDays } from "date-fns";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { format, addDays, parseISO, differenceInDays, isAfter, isBefore } from "date-fns";
 import { ChevronLeft } from "lucide-react";
 import { collection, addDoc, serverTimestamp, query, onSnapshot, doc, getDoc } from "firebase/firestore";
 import { db } from "../../shared/lib/firebase";
@@ -7,21 +7,25 @@ import { useAuth } from "../../shared/context/AuthContext";
 import { useNotifications } from "../../shared/context/NotificationContext";
 
 import { PriceSummary } from "./PriceSummary";
-import { CalendarBooked, checkIsHoliday } from "./CalendarBooked";
+import { CalendarBooked } from "./CalendarBooked";
 import { BookingCategory } from "./BookingCategory";
-import { BookingConfirmation } from "./BookingConfirmation"; // SIGURADUHING TAMA ANG PATH
+import { BookingConfirmation } from "./BookingConfirmation";
+import { checkIsHighRate, CabinId, StayType } from "../../shared/lib/bookingPricing";
 
 export function BookingPage({ onBack, onRequireAuth }: { onBack: () => void; onRequireAuth?: () => void }) {
   const { user } = useAuth();
   const { addNotification } = useNotifications();
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
-  const [cabin, setCabin] = useState<any>("ohannah");
-  const [stayType, setStayType] = useState<any>("full");
+  // --- STATES ---
+  const [cabin, setCabin] = useState<CabinId>("ohannah");
+  const [stayType, setStayType] = useState<StayType>("full");
   const [checkIn, setCheckIn] = useState(todayStr);
   const [checkOut, setCheckOut] = useState(format(addDays(new Date(), 1), "yyyy-MM-dd"));
   const [guests, setGuests] = useState(4);
+  const [kids, setKids] = useState(0); // Added Kids state
   const [pets, setPets] = useState(0);
+  const [specialOccasion, setSpecialOccasion] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
   const [currentViewDate, setCurrentViewDate] = useState(new Date());
   const [dbBookings, setDbBookings] = useState<any[]>([]);
@@ -30,6 +34,7 @@ export function BookingPage({ onBack, onRequireAuth }: { onBack: () => void; onR
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [lastBookingData, setLastBookingData] = useState<any>(null);
 
+  // --- FIREBASE SYNC ---
   useEffect(() => {
     if (!db) return;
     const q = query(collection(db, "bookings"));
@@ -42,69 +47,91 @@ export function BookingPage({ onBack, onRequireAuth }: { onBack: () => void; onR
     return () => { unsubBookings(); unsubHolidays(); };
   }, []);
 
+  // --- LOGIC HANDLERS ---
+
+  // Update Checkout automatically when Checkin or StayType changes
+  const handleDateLogic = useCallback((newIn: string, type: StayType) => {
+    setCheckIn(newIn);
+    if (type === "full") {
+      const nextDay = format(addDays(parseISO(newIn), 1), "yyyy-MM-dd");
+      setCheckOut(nextDay);
+    } else {
+      setCheckOut(newIn); // Same day for Day/Evening lounge
+    }
+  }, []);
+
   const filteredBookings = useMemo(() =>
     dbBookings.filter(b => b.cabin === cabin && (b.status === "Approved" || b.status === "Confirmed")),
     [cabin, dbBookings]);
 
-  const durationCount = useMemo(() =>
-    stayType === "full" ? Math.max(differenceInDays(parseISO(checkOut), parseISO(checkIn)), 1) : 1,
-    [checkIn, checkOut, stayType]);
+  const durationCount = useMemo(() => {
+    if (stayType !== "full") return 1;
+    const diff = differenceInDays(parseISO(checkOut), parseISO(checkIn));
+    return Math.max(diff, 1);
+  }, [checkIn, checkOut, stayType]);
 
-  const isHolidayOrWeekend = useMemo(() => {
-    const d = parseISO(checkIn);
-    return checkIsHoliday(d, dbHolidays);
+  const isHighRate = useMemo(() => {
+    return checkIsHighRate(parseISO(checkIn), dbHolidays);
   }, [checkIn, dbHolidays]);
 
   const isDateRangeValid = useMemo(() => {
     const start = parseISO(checkIn);
     const end = parseISO(checkOut);
-    return !filteredBookings.some(b => (start <= parseISO(b.checkOut) && end >= parseISO(b.checkIn)));
+    // Prevents booking if dates overlap with existing approved bookings
+    return !filteredBookings.some(b => {
+      const bStart = parseISO(b.checkInDate || b.checkIn); // Ensure field name matches DB
+      const bEnd = parseISO(b.checkOutDate || b.checkOut);
+      return (start < bEnd && end > bStart);
+    });
   }, [checkIn, checkOut, filteredBookings]);
 
   const handleBooking = async (finalPrice: number) => {
     if (!user) return onRequireAuth?.();
-    setSubmitting(true);
+    if (!selectedColor) return alert("Please select a color slot.");
 
+    setSubmitting(true);
     try {
       const userSnap = await getDoc(doc(db, "users", user.uid));
       const profile = userSnap.exists() ? userSnap.data() : null;
 
       const bookingPayload = {
         customerName: profile?.fullName || user.displayName || "Valued Guest",
-        mobile: profile?.mobile || "Not Provided",
-        address: profile?.address || "No Address Provided",
-        cabin, stayType,
-        checkIn: `${stayType === 'day' ? '9AM' : stayType === 'evening' ? '8PM' : '2PM'} of ${format(parseISO(checkIn), "MMMM dd, yyyy")}`,
-        checkOut: `${stayType === 'day' ? '5PM' : stayType === 'evening' ? '7AM' : '12PM'} of ${format(parseISO(checkOut), "MMMM dd, yyyy")}`,
-        guests, pets,
-        isHighRate: isHolidayOrWeekend,
+        userId: user.uid,
+        cabin,
+        stayType,
+        checkIn,
+        checkOut,
+        guests,
+        kids,
+        pets,
+        specialOccasion,
+        color: selectedColor,
+        isHighRate,
         totalPrice: finalPrice,
+        status: "Pending",
+        createdAt: serverTimestamp(),
       };
 
-      await addDoc(collection(db, "bookings"), {
-        ...bookingPayload,
-        userId: user.uid,
-        color: selectedColor,
-        status: "Pending",
-        createdAt: serverTimestamp()
-      });
+      await addDoc(collection(db, "bookings"), bookingPayload);
 
       setLastBookingData(bookingPayload);
       setShowConfirmation(true);
       addNotification({ title: "Success", description: "Booking Request Sent!", read: false });
     } catch (err) {
+      console.error(err);
       addNotification({ title: "Error", description: "Failed to save booking", read: false });
     } finally {
       setSubmitting(false);
     }
   };
 
+  // --- RENDER VIEWS ---
   if (showConfirmation && lastBookingData) {
     return (
       <div className="min-h-screen bg-zinc-50 py-20 px-6">
         <div className="max-w-2xl mx-auto">
           <button onClick={() => window.location.reload()} className="mb-8 flex items-center gap-2 text-zinc-400">
-            <ChevronLeft size={20} /> <span className="text-xs font-black uppercase tracking-widest">Finish</span>
+            <ChevronLeft size={20} /> <span className="text-xs font-black uppercase tracking-widest">Back to Home</span>
           </button>
           <BookingConfirmation bookingData={lastBookingData} />
         </div>
@@ -123,19 +150,61 @@ export function BookingPage({ onBack, onRequireAuth }: { onBack: () => void; onR
 
       <div className="max-w-7xl mx-auto px-6 mt-12 grid grid-cols-1 lg:grid-cols-12 gap-12">
         <div className="lg:col-span-8 space-y-12">
+          {/* CABIN SELECTOR */}
           <section className="bg-zinc-950 p-2 rounded-[2rem] flex gap-2">
-            {["ohannah", "dream"].map(c => (
+            {(["ohannah", "dream"] as CabinId[]).map(c => (
               <button key={c} onClick={() => { setCabin(c); setSelectedColor(""); }}
                 className={`flex-1 py-4 rounded-[1.6rem] text-[10px] font-bold uppercase tracking-[0.3em] transition-all ${cabin === c ? 'bg-white text-zinc-950' : 'text-zinc-500 hover:text-white'}`}>
                 {c === 'ohannah' ? 'Ohannah Cabin' : 'The Dream'}
               </button>
             ))}
           </section>
-          <CalendarBooked currentViewDate={currentViewDate} setCurrentViewDate={setCurrentViewDate} filteredBookings={filteredBookings} />
-          <BookingCategory stayType={stayType} setStayType={setStayType} checkIn={checkIn} setCheckIn={setCheckIn} checkOut={checkOut} setCheckOut={setCheckOut} guests={guests} setGuests={setGuests} pets={pets} setPets={setPets} selectedColor={selectedColor} setSelectedColor={setSelectedColor} filteredBookings={filteredBookings} todayStr={todayStr} />
+
+          <CalendarBooked
+            currentViewDate={currentViewDate}
+            setCurrentViewDate={setCurrentViewDate}
+            filteredBookings={filteredBookings}
+          />
+
+          <BookingCategory
+            cabin={cabin}
+            stayType={stayType}
+            setStayType={(t) => { setStayType(t); handleDateLogic(checkIn, t); }}
+            checkIn={checkIn}
+            setCheckIn={(d) => handleDateLogic(d, stayType)}
+            checkOut={checkOut}
+            setCheckOut={setCheckOut}
+            guests={guests}
+            setGuests={setGuests}
+            kids={kids}
+            setKids={setKids}
+            pets={pets}
+            setPets={setPets}
+            specialOccasion={specialOccasion}
+            setSpecialOccasion={setSpecialOccasion}
+            selectedColor={selectedColor}
+            setSelectedColor={setSelectedColor}
+            filteredBookings={filteredBookings}
+            todayStr={todayStr}
+          />
         </div>
+
         <div className="lg:col-span-4 h-fit sticky top-32">
-          <PriceSummary cabin={cabin} stayType={stayType} guests={guests} pets={pets} durationCount={durationCount} isHighRate={isHolidayOrWeekend} canBookCore={isDateRangeValid && selectedColor !== ""} submitting={submitting} selectedColor={selectedColor} isDateRangeValid={isDateRangeValid} onSubmit={handleBooking} />
+          <PriceSummary
+            cabin={cabin}
+            stayType={stayType}
+            guests={guests}
+            kids={kids}
+            pets={pets}
+            checkIn={checkIn}
+            checkOut={checkOut}
+            specialOccasion={specialOccasion}
+            durationCount={durationCount}
+            isHighRate={isHighRate}
+            canBookCore={isDateRangeValid && selectedColor !== "" && durationCount > 0}
+            submitting={submitting}
+            onSubmit={handleBooking}
+          />
         </div>
       </div>
     </div>

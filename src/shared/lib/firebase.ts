@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage"; // 1. Idinagdag ito
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -23,18 +24,22 @@ let app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 let authInstance;
 let googleProviderInstance;
 let dbInstance;
+let storageInstance; // 2. Idinagdag ito
 
 try {
   authInstance = getAuth(app);
   googleProviderInstance = new GoogleAuthProvider();
   dbInstance = getFirestore(app);
+  storageInstance = getStorage(app); // 3. Initialize storage
 } catch (error) {
-  console.error("[Firebase] Failed to initialize auth:", error);
+  console.error("[Firebase] Failed to initialize services:", error);
   authInstance = undefined;
   googleProviderInstance = undefined;
   dbInstance = undefined;
+  storageInstance = undefined;
 }
 
 export const auth = authInstance;
 export const googleProvider = googleProviderInstance;
 export const db = dbInstance;
+export const storage = storageInstance; // 4. I-export ang storage

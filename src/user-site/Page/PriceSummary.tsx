@@ -34,7 +34,8 @@ export function PriceSummary({
             <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-6">
                 <div className="flex items-center gap-3">
                     <Receipt size={22} className="text-[#D4AF37]" />
-                    <h3 className="text-xl font-serif italic tracking-tight">Booking Confirmation</h3>
+                    <h3 className="text-xl font-serif italic tracking-tight">Price Summary</h3>
+                    <h6 className="text-[8px] uppercase tracking-[0.3em] text-zinc-500 font-bold">click pic</h6>
                 </div>
                 <button onClick={() => setShowModal(true)} className="text-[#D4AF37] hover:scale-110 transition-transform">
                     <ImageIcon size={20} />

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
-import { format, addDays, parseISO, differenceInDays, isAfter, isBefore } from "date-fns";
+import { format, addDays, parseISO, differenceInDays } from "date-fns";
 import { ChevronLeft } from "lucide-react";
-import { collection, addDoc, serverTimestamp, query, onSnapshot, doc, getDoc } from "firebase/firestore";
+import { collection, query, onSnapshot, doc, getDoc } from "firebase/firestore";
 import { db } from "../../shared/lib/firebase";
 import { useAuth } from "../../shared/context/AuthContext";
 import { useNotifications } from "../../shared/context/NotificationContext";
@@ -23,7 +23,7 @@ export function BookingPage({ onBack, onRequireAuth }: { onBack: () => void; onR
   const [checkIn, setCheckIn] = useState(todayStr);
   const [checkOut, setCheckOut] = useState(format(addDays(new Date(), 1), "yyyy-MM-dd"));
   const [guests, setGuests] = useState(4);
-  const [kids, setKids] = useState(0); // Added Kids state
+  const [kids, setKids] = useState(0);
   const [pets, setPets] = useState(0);
   const [specialOccasion, setSpecialOccasion] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
@@ -48,15 +48,13 @@ export function BookingPage({ onBack, onRequireAuth }: { onBack: () => void; onR
   }, []);
 
   // --- LOGIC HANDLERS ---
-
-  // Update Checkout automatically when Checkin or StayType changes
   const handleDateLogic = useCallback((newIn: string, type: StayType) => {
     setCheckIn(newIn);
     if (type === "full") {
       const nextDay = format(addDays(parseISO(newIn), 1), "yyyy-MM-dd");
       setCheckOut(nextDay);
     } else {
-      setCheckOut(newIn); // Same day for Day/Evening lounge
+      setCheckOut(newIn);
     }
   }, []);
 
@@ -77,28 +75,36 @@ export function BookingPage({ onBack, onRequireAuth }: { onBack: () => void; onR
   const isDateRangeValid = useMemo(() => {
     const start = parseISO(checkIn);
     const end = parseISO(checkOut);
-    // Prevents booking if dates overlap with existing approved bookings
     return !filteredBookings.some(b => {
-      const bStart = parseISO(b.checkInDate || b.checkIn); // Ensure field name matches DB
+      const bStart = parseISO(b.checkInDate || b.checkIn);
       const bEnd = parseISO(b.checkOutDate || b.checkOut);
       return (start < bEnd && end > bStart);
     });
   }, [checkIn, checkOut, filteredBookings]);
 
+  // --- MODIFIED handleBooking (Draft Only) ---
   const handleBooking = async (finalPrice: number) => {
-    if (!user) return onRequireAuth?.();
+    if (!user) {
+      addNotification({ title: "Authentication", description: "Please sign in.", read: false });
+      return onRequireAuth?.();
+    }
+
     if (!selectedColor) return alert("Please select a color slot.");
 
     setSubmitting(true);
     try {
-      const userSnap = await getDoc(doc(db, "users", user.uid));
+      const userSnap = await getDoc(doc(db!, "users", user.uid));
       const profile = userSnap.exists() ? userSnap.data() : null;
 
+      // Nag-create lang tayo ng object, hindi muna natin ise-save sa Firebase
       const bookingPayload = {
         customerName: profile?.fullName || user.displayName || "Valued Guest",
+        mobile: profile?.mobile || "",
+        address: profile?.address || "",
         userId: user.uid,
         cabin,
         stayType,
+        duration: durationCount, // Lalabas na ang tamang bilang (e.g. 12)
         checkIn,
         checkOut,
         guests,
@@ -109,32 +115,29 @@ export function BookingPage({ onBack, onRequireAuth }: { onBack: () => void; onR
         isHighRate,
         totalPrice: finalPrice,
         status: "Pending",
-        createdAt: serverTimestamp(),
+        // Tatanggalin ang createdAt dito dahil sa confirmation na ang final timestamp
       };
-
-      await addDoc(collection(db, "bookings"), bookingPayload);
 
       setLastBookingData(bookingPayload);
       setShowConfirmation(true);
-      addNotification({ title: "Success", description: "Booking Request Sent!", read: false });
+      // notification removed here, move to final confirm
     } catch (err) {
       console.error(err);
-      addNotification({ title: "Error", description: "Failed to save booking", read: false });
+      addNotification({ title: "Error", description: "Something went wrong.", read: false });
     } finally {
       setSubmitting(false);
     }
   };
 
   // --- RENDER VIEWS ---
+
   if (showConfirmation && lastBookingData) {
     return (
-      <div className="min-h-screen bg-zinc-50 py-20 px-6">
-        <div className="max-w-2xl mx-auto">
-          <button onClick={() => window.location.reload()} className="mb-8 flex items-center gap-2 text-zinc-400">
-            <ChevronLeft size={20} /> <span className="text-xs font-black uppercase tracking-widest">Back to Home</span>
-          </button>
-          <BookingConfirmation bookingData={lastBookingData} />
-        </div>
+      <div className="min-h-screen bg-zinc-50 flex items-center justify-center py-10 px-6">
+        <BookingConfirmation
+          bookingData={lastBookingData}
+          onBack={() => setShowConfirmation(false)}
+        />
       </div>
     );
   }
@@ -142,19 +145,19 @@ export function BookingPage({ onBack, onRequireAuth }: { onBack: () => void; onR
   return (
     <div className="min-h-screen bg-[#FDFCFB] pb-24 text-zinc-900">
       <nav className="bg-white/80 backdrop-blur-xl border-b px-8 py-6 flex items-center justify-between sticky top-0 z-50">
-        <button onClick={onBack} className="flex items-center gap-3 text-zinc-400 hover:text-zinc-950">
+        <button onClick={onBack} className="flex items-center gap-3 text-zinc-400 hover:text-zinc-950 transition-colors">
           <ChevronLeft size={20} />
           <span className="text-[10px] font-black uppercase tracking-[0.3em]">Exit</span>
         </button>
+        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Reservation Details</div>
       </nav>
 
       <div className="max-w-7xl mx-auto px-6 mt-12 grid grid-cols-1 lg:grid-cols-12 gap-12">
         <div className="lg:col-span-8 space-y-12">
-          {/* CABIN SELECTOR */}
-          <section className="bg-zinc-950 p-2 rounded-[2rem] flex gap-2">
+          <section className="bg-zinc-950 p-2 rounded-[2rem] flex gap-2 shadow-2xl">
             {(["ohannah", "dream"] as CabinId[]).map(c => (
               <button key={c} onClick={() => { setCabin(c); setSelectedColor(""); }}
-                className={`flex-1 py-4 rounded-[1.6rem] text-[10px] font-bold uppercase tracking-[0.3em] transition-all ${cabin === c ? 'bg-white text-zinc-950' : 'text-zinc-500 hover:text-white'}`}>
+                className={`flex-1 py-4 rounded-[1.6rem] text-[10px] font-bold uppercase tracking-[0.3em] transition-all ${cabin === c ? 'bg-white text-zinc-950 shadow-lg' : 'text-zinc-500 hover:text-white'}`}>
                 {c === 'ohannah' ? 'Ohannah Cabin' : 'The Dream'}
               </button>
             ))}
@@ -205,6 +208,9 @@ export function BookingPage({ onBack, onRequireAuth }: { onBack: () => void; onR
             submitting={submitting}
             onSubmit={handleBooking}
           />
+          <p className="text-center text-[9px] text-zinc-400 mt-6 uppercase tracking-widest leading-relaxed">
+            Review your request and dates <br /> before proceeding to final confirmation.
+          </p>
         </div>
       </div>
     </div>

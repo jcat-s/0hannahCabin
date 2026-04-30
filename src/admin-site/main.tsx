@@ -3,4 +3,3 @@ import AdminApp from "./AdminApp";
 import "../styles/index.css";
 
 createRoot(document.getElementById("root")!).render(<AdminApp />);
-

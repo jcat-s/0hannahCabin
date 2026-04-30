@@ -1,0 +1,111 @@
+import React from "react";
+import { ChevronLeft } from "lucide-react";
+import { useBooking } from "../hooks/useBooking";
+import { PriceSummary } from "./PriceSummary";
+import { CalendarBooked } from "./CalendarBooked";
+import { BookingCategory } from "./BookingCategory";
+import { BookingConfirmation } from "./BookingConfirmation";
+
+export function BookingContainer({ onBack, onRequireAuth }: { onBack: () => void; onRequireAuth?: () => void }) {
+    const booking = useBooking();
+
+    // Show confirmation if booking submitted
+    if (booking.showConfirmation && booking.lastBookingData) {
+        return (
+            <div className="min-h-screen bg-zinc-50 flex items-center justify-center py-10 px-6">
+                <BookingConfirmation
+                    bookingData={booking.lastBookingData}
+                    onBack={() => booking.setShowConfirmation(false)}
+                />
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-[#FDFCFB] pb-24 text-zinc-900">
+            <nav className="bg-white/80 backdrop-blur-xl border-b px-8 py-6 flex items-center justify-between sticky top-0 z-50">
+                <button onClick={onBack} className="flex items-center gap-3 text-zinc-400 hover:text-zinc-950 transition-colors">
+                    <ChevronLeft size={20} />
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em]">Exit</span>
+                </button>
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Reservation Details</div>
+            </nav>
+
+            <div className="max-w-7xl mx-auto px-6 mt-12 grid grid-cols-1 lg:grid-cols-12 gap-12">
+                <div className="lg:col-span-8 space-y-12">
+                    {/* Cabin Selection */}
+                    <section className="bg-zinc-950 p-2 rounded-[2rem] flex gap-2 shadow-2xl">
+                        {(["ohannah", "dream"] as const).map(c => (
+                            <button
+                                key={c}
+                                onClick={() => {
+                                    booking.setCabin(c);
+                                    booking.setSelectedColor("");
+                                }}
+                                className={`flex-1 py-4 rounded-[1.6rem] text-[10px] font-bold uppercase tracking-[0.3em] transition-all ${booking.cabin === c ? 'bg-white text-zinc-950 shadow-lg' : 'text-zinc-500 hover:text-white'
+                                    }`}
+                            >
+                                {c === 'ohannah' ? 'Ohannah Cabin' : 'The Dream'}
+                            </button>
+                        ))}
+                    </section>
+
+                    {/* Calendar */}
+                    <CalendarBooked
+                        currentViewDate={booking.currentViewDate}
+                        setCurrentViewDate={booking.setCurrentViewDate}
+                        filteredBookings={booking.filteredBookings}
+                    />
+
+                    {/* Booking Form */}
+                    <BookingCategory
+                        cabin={booking.cabin}
+                        stayType={booking.stayType}
+                        setStayType={(t) => {
+                            booking.setStayType(t);
+                            booking.handleDateLogic(booking.checkIn, t);
+                        }}
+                        checkIn={booking.checkIn}
+                        setCheckIn={(d) => booking.handleDateLogic(d, booking.stayType)}
+                        checkOut={booking.checkOut}
+                        setCheckOut={booking.setCheckOut}
+                        guests={booking.guests}
+                        setGuests={booking.setGuests}
+                        kids={booking.kids}
+                        setKids={booking.setKids}
+                        pets={booking.pets}
+                        setPets={booking.setPets}
+                        specialOccasion={booking.specialOccasion}
+                        setSpecialOccasion={booking.setSpecialOccasion}
+                        selectedColor={booking.selectedColor}
+                        setSelectedColor={booking.setSelectedColor}
+                        filteredBookings={booking.filteredBookings}
+                        todayStr={booking.todayStr}
+                    />
+                </div>
+
+                {/* Price Summary Sidebar */}
+                <div className="lg:col-span-4 h-fit sticky top-32">
+                    <PriceSummary
+                        cabin={booking.cabin}
+                        stayType={booking.stayType}
+                        guests={booking.guests}
+                        kids={booking.kids}
+                        pets={booking.pets}
+                        checkIn={booking.checkIn}
+                        checkOut={booking.checkOut}
+                        specialOccasion={booking.specialOccasion}
+                        durationCount={booking.durationCount}
+                        isHighRate={booking.isHighRate}
+                        canBookCore={booking.isDateRangeValid && booking.selectedColor !== "" && booking.durationCount > 0}
+                        submitting={booking.submitting}
+                        onSubmit={booking.handleBooking}
+                    />
+                    <p className="text-center text-[9px] text-zinc-400 mt-6 uppercase tracking-widest leading-relaxed">
+                        Review your request and dates <br /> before proceeding to final confirmation.
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+}

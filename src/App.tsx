@@ -7,7 +7,7 @@ import { AmenitiesSection } from "./user-site/sections/AmenitiesSection";
 import { GallerySection } from "./user-site/sections/GallerySection";
 import { ContactSection } from "./user-site/sections/ContactSection";
 import { AuthPage } from "./user-site/Page/AuthPage";
-import { BookingPage } from "./user-site/Page/BookingPage";
+import { BookingContainer } from "./user-site/Page/BookingContainer";
 import { ProfilePage } from "./user-site/Page/ProfilePage";
 import { AuthProvider } from "./shared/context/AuthContext";
 import { NotificationProvider } from "./shared/context/NotificationContext";
@@ -41,7 +41,7 @@ export default function App() {
             {activePage === "auth" && <AuthPage />}
 
             {activePage === "booking" && (
-              <BookingPage
+              <BookingContainer
                 onBack={() => setActivePage("home")}
                 onRequireAuth={() => setActivePage("auth")}
               />

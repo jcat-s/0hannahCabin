@@ -1,0 +1,167 @@
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { format, addDays, parseISO, differenceInDays } from "date-fns";
+import { collection, query, onSnapshot, doc, getDoc } from "firebase/firestore";
+import { db } from "../../shared/lib/firebase";
+import { useAuth } from "../../shared/context/AuthContext";
+import { useNotifications } from "../../shared/context/NotificationContext";
+import { checkIsHighRate, CabinId, StayType } from "../../shared/lib/bookingPricing";
+
+export function useBooking() {
+    const { user } = useAuth();
+    const { addNotification } = useNotifications();
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+
+    // --- STATES ---
+    const [cabin, setCabin] = useState<CabinId>("ohannah");
+    const [stayType, setStayType] = useState<StayType>("full");
+    const [checkIn, setCheckIn] = useState(todayStr);
+    const [checkOut, setCheckOut] = useState(format(addDays(new Date(), 1), "yyyy-MM-dd"));
+    const [guests, setGuests] = useState(4);
+    const [kids, setKids] = useState(0);
+    const [pets, setPets] = useState(0);
+    const [specialOccasion, setSpecialOccasion] = useState("");
+    const [selectedColor, setSelectedColor] = useState("");
+    const [currentViewDate, setCurrentViewDate] = useState(new Date());
+    const [dbBookings, setDbBookings] = useState<any[]>([]);
+    const [dbHolidays, setDbHolidays] = useState<string[]>([]);
+    const [submitting, setSubmitting] = useState(false);
+    const [showConfirmation, setShowConfirmation] = useState(false);
+    const [lastBookingData, setLastBookingData] = useState<any>(null);
+
+    // --- FIREBASE SYNC ---
+    useEffect(() => {
+        if (!db) return;
+        const q = query(collection(db, "bookings"));
+        const unsubBookings = onSnapshot(q, (snap) => {
+            setDbBookings(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+        const unsubHolidays = onSnapshot(doc(db, "metadata", "holidays"), (docSnap) => {
+            if (docSnap.exists()) setDbHolidays(docSnap.data().dates || []);
+        });
+        return () => { unsubBookings(); unsubHolidays(); };
+    }, []);
+
+    // --- LOGIC HANDLERS ---
+    const handleDateLogic = useCallback((newIn: string, type: StayType) => {
+        setCheckIn(newIn);
+        if (type === "full") {
+            const nextDay = format(addDays(parseISO(newIn), 1), "yyyy-MM-dd");
+            setCheckOut(nextDay);
+        } else {
+            setCheckOut(newIn);
+        }
+    }, []);
+
+    const filteredBookings = useMemo(() =>
+        dbBookings.filter(b => b.cabin === cabin && b.status === "Confirmed"),
+        [cabin, dbBookings]);
+
+    const durationCount = useMemo(() => {
+        if (stayType !== "full") return 1;
+        const diff = differenceInDays(parseISO(checkOut), parseISO(checkIn));
+        return Math.max(diff, 1);
+    }, [checkIn, checkOut, stayType]);
+
+    const isHighRate = useMemo(() => {
+        return checkIsHighRate(parseISO(checkIn), dbHolidays);
+    }, [checkIn, dbHolidays]);
+
+    const isDateRangeValid = useMemo(() => {
+        const start = parseISO(checkIn);
+        const end = parseISO(checkOut);
+        return !filteredBookings.some(b => {
+            const bStart = parseISO(b.checkInDate || b.checkIn);
+            const bEnd = parseISO(b.checkOutDate || b.checkOut);
+            return (start < bEnd && end > bStart);
+        });
+    }, [checkIn, checkOut, filteredBookings]);
+
+    // --- BOOKING HANDLER ---
+    const handleBooking = async (finalPrice: number) => {
+        if (!user) {
+            addNotification({ title: "Authentication", description: "Please sign in.", read: false });
+            return false;
+        }
+
+        if (!selectedColor) {
+            alert("Please select a color slot.");
+            return false;
+        }
+
+        setSubmitting(true);
+        try {
+            const userSnap = await getDoc(doc(db!, "users", user.uid));
+            const profile = userSnap.exists() ? userSnap.data() : null;
+
+            const bookingPayload = {
+                customerName: profile?.fullName || user.displayName || "Valued Guest",
+                mobile: profile?.mobile || "",
+                address: profile?.address || "",
+                userId: user.uid,
+                cabin,
+                stayType,
+                duration: durationCount,
+                checkIn,
+                checkOut,
+                guests,
+                kids,
+                pets,
+                specialOccasion,
+                color: selectedColor,
+                isHighRate,
+                totalPrice: finalPrice,
+                status: "Pending",
+            };
+
+            setLastBookingData(bookingPayload);
+            setShowConfirmation(true);
+            return true;
+        } catch (err) {
+            console.error(err);
+            addNotification({ title: "Error", description: "Something went wrong.", read: false });
+            return false;
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return {
+        // States
+        cabin,
+        stayType,
+        checkIn,
+        checkOut,
+        guests,
+        kids,
+        pets,
+        specialOccasion,
+        selectedColor,
+        currentViewDate,
+        dbBookings,
+        dbHolidays,
+        submitting,
+        showConfirmation,
+        lastBookingData,
+        // Setters
+        setCabin,
+        setStayType,
+        setCheckIn,
+        setCheckOut,
+        setGuests,
+        setKids,
+        setPets,
+        setSpecialOccasion,
+        setSelectedColor,
+        setCurrentViewDate,
+        setShowConfirmation,
+        // Computed
+        filteredBookings,
+        durationCount,
+        isHighRate,
+        isDateRangeValid,
+        todayStr,
+        // Handlers
+        handleDateLogic,
+        handleBooking,
+    };
+}

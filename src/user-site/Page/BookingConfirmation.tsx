@@ -55,6 +55,9 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
                 customerName: bookingData.customerName,
                 mobile: bookingData.mobile,
                 address: bookingData.address,
+                userId: bookingData.userId,
+                cabin: bookingData.cabin,
+
 
                 // Dates & Stay
                 checkIn: bookingData.checkIn,
@@ -66,10 +69,14 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
                 guests: bookingData.guests,
                 kids: bookingData.kids,
                 pets: bookingData.pets,
-                occasion: bookingData.occasion || "Not Specified",
+                specialOccasion: bookingData.specialOccasion || "Not Specified",
+
+                // Color & Pricing
+                color: bookingData.color,
+                isHighRate: bookingData.isHighRate,
+                totalPrice: bookingData.totalPrice,
 
                 // Payment & Tech
-                totalPrice: bookingData.totalPrice,
                 paymentMethod: activeTab,
                 receiptUrl: base64Image,
                 status: "Pending",
@@ -114,7 +121,7 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
 
                             <div className="bg-zinc-50 p-4 rounded-3xl border border-zinc-100 space-y-2">
                                 <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2"><PartyPopper size={12} /> Occasion</p>
-                                <p className="text-xs font-bold text-zinc-800">{bookingData.occasion || "No occasion specified"}</p>
+                                <p className="text-xs font-bold text-zinc-800">{bookingData.specialOccasion || "No occasion specified"}</p>
                             </div>
 
                             <div className="space-y-1 text-zinc-500 uppercase text-[10px] font-bold">

@@ -107,6 +107,8 @@ export function useBooking() {
                 mobile: profile?.mobile || "",
                 address: profile?.address || "",
                 userId: user.uid,
+                userEmail: user.email || "",
+                userPhotoURL: profile?.photoURL || user.photoURL || "",
                 cabin,
                 stayType,
                 fullStayOption: stayType === "full" ? fullStayOption : undefined,

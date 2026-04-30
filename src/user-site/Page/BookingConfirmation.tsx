@@ -56,8 +56,9 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
                 mobile: bookingData.mobile,
                 address: bookingData.address,
                 userId: bookingData.userId,
+                userEmail: bookingData.userEmail || bookingData.email || "",
+                userPhotoURL: bookingData.userPhotoURL || "",
                 cabin: bookingData.cabin,
-
 
                 // Dates & Stay
                 checkIn: bookingData.checkIn,
@@ -128,6 +129,7 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
                             <div className="space-y-1 text-zinc-500 uppercase text-[10px] font-bold">
                                 <p><Smartphone size={10} className="inline mr-1" /> {bookingData.mobile}</p>
                                 <p><MapPin size={10} className="inline mr-1" /> {bookingData.address}</p>
+                                <p><User size={10} className="inline mr-1" /> {bookingData.userEmail || bookingData.email || "No email provided"}</p>
                             </div>
                         </div>
 

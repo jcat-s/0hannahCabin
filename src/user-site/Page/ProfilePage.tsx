@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { auth, db } from "../../shared/lib/firebase";
 import { doc, getDoc, collection, query, where, onSnapshot, updateDoc } from "firebase/firestore";
 import { useAuth } from "../../shared/context/AuthContext";
-import { ChevronLeft, User, Phone, MapPin, Calendar, Clock, CreditCard, LogOut, PartyPopper, Baby, Dog } from "lucide-react";
+import { ChevronLeft, User, Users, Phone, MapPin, Calendar, Clock, CreditCard, LogOut, PartyPopper, Baby, Dog } from "lucide-react";
 import { format } from "date-fns";
 
 export function ProfilePage({ onBack }: { onBack: () => void }) {
@@ -11,6 +11,10 @@ export function ProfilePage({ onBack }: { onBack: () => void }) {
     const [myBookings, setMyBookings] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
+    const [showProfileModal, setShowProfileModal] = useState(false);
+
+    const profileImage = profile?.photoURL || user?.photoURL || "";
+    const profileInitial = (profile?.fullName || user?.displayName || user?.email || "").charAt(0).toUpperCase();
 
     // Edit States
     const [editName, setEditName] = useState("");
@@ -18,27 +22,47 @@ export function ProfilePage({ onBack }: { onBack: () => void }) {
     const [editAddress, setEditAddress] = useState("");
 
     useEffect(() => {
-        if (!user) return;
+        if (!user || !db) {
+            setLoading(false);
+            return;
+        }
 
         // 1. Get User Profile from Firestore
         const fetchProfile = async () => {
-            const docRef = doc(db, "users", user.uid);
-            const snap = await getDoc(docRef);
-            if (snap.exists()) {
-                const data = snap.data();
-                setProfile(data);
-                setEditName(data.fullName || "");
-                setEditMobile(data.mobile || "");
-                setEditAddress(data.address || "");
+            try {
+                const docRef = doc(db!, "users", user.uid);
+                const snap = await getDoc(docRef);
+                if (snap.exists()) {
+                    const data = snap.data();
+                    setProfile(data);
+                    setEditName(data.fullName || "");
+                    setEditMobile(data.mobile || "");
+                    setEditAddress(data.address || "");
+                }
+            } catch (err) {
+                console.error("Error fetching profile:", err);
             }
         };
 
         // 2. Real-time Listen for User's Bookings
-        const q = query(collection(db, "bookings"), where("userId", "==", user.uid));
+        const q = query(collection(db!, "bookings"), where("userId", "==", user.uid));
         const unsub = onSnapshot(q, (snap) => {
-            const bookings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            // Sort by latest
-            setMyBookings(bookings.sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds));
+            try {
+                const bookings = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+                // Sort by latest (handle both Firestore Timestamp and regular dates)
+                const sorted = bookings.sort((a, b) => {
+                    const aTime = a.createdAt?.seconds || (a.createdAt instanceof Date ? a.createdAt.getTime() / 1000 : 0);
+                    const bTime = b.createdAt?.seconds || (b.createdAt instanceof Date ? b.createdAt.getTime() / 1000 : 0);
+                    return bTime - aTime;
+                });
+                setMyBookings(sorted);
+            } catch (err) {
+                console.error("Error processing bookings:", err);
+                setMyBookings([]);
+            }
+            setLoading(false);
+        }, (error) => {
+            console.error("Error listening to bookings:", error);
             setLoading(false);
         });
 
@@ -49,7 +73,7 @@ export function ProfilePage({ onBack }: { onBack: () => void }) {
     const handleUpdateProfile = async () => {
         if (!user) return;
         try {
-            await updateDoc(doc(db, "users", user.uid), {
+            await updateDoc(doc(db!, "users", user.uid), {
                 fullName: editName,
                 mobile: editMobile,
                 address: editAddress
@@ -62,7 +86,7 @@ export function ProfilePage({ onBack }: { onBack: () => void }) {
     };
 
     const handleLogout = () => {
-        auth.signOut().then(() => window.location.reload());
+        auth?.signOut().then(() => window.location.reload());
     };
 
     if (loading) return (
@@ -88,22 +112,30 @@ export function ProfilePage({ onBack }: { onBack: () => void }) {
             <div className="max-w-6xl mx-auto px-6 mt-12 grid grid-cols-1 lg:grid-cols-12 gap-16">
 
                 {/* Left Column: Profile Details */}
-                <div className="lg:col-span-4 space-y-8">
+                <div className="lg:col-span-4 space-y-8 lg:sticky lg:top-24 self-start">
                     <div className="text-center lg:text-left space-y-4">
-                        <div className="relative inline-block">
-                            <img
-                                src={user?.photoURL || ""}
-                                alt="Profile"
-                                className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-2xl mx-auto lg:mx-0"
-                            />
+                        <div className="relative inline-flex items-center justify-center w-32 h-32 rounded-full bg-zinc-100 border-4 border-white shadow-2xl mx-auto lg:mx-0 overflow-hidden">
+                            {profileImage ? (
+                                <img
+                                    src={profileImage}
+                                    alt="Profile"
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <span className="text-5xl font-black text-zinc-700">{profileInitial}</span>
+                            )}
                             <div className="absolute bottom-0 right-0 bg-[#D4AF37] p-2 rounded-full border-4 border-white">
                                 <User size={16} className="text-white" />
                             </div>
                         </div>
                         <div>
-                            <h1 className="text-3xl font-serif italic text-zinc-900">{profile?.fullName}</h1>
+                            <h1 className="text-3xl font-serif italic text-zinc-900">{profile?.fullName || user?.displayName || "Guest"}</h1>
+                            <p className="text-sm text-zinc-500 font-medium">{user?.email || profile?.email || "No email provided"}</p>
                             <p className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-[0.4em] mt-1">Guest Member</p>
                         </div>
+                        <button onClick={() => setShowProfileModal(true)} className="text-[10px] font-black uppercase text-zinc-600 hover:text-[#D4AF37] transition-colors">
+                            View profile details
+                        </button>
                     </div>
 
                     <div className="bg-white rounded-[2.5rem] p-8 border border-zinc-100 shadow-sm space-y-6">
@@ -200,11 +232,10 @@ export function ProfilePage({ onBack }: { onBack: () => void }) {
                                                 <p className="text-sm font-bold text-zinc-900">₱{booking.totalPrice?.toLocaleString()}</p>
                                             </div>
                                             <div className="text-right">
-                                                <span className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                                                    booking.status === 'Confirmed' ? 'bg-green-50 text-green-600' :
+                                                <span className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest ${booking.status === 'Confirmed' ? 'bg-green-50 text-green-600' :
                                                     booking.status === 'Rejected' ? 'bg-red-50 text-red-600' :
-                                                    'bg-orange-50 text-orange-600'
-                                                }`}>
+                                                        'bg-orange-50 text-orange-600'
+                                                    }`}>
                                                     {booking.status}
                                                 </span>
                                             </div>
@@ -230,6 +261,47 @@ export function ProfilePage({ onBack }: { onBack: () => void }) {
                     )}
                 </div>
             </div>
+
+            {showProfileModal && (
+                <div className="fixed inset-0 z-[999] bg-zinc-950/60 backdrop-blur-xl flex items-center justify-center p-6" onClick={() => setShowProfileModal(false)}>
+                    <div className="bg-white rounded-[3rem] w-full max-w-2xl p-8" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-start justify-between gap-6 mb-8">
+                            <div className="flex items-center gap-4">
+                                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-zinc-100 overflow-hidden">
+                                    {profileImage ? (
+                                        <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="text-3xl font-black text-zinc-700">{profileInitial}</span>
+                                    )}
+                                </div>
+                                <div>
+                                    <p className="text-xs uppercase tracking-[0.4em] text-zinc-400">Guest Profile</p>
+                                    <h3 className="text-2xl font-black uppercase tracking-tight">{profile?.fullName || user?.displayName || "Guest"}</h3>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowProfileModal(false)} className="text-[10px] font-black uppercase text-zinc-500 hover:text-zinc-900">Close</button>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-6">
+                            <InfoItem icon={<User size={14} />} label="Full Name" value={profile?.fullName || user?.displayName || "Guest"} />
+                            <InfoItem icon={<Phone size={14} />} label="Mobile" value={profile?.mobile || "Not provided"} />
+                            <InfoItem icon={<MapPin size={14} />} label="Address" value={profile?.address || "Not provided"} />
+                            <InfoItem icon={<CreditCard size={14} />} label="Email" value={user?.email || "Not provided"} />
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function InfoItem({ icon, label, value }: { icon: any; label: string; value: any }) {
+    return (
+        <div className="space-y-1">
+            <p className="text-[8px] font-bold text-zinc-300 uppercase tracking-widest flex items-center gap-1">
+                {icon} {label}
+            </p>
+            <p className="text-sm font-black text-zinc-900 uppercase">{value}</p>
         </div>
     );
 }

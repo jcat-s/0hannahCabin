@@ -16,7 +16,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
     const [selectedBooking, setSelectedBooking] = useState<any>(null);
     const [approvalMessage, setApprovalMessage] = useState("");
     const [showApprovalModal, setShowApprovalModal] = useState(false);
-    const [pendingAction, setPendingAction] = useState<{id: string, status: string} | null>(null);
+    const [pendingAction, setPendingAction] = useState<{ id: string, status: string } | null>(null);
 
     const handleApprovalAction = (id: string, status: string) => {
         setPendingAction({ id, status });
@@ -46,21 +46,32 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                                 <div className={`w-3 h-20 rounded-full shrink-0 ${getSlotBg(activeColor)}`} />
 
                                 <div className="grid grid-cols-4 gap-8 w-full">
-                                    <div className="space-y-1">
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-[#D4AF37]">{booking.cabin || "Cabin"}</span>
-                                        <h3 className="text-xl font-black uppercase tracking-tighter">{booking.customerName}</h3>
-                                        <div className="flex items-center gap-2 text-zinc-500 text-[11px] font-bold">
-                                            <Phone size={12} /> {booking.mobile}
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-full bg-zinc-100 overflow-hidden flex items-center justify-center">
+                                                {booking.userPhotoURL ? (
+                                                    <img src={booking.userPhotoURL} alt="Guest" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span className="text-base font-black text-zinc-700">{(booking.customerName || booking.userEmail || 'G').charAt(0).toUpperCase()}</span>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-[#D4AF37]">{booking.cabin || "Cabin"}</span>
+                                                <h3 className="text-xl font-black uppercase tracking-tighter">{booking.customerName}</h3>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col gap-1 text-zinc-500 text-[11px] font-bold">
+                                            <div className="flex items-center gap-2"><Phone size={12} /> {booking.mobile}</div>
+                                            <div className="flex items-center gap-2"><User size={12} /> {booking.userEmail || booking.email || 'No email'}</div>
                                         </div>
                                     </div>
 
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-2">
-                                            <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase ${
-                                                booking.status === 'Confirmed' ? 'bg-emerald-50 text-emerald-600' :
-                                                booking.status === 'Rejected' ? 'bg-red-50 text-red-600' :
-                                                'bg-orange-50 text-orange-600'
-                                            }`}>
+                                            <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase ${booking.status === 'Confirmed' ? 'bg-emerald-50 text-emerald-600' :
+                                                    booking.status === 'Rejected' ? 'bg-red-50 text-red-600' :
+                                                        'bg-orange-50 text-orange-600'
+                                                }`}>
                                                 {booking.status}
                                             </span>
                                             <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase bg-blue-50 text-blue-600">
@@ -153,11 +164,10 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                                 </button>
                                 <button
                                     onClick={confirmApprovalAction}
-                                    className={`flex-1 py-4 rounded-2xl font-black uppercase text-sm ${
-                                        pendingAction?.status === 'Confirmed'
+                                    className={`flex-1 py-4 rounded-2xl font-black uppercase text-sm ${pendingAction?.status === 'Confirmed'
                                             ? 'bg-emerald-500 text-white'
                                             : 'bg-red-500 text-white'
-                                    }`}
+                                        }`}
                                 >
                                     {pendingAction?.status === 'Confirmed' ? 'Approve' : 'Reject'}
                                 </button>
@@ -172,10 +182,20 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                 <div className="fixed inset-0 z-[999] bg-zinc-950/60 backdrop-blur-xl flex items-center justify-center p-6" onClick={() => setSelectedBooking(null)}>
                     <div className="bg-white rounded-[4rem] w-full max-w-5xl h-[85vh] overflow-hidden flex shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="flex-1 p-16 overflow-y-auto space-y-12">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <p className="text-[10px] font-black uppercase tracking-[0.5em] text-[#D4AF37] mb-2">Reservation Info</p>
-                                    <h2 className="text-4xl font-black uppercase tracking-tighter leading-none">{selectedBooking.customerName}</h2>
+                            <div className="flex flex-col lg:flex-row justify-between items-start gap-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-20 h-20 rounded-full bg-zinc-100 overflow-hidden flex items-center justify-center">
+                                        {selectedBooking.userPhotoURL ? (
+                                            <img src={selectedBooking.userPhotoURL} alt="Guest" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span className="text-3xl font-black text-zinc-700">{(selectedBooking.customerName || selectedBooking.userEmail || 'G').charAt(0).toUpperCase()}</span>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-[0.5em] text-[#D4AF37] mb-2">Reservation Info</p>
+                                        <h2 className="text-4xl font-black uppercase tracking-tighter leading-none">{selectedBooking.customerName}</h2>
+                                        <p className="text-xs text-zinc-500 mt-2">{selectedBooking.userEmail || selectedBooking.email || 'No email provided'}</p>
+                                    </div>
                                 </div>
                                 <button onClick={() => setSelectedBooking(null)} className="p-4 hover:bg-zinc-100 rounded-full"><X size={32} /></button>
                             </div>

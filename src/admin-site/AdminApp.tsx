@@ -3,7 +3,7 @@ import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, orderBy, Fire
 import { Inbox, Calendar, TrendingUp } from "lucide-react";
 import { db } from "../shared/lib/firebase";
 import { Reservations } from "./Reservations";
-import { Analytics } from "./Anakytics";
+import { Analytics } from "./Analytics";
 
 export default function AdminApp() {
   const [bookings, setBookings] = useState<any[]>([]);

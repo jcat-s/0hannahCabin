@@ -77,14 +77,6 @@ export function Analytics({ bookings }: AnalyticsProps) {
 
     return (
         <div className="space-y-8">
-            {/* Header */}
-            <div className="text-center">
-                <h2 className="text-4xl font-serif italic font-black text-zinc-900">Analytics Dashboard</h2>
-                <p className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.3em] mt-2 italic">
-                    Business Insights & Performance
-                </p>
-            </div>
-
             {/* Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard

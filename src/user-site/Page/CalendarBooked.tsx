@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, subMonths, addMonths, getDay } from "date-fns";
+import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, subMonths, addMonths, getDay } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../shared/lib/firebase";
@@ -95,17 +95,29 @@ export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBo
 
                         // Hanapin kung may booking sa araw na ito
                         const booking = filteredBookings.find(b => {
-                            const start = b.checkIn;
-                            const end = b.checkOut;
-                            return dateStr >= start && dateStr <= end;
+                            const start = parseISO(b.checkIn);
+                            const end = b.stayType === "day"
+                                ? addDays(parseISO(b.checkOut), 1)
+                                : parseISO(b.checkOut);
+                            return d >= start && d < end;
                         });
 
                         const bgColorClass = booking ? (CALENDAR_COLORS[booking.color] || "bg-zinc-400") : "";
 
+                        // Get stay time label
+                        const getStayTimeLabel = (booking: any) => {
+                            if (!booking) return "";
+                            if (booking.stayType === "day") {
+                                return booking.fullStayOption || "Day";
+                            } else {
+                                return booking.fullStayOption || "Night";
+                            }
+                        };
+
                         return (
                             <div
                                 key={d.toString()}
-                                className={`h-14 border border-zinc-50 flex flex-col items-center justify-center rounded-[1.2rem] relative transition-all 
+                                className={`h-14 border border-zinc-50 flex flex-col items-center justify-center rounded-[1.2rem] relative transition-all
                                     ${booking
                                         ? `${bgColorClass} text-white z-10 scale-[1.05] shadow-lg`
                                         : "hover:bg-zinc-50 text-zinc-400"
@@ -114,7 +126,9 @@ export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBo
                                 <span className="text-sm font-bold">{format(d, "d")}</span>
 
                                 {booking ? (
-                                    <span className="text-[6px] uppercase font-black mt-1">Booked</span>
+                                    <span className="text-[6px] uppercase font-black mt-1">
+                                        {getStayTimeLabel(booking)}
+                                    </span>
                                 ) : (
                                     isHighRate && (
                                         <div className="absolute top-2 right-2 w-1 h-1 rounded-full bg-[#D4AF37]" />

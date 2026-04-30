@@ -79,6 +79,8 @@ export function BookingContainer({ onBack, onRequireAuth }: { onBack: () => void
                         setSpecialOccasion={booking.setSpecialOccasion}
                         selectedColor={booking.selectedColor}
                         setSelectedColor={booking.setSelectedColor}
+                        fullStayOption={booking.fullStayOption}
+                        setFullStayOption={booking.setFullStayOption}
                         filteredBookings={booking.filteredBookings}
                         todayStr={booking.todayStr}
                     />
@@ -89,6 +91,7 @@ export function BookingContainer({ onBack, onRequireAuth }: { onBack: () => void
                     <PriceSummary
                         cabin={booking.cabin}
                         stayType={booking.stayType}
+                        fullStayOption={booking.fullStayOption}
                         guests={booking.guests}
                         kids={booking.kids}
                         pets={booking.pets}

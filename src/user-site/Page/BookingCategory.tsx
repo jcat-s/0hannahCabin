@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { parseISO } from "date-fns";
+import { addDays, parseISO } from "date-fns";
 import { Clock, Calendar as CalendarIcon, Users, PawPrint, PartyPopper, Baby } from "lucide-react";
 import { CabinId, StayType } from "../../shared/lib/bookingPricing";
 
@@ -14,8 +14,11 @@ const BOOKING_COLORS = [
     { id: "violet", label: "Violet Slot", bg: "bg-violet-400" },
 ];
 
+type FullStayOption = "9AM-7AM" | "8PM-5PM";
+
 interface BookingCategoryProps {
     cabin: CabinId; stayType: StayType; setStayType: (v: StayType) => void;
+    fullStayOption: FullStayOption; setFullStayOption: (v: FullStayOption) => void;
     checkIn: string; setCheckIn: (v: string) => void;
     checkOut: string; setCheckOut: (v: string) => void;
     guests: number; setGuests: (v: number) => void;
@@ -27,21 +30,33 @@ interface BookingCategoryProps {
 }
 
 export function BookingCategory({
-    cabin, stayType, setStayType, checkIn, setCheckIn, checkOut, setCheckOut,
+    cabin, stayType, setStayType, fullStayOption, setFullStayOption, checkIn, setCheckIn, checkOut, setCheckOut,
     guests, setGuests, kids, setKids, pets, setPets, specialOccasion, setSpecialOccasion,
     selectedColor, setSelectedColor, filteredBookings, todayStr
 }: BookingCategoryProps) {
 
+    const getRangeEnd = (dateStr: string, type: StayType) => {
+        const date = parseISO(dateStr);
+        return type === "day" ? addDays(date, 1) : date;
+    };
+
+    const rangesOverlap = (startA: Date, endA: Date, startB: Date, endB: Date) =>
+        startA < endB && endA > startB;
+
     const dynamicColors = useMemo(() => {
         const start = parseISO(checkIn);
-        const end = parseISO(checkOut);
+        const end = getRangeEnd(checkOut, stayType);
         const blocked = new Set(
             filteredBookings
-                .filter(b => (start <= parseISO(b.checkOut) && end >= parseISO(b.checkIn)))
+                .filter(b => {
+                    const bStart = parseISO(b.checkInDate || b.checkIn);
+                    const bEnd = getRangeEnd(b.checkOutDate || b.checkOut, b.stayType || "full");
+                    return rangesOverlap(start, end, bStart, bEnd);
+                })
                 .map(b => b.color)
         );
         return BOOKING_COLORS.map(c => ({ ...c, isBlocked: blocked.has(c.id) }));
-    }, [checkIn, checkOut, filteredBookings]);
+    }, [checkIn, checkOut, stayType, filteredBookings]);
 
     // STRICT VALIDATION: Hindi papayag na lumampas sa max limit
     const handleNumberChange = (val: string, max: number, setter: (v: number) => void) => {
@@ -72,8 +87,22 @@ export function BookingCategory({
                         >
                             <option value="day">☀️ Day Lounge (9AM-5PM)</option>
                             <option value="evening">🌙 Evening Chill (8PM-7AM)</option>
-                            <option value="full">🏠 Full Stay (9AM-7AM / 8PM-5PM)</option>
+                            <option value="full">🏠 Full Stay (9AM-7AM or 8PM-5PM)</option>
                         </select>
+                        {stayType === "full" && (
+                            <div className="mt-6 grid grid-cols-2 gap-3">
+                                {(["9AM-7AM", "8PM-5PM"] as FullStayOption[]).map(option => (
+                                    <button
+                                        key={option}
+                                        type="button"
+                                        onClick={() => setFullStayOption(option)}
+                                        className={`py-4 rounded-2xl text-[10px] font-black uppercase transition-all border ${fullStayOption === option ? 'bg-zinc-950 text-white border-zinc-950 shadow-lg' : 'bg-zinc-50 text-zinc-600 border-zinc-200 hover:border-zinc-300'}`}
+                                    >
+                                        {option}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     <div className="space-y-4">

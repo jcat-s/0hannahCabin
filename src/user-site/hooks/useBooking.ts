@@ -21,6 +21,7 @@ export function useBooking() {
     const [pets, setPets] = useState(0);
     const [specialOccasion, setSpecialOccasion] = useState("");
     const [selectedColor, setSelectedColor] = useState("");
+    const [fullStayOption, setFullStayOption] = useState<"9AM-7AM" | "8PM-5PM">("9AM-7AM");
     const [currentViewDate, setCurrentViewDate] = useState(new Date());
     const [dbBookings, setDbBookings] = useState<any[]>([]);
     const [dbHolidays, setDbHolidays] = useState<string[]>([]);
@@ -44,13 +45,21 @@ export function useBooking() {
     // --- LOGIC HANDLERS ---
     const handleDateLogic = useCallback((newIn: string, type: StayType) => {
         setCheckIn(newIn);
-        if (type === "full") {
+        if (type === "day") {
+            setCheckOut(newIn);
+        } else {
             const nextDay = format(addDays(parseISO(newIn), 1), "yyyy-MM-dd");
             setCheckOut(nextDay);
-        } else {
-            setCheckOut(newIn);
         }
     }, []);
+
+    const getRangeEnd = (dateStr: string, type: StayType) => {
+        const date = parseISO(dateStr);
+        return type === "day" ? addDays(date, 1) : date;
+    };
+
+    const rangesOverlap = (startA: Date, endA: Date, startB: Date, endB: Date) =>
+        startA < endB && endA > startB;
 
     const filteredBookings = useMemo(() =>
         dbBookings.filter(b => b.cabin === cabin && b.status === "Confirmed"),
@@ -68,13 +77,13 @@ export function useBooking() {
 
     const isDateRangeValid = useMemo(() => {
         const start = parseISO(checkIn);
-        const end = parseISO(checkOut);
+        const end = getRangeEnd(checkOut, stayType);
         return !filteredBookings.some(b => {
             const bStart = parseISO(b.checkInDate || b.checkIn);
-            const bEnd = parseISO(b.checkOutDate || b.checkOut);
-            return (start < bEnd && end > bStart);
+            const bEnd = getRangeEnd(b.checkOutDate || b.checkOut, b.stayType || "full");
+            return rangesOverlap(start, end, bStart, bEnd);
         });
-    }, [checkIn, checkOut, filteredBookings]);
+    }, [checkIn, checkOut, stayType, filteredBookings]);
 
     // --- BOOKING HANDLER ---
     const handleBooking = async (finalPrice: number) => {
@@ -100,6 +109,7 @@ export function useBooking() {
                 userId: user.uid,
                 cabin,
                 stayType,
+                fullStayOption: stayType === "full" ? fullStayOption : undefined,
                 duration: durationCount,
                 checkIn,
                 checkOut,
@@ -160,6 +170,8 @@ export function useBooking() {
         isHighRate,
         isDateRangeValid,
         todayStr,
+        fullStayOption,
+        setFullStayOption,
         // Handlers
         handleDateLogic,
         handleBooking,

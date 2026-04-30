@@ -4,7 +4,7 @@ import { format, parseISO } from "date-fns";
 import { CabinId, StayType, calculateTotal } from "../../shared/lib/bookingPricing";
 
 interface PriceSummaryProps {
-    cabin: CabinId; stayType: StayType; guests: number; kids: number;
+    cabin: CabinId; stayType: StayType; fullStayOption?: "9AM-7AM" | "8PM-5PM"; guests: number; kids: number;
     pets: number; checkIn: string; checkOut: string;
     specialOccasion?: string; durationCount: number;
     isHighRate: boolean; canBookCore: boolean;
@@ -12,7 +12,7 @@ interface PriceSummaryProps {
 }
 
 export function PriceSummary({
-    cabin, stayType, guests, kids, pets, checkIn, checkOut, specialOccasion,
+    cabin, stayType, fullStayOption, guests, kids, pets, checkIn, checkOut, specialOccasion,
     durationCount, isHighRate, canBookCore, submitting, onSubmit
 }: PriceSummaryProps) {
     const [showModal, setShowModal] = useState(false);
@@ -56,7 +56,7 @@ export function PriceSummary({
                     </div>
                 </div>
 
-                <SummaryRow label="Stay" value={`${durationCount} ${stayLabels[stayType].label}`} />
+                <SummaryRow label="Stay" value={`${durationCount} ${stayLabels[stayType].label}${stayType === 'full' && fullStayOption ? ` (${fullStayOption})` : ''}`} />
 
                 <div className="pt-2 space-y-3">
                     <SummaryRow label="Adults" value={`${guests} Pax`} />

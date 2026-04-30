@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { auth, db } from "../../shared/lib/firebase";
 import { doc, getDoc, collection, query, where, onSnapshot, updateDoc } from "firebase/firestore";
 import { useAuth } from "../../shared/context/AuthContext";
-import { ChevronLeft, User, Phone, MapPin, Calendar, Clock, CreditCard, LogOut } from "lucide-react";
+import { ChevronLeft, User, Phone, MapPin, Calendar, Clock, CreditCard, LogOut, PartyPopper, Baby, Dog } from "lucide-react";
 import { format } from "date-fns";
 
 export function ProfilePage({ onBack }: { onBack: () => void }) {
@@ -147,39 +147,83 @@ export function ProfilePage({ onBack }: { onBack: () => void }) {
                     ) : (
                         <div className="space-y-4">
                             {myBookings.map((booking) => (
-                                <div key={booking.id} className="bg-white rounded-[2rem] p-8 border border-zinc-100 shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row justify-between items-center gap-6">
-                                    <div className="flex gap-6 items-center">
-                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${booking.cabin === 'ohannah' ? 'bg-zinc-900' : 'bg-[#D4AF37]'} text-white shadow-lg`}>
-                                            <span className="font-serif italic text-lg">{booking.cabin[0].toUpperCase()}</span>
+                                <div key={booking.id} className="bg-white rounded-[2rem] p-8 border border-zinc-100 shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="flex flex-col lg:flex-row justify-between items-start gap-6">
+                                        <div className="flex gap-6 items-start">
+                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${booking.cabin === 'ohannah' ? 'bg-zinc-900' : 'bg-[#D4AF37]'} text-white shadow-lg`}>
+                                                <span className="font-serif italic text-lg">{booking.cabin[0].toUpperCase()}</span>
+                                            </div>
+                                            <div className="flex-1">
+                                                <h4 className="text-sm font-bold uppercase tracking-tight text-zinc-900">
+                                                    {booking.cabin === 'ohannah' ? 'Ohannah Cabin' : 'The Dream by Ohannah'}
+                                                </h4>
+                                                <div className="flex flex-wrap gap-4 mt-2">
+                                                    <span className="flex items-center gap-1 text-[10px] text-zinc-400 font-medium">
+                                                        <Calendar size={12} /> {booking.checkIn} — {booking.checkOut}
+                                                    </span>
+                                                    <span className="flex items-center gap-1 text-[10px] text-zinc-400 font-medium uppercase tracking-tighter">
+                                                        <Clock size={12} /> {booking.duration} {booking.stayType}{booking.fullStayOption ? ` (${booking.fullStayOption})` : ''}
+                                                    </span>
+                                                </div>
+                                                <div className="flex flex-wrap gap-4 mt-2">
+                                                    <span className="flex items-center gap-1 text-[10px] text-zinc-500 font-medium">
+                                                        <Users size={12} /> {booking.guests} Adults
+                                                    </span>
+                                                    {booking.kids > 0 && (
+                                                        <span className="flex items-center gap-1 text-[10px] text-zinc-500 font-medium">
+                                                            <Baby size={12} /> {booking.kids} Kids
+                                                        </span>
+                                                    )}
+                                                    {booking.pets > 0 && (
+                                                        <span className="flex items-center gap-1 text-[10px] text-zinc-500 font-medium">
+                                                            <Dog size={12} /> {booking.pets} Pets
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {booking.specialOccasion && (
+                                                    <div className="flex items-center gap-1 text-[10px] text-zinc-500 font-medium mt-1">
+                                                        <PartyPopper size={12} /> {booking.specialOccasion}
+                                                    </div>
+                                                )}
+                                                {booking.statusMessage && (
+                                                    <div className="mt-3 p-3 bg-zinc-50 rounded-xl border border-zinc-100">
+                                                        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Admin Message</p>
+                                                        <p className="text-sm text-zinc-700">{booking.statusMessage}</p>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h4 className="text-sm font-bold uppercase tracking-tight text-zinc-900">
-                                                {booking.cabin === 'ohannah' ? 'Ohannah Cabin' : 'The Dream by Ohannah'}
-                                            </h4>
-                                            <div className="flex flex-wrap gap-4 mt-1">
-                                                <span className="flex items-center gap-1 text-[10px] text-zinc-400 font-medium">
-                                                    <Calendar size={12} /> {booking.checkIn.split(' of ')[1]}
-                                                </span>
-                                                <span className="flex items-center gap-1 text-[10px] text-zinc-400 font-medium uppercase tracking-tighter">
-                                                    <Clock size={12} /> {booking.stayType} Stay
+
+                                        <div className="flex items-center gap-6 w-full lg:w-auto justify-between lg:justify-end lg:flex-col lg:items-end">
+                                            <div className="text-right">
+                                                <p className="text-[10px] font-black text-zinc-300 uppercase tracking-widest mb-1">Total Paid</p>
+                                                <p className="text-sm font-bold text-zinc-900">₱{booking.totalPrice?.toLocaleString()}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                                                    booking.status === 'Confirmed' ? 'bg-green-50 text-green-600' :
+                                                    booking.status === 'Rejected' ? 'bg-red-50 text-red-600' :
+                                                    'bg-orange-50 text-orange-600'
+                                                }`}>
+                                                    {booking.status}
                                                 </span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-8 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-4 md:pt-0">
-                                        <div className="text-right">
-                                            <p className="text-[10px] font-black text-zinc-300 uppercase tracking-widest mb-1">Total Paid</p>
-                                            <p className="text-sm font-bold text-zinc-900">₱{booking.totalPrice?.toLocaleString()}</p>
+                                    {/* Receipt Image */}
+                                    {booking.receiptUrl && (
+                                        <div className="mt-6 pt-6 border-t border-zinc-100">
+                                            <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-3">Payment Receipt</p>
+                                            <div className="bg-zinc-50 rounded-xl p-4 border border-zinc-100">
+                                                <img
+                                                    src={booking.receiptUrl}
+                                                    alt="Payment Receipt"
+                                                    className="max-w-full max-h-32 object-contain rounded-lg"
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="text-right">
-                                            <span className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest ${booking.status === 'Confirmed' ? 'bg-green-50 text-green-600' :
-                                                    booking.status === 'Pending' ? 'bg-orange-50 text-orange-600' : 'bg-zinc-100 text-zinc-400'
-                                                }`}>
-                                                {booking.status}
-                                            </span>
-                                        </div>
-                                    </div>
+                                    )}
                                 </div>
                             ))}
                         </div>

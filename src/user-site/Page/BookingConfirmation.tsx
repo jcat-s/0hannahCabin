@@ -64,6 +64,7 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
                 checkOut: bookingData.checkOut,
                 duration: bookingData.duration,
                 stayType: bookingData.stayType,
+                fullStayOption: bookingData.fullStayOption || "",
 
                 // Pax & Details
                 guests: bookingData.guests,
@@ -147,7 +148,7 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
                                 <p className="text-[9px] font-black text-zinc-300 uppercase tracking-widest flex items-center gap-2"><CalendarDays size={12} /> Date & Stay</p>
                                 <p className="text-[12px] font-bold text-zinc-800 leading-tight">
                                     {bookingData.checkIn} — {bookingData.checkOut} <br />
-                                    <span className="text-[#D4AF37] uppercase text-[10px] flex items-center gap-1 mt-1"><Moon size={10} /> {bookingData.duration} {bookingData.stayType}</span>
+                                    <span className="text-[#D4AF37] uppercase text-[10px] flex items-center gap-1 mt-1"><Moon size={10} /> {bookingData.duration} {bookingData.stayType}{bookingData.fullStayOption ? ` (${bookingData.fullStayOption})` : ''}</span>
                                 </p>
                             </div>
                             <div className="space-y-2">

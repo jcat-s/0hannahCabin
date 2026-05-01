@@ -1,24 +1,32 @@
 import React, { useState, useEffect } from "react";
-import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, subMonths, addMonths, getDay } from "date-fns";
+import {
+    format,
+    addDays,
+    startOfMonth,
+    endOfMonth,
+    eachDayOfInterval,
+    parseISO,
+    subMonths,
+    addMonths,
+    getDay,
+    isWithinInterval,
+    startOfDay
+} from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../shared/lib/firebase";
 
 const FIXED_PH_HOLIDAYS = ["01-01", "04-09", "05-01", "06-12", "08-31", "11-30", "12-25", "12-30", "02-17", "08-21", "11-01", "11-02", "12-08", "12-24", "12-31"];
 
-// Helper to check if a date is a holiday or a custom weekend (Fri-Sun)
 export const checkIsHoliday = (date: Date, dbHolidays: string[]) => {
     const monthDay = format(date, "MM-dd");
     const fullDate = format(date, "yyyy-MM-dd");
-    const dayOfWeek = getDay(date); // 0 = Sunday, 5 = Friday, 6 = Saturday
-
+    const dayOfWeek = getDay(date);
     const isCustomWeekend = dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6;
     const isHoliday = FIXED_PH_HOLIDAYS.includes(monthDay) || dbHolidays.includes(fullDate);
-
     return isHoliday || isCustomWeekend;
 };
 
-// Static color mapping para sa Calendar (Dapat match sa BookingCategory)
 const CALENDAR_COLORS: Record<string, string> = {
     pink: "bg-pink-400",
     red: "bg-red-400",
@@ -51,7 +59,6 @@ export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBo
         end: endOfMonth(currentViewDate)
     });
 
-    // Start of month offset (Para sa Monday-start calendar)
     const firstDow = (startOfMonth(currentViewDate).getDay() + 6) % 7;
 
     return (
@@ -74,45 +81,32 @@ export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBo
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-[#D4AF37]" />
-                    <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Holiday/Weekend Rate (Fri-Sun)</span>
+                    <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Holiday/Weekend Rate</span>
                 </div>
             </div>
 
             <div className="p-10">
                 <div className="grid grid-cols-7 gap-4">
-                    {/* Day Headers */}
                     {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map(d => (
                         <div key={d} className="text-center text-[10px] font-bold text-zinc-300 uppercase pb-8">{d}</div>
                     ))}
 
-                    {/* Empty Slots for Padding */}
                     {Array.from({ length: firstDow }).map((_, i) => <div key={`empty-${i}`} />)}
 
-                    {/* Actual Calendar Days */}
                     {days.map(d => {
-                        const dateStr = format(d, "yyyy-MM-dd");
+                        const currentIterationDay = startOfDay(d);
                         const isHighRate = checkIsHoliday(d, dbHolidays);
 
-                        // Hanapin kung may booking sa araw na ito
+                        // logic para mahanap ang booking sa range
                         const booking = filteredBookings.find(b => {
-                            const start = parseISO(b.checkIn);
-                            const end = b.stayType === "day"
-                                ? addDays(parseISO(b.checkOut), 1)
-                                : parseISO(b.checkOut);
-                            return d >= start && d < end;
+                            const start = startOfDay(parseISO(b.checkIn));
+                            const end = startOfDay(parseISO(b.checkOut));
+
+                            // Kung May 5 to 13, dapat kasama ang 5 at 13 sa interval
+                            return isWithinInterval(currentIterationDay, { start, end });
                         });
 
                         const bgColorClass = booking ? (CALENDAR_COLORS[booking.color] || "bg-zinc-400") : "";
-
-                        // Get stay time label
-                        const getStayTimeLabel = (booking: any) => {
-                            if (!booking) return "";
-                            if (booking.stayType === "day") {
-                                return booking.fullStayOption || "Day";
-                            } else {
-                                return booking.fullStayOption || "Night";
-                            }
-                        };
 
                         return (
                             <div
@@ -127,7 +121,8 @@ export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBo
 
                                 {booking ? (
                                     <span className="text-[6px] uppercase font-black mt-1">
-                                        {getStayTimeLabel(booking)}
+                                        {/* Labeling para mas malinaw kung Day/Night/Full */}
+                                        {booking.stayType === "day" ? "Day" : (booking.fullStayOption || "Stay")}
                                     </span>
                                 ) : (
                                     isHighRate && (

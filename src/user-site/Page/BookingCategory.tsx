@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { addDays, parseISO } from "date-fns";
+import React, { useMemo, useEffect } from "react";
+import { addDays, subDays, parseISO, isSameDay } from "date-fns";
 import { Clock, Calendar as CalendarIcon, Users, PawPrint, PartyPopper, Baby } from "lucide-react";
 import { CabinId, StayType } from "../../shared/lib/bookingPricing";
 
@@ -35,39 +35,51 @@ export function BookingCategory({
     selectedColor, setSelectedColor, filteredBookings, todayStr
 }: BookingCategoryProps) {
 
-    const getRangeEnd = (dateStr: string, type: StayType) => {
-        const date = parseISO(dateStr);
-        return type === "day" ? addDays(date, 1) : date;
-    };
-
-    const rangesOverlap = (startA: Date, endA: Date, startB: Date, endB: Date) =>
-        startA < endB && endA > startB;
-
     const dynamicColors = useMemo(() => {
+        if (!checkIn || !checkOut) return BOOKING_COLORS.map(c => ({ ...c, isBlocked: false }));
+
         const start = parseISO(checkIn);
-        const end = getRangeEnd(checkOut, stayType);
+        const end = parseISO(checkOut);
+
         const blocked = new Set(
             filteredBookings
                 .filter(b => {
                     const bStart = parseISO(b.checkInDate || b.checkIn);
-                    const bEnd = getRangeEnd(b.checkOutDate || b.checkOut, b.stayType || "full");
-                    return rangesOverlap(start, end, bStart, bEnd);
+                    const bEnd = parseISO(b.checkOutDate || b.checkOut);
+
+                    // 1. ACTUAL OVERLAP: Hindi pwedeng gamitin ang kulay kung sumasapaw sa dates.
+                    const isOverlapping = start <= bEnd && bStart <= end;
+
+                    // 2. ADJACENCY RULE: 
+                    // Bawal ang kulay kung ang Check-in mo ay saktong kinabukasan ng Check-out ng iba (May 13 vs May 12).
+                    const isDayAfter = isSameDay(start, addDays(bEnd, 1));
+
+                    // Bawal ang kulay kung ang Check-out mo ay saktong araw bago ang Check-in ng iba (May 5 vs May 6).
+                    const isDayBefore = isSameDay(end, subDays(bStart, 1));
+
+                    return isOverlapping || isDayAfter || isDayBefore;
                 })
                 .map(b => b.color)
         );
-        return BOOKING_COLORS.map(c => ({ ...c, isBlocked: blocked.has(c.id) }));
-    }, [checkIn, checkOut, stayType, filteredBookings]);
 
-    // STRICT VALIDATION: Hindi papayag na lumampas sa max limit
+        return BOOKING_COLORS.map(c => ({
+            ...c,
+            isBlocked: blocked.has(c.id)
+        }));
+    }, [checkIn, checkOut, filteredBookings]);
+
+    // Reset selected color if it becomes blocked due to date change
+    useEffect(() => {
+        if (!selectedColor) return;
+        const current = dynamicColors.find(c => c.id === selectedColor);
+        if (current?.isBlocked) {
+            setSelectedColor("");
+        }
+    }, [dynamicColors, selectedColor, setSelectedColor]);
+
     const handleNumberChange = (val: string, max: number, setter: (v: number) => void) => {
         const num = val === "" ? 0 : parseInt(val, 10);
-        if (num > max) {
-            setter(max);
-        } else if (num < 0) {
-            setter(0);
-        } else {
-            setter(num);
-        }
+        setter(Math.min(Math.max(0, num), max));
     };
 
     return (
@@ -82,7 +94,11 @@ export function BookingCategory({
                         </label>
                         <select
                             value={stayType}
-                            onChange={(e) => setStayType(e.target.value as StayType)}
+                            onChange={(e) => {
+                                const val = e.target.value as StayType;
+                                setStayType(val);
+                                if (val !== "full") setCheckOut(checkIn);
+                            }}
                             className="w-full p-5 rounded-2xl bg-zinc-50 border-none outline-none text-[11px] font-bold uppercase focus:ring-2 focus:ring-[#D4AF37]/20"
                         >
                             <option value="day">☀️ Day Lounge (9AM-5PM)</option>
@@ -112,7 +128,10 @@ export function BookingCategory({
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
                                 <span className="text-[8px] text-zinc-300 font-bold uppercase ml-1">Check-in</span>
-                                <input type="date" value={checkIn} min={todayStr} onChange={(e) => setCheckIn(e.target.value)} className="w-full p-4 rounded-xl bg-zinc-50 border-none text-[11px] font-bold" />
+                                <input type="date" value={checkIn} min={todayStr} onChange={(e) => {
+                                    setCheckIn(e.target.value);
+                                    if (stayType !== "full") setCheckOut(e.target.value);
+                                }} className="w-full p-4 rounded-xl bg-zinc-50 border-none text-[11px] font-bold" />
                             </div>
                             <div className="space-y-1">
                                 <span className="text-[8px] text-zinc-300 font-bold uppercase ml-1">Check-out</span>
@@ -186,7 +205,8 @@ export function BookingCategory({
 
             {/* COLOR SELECTION */}
             <div className="pt-12 border-t border-zinc-50">
-                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em] block mb-8 text-center">Select Personal Slot Color</label>
+                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em] block mb-4 text-center">Select Personal Slot Color</label>
+                <p className="text-[9px] text-zinc-400 uppercase tracking-[0.2em] text-center mb-6">If a color is unavailable, it is booked on your dates or an adjacent date.</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {dynamicColors.map(c => (
                         <button
@@ -197,10 +217,10 @@ export function BookingCategory({
                             className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${selectedColor === c.id
                                 ? 'bg-zinc-950 text-white border-zinc-950 scale-105 shadow-xl'
                                 : 'bg-white text-zinc-400 border-zinc-50 hover:border-zinc-200'
-                                } ${c.isBlocked ? 'opacity-10 grayscale cursor-not-allowed' : ''}`}
+                                } ${c.isBlocked ? 'opacity-20 grayscale cursor-not-allowed' : ''}`}
                         >
                             <span className={`w-4 h-4 rounded-full ${c.bg} border border-black/5`} />
-                            <span className="text-[9px] font-black uppercase tracking-widest">{c.isBlocked ? 'Booked' : c.label}</span>
+                            <span className="text-[9px] font-black uppercase tracking-widest">{c.isBlocked ? 'In Use' : c.label}</span>
                         </button>
                     ))}
                 </div>

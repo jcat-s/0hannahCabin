@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { format, addDays, parseISO, differenceInDays } from "date-fns";
+import { format, addDays, parseISO, differenceInDays, isSameDay, subDays } from "date-fns";
 import { collection, query, onSnapshot, doc, getDoc } from "firebase/firestore";
 import { db } from "../../shared/lib/firebase";
 import { useAuth } from "../../shared/context/AuthContext";
@@ -53,13 +53,12 @@ export function useBooking() {
         }
     }, []);
 
-    const getRangeEnd = (dateStr: string, type: StayType) => {
-        const date = parseISO(dateStr);
-        return type === "day" ? addDays(date, 1) : date;
+    // Helper: Mismong overlap logic (Hindi kasama ang adjacency/magkadikit)
+    const rangesOverlap = (startA: Date, endA: Date, startB: Date, endB: Date) => {
+        // Exclusive boundary check: startA < endB && startB < endA
+        // Ito ang nagpapahintulot na ang May 12 (Checkout) ay maging May 12 (Checkin) ng iba.
+        return startA < endB && startB < endA;
     };
-
-    const rangesOverlap = (startA: Date, endA: Date, startB: Date, endB: Date) =>
-        startA < endB && endA > startB;
 
     const filteredBookings = useMemo(() =>
         dbBookings.filter(b => b.cabin === cabin && b.status === "Confirmed"),
@@ -75,15 +74,49 @@ export function useBooking() {
         return checkIsHighRate(parseISO(checkIn), dbHolidays);
     }, [checkIn, dbHolidays]);
 
+    // FIX: Dito titingnan kung VALID ang date (walang sumasapaw na booking kahit anong kulay)
     const isDateRangeValid = useMemo(() => {
         const start = parseISO(checkIn);
-        const end = getRangeEnd(checkOut, stayType);
+        // Kung "day" stay, ang end ay saktong kinabukasan para sa comparison
+        const end = stayType === "day" ? addDays(start, 1) : addDays(parseISO(checkOut), 1);
+
         return !filteredBookings.some(b => {
             const bStart = parseISO(b.checkInDate || b.checkIn);
-            const bEnd = getRangeEnd(b.checkOutDate || b.checkOut, b.stayType || "full");
+            const bEnd = addDays(parseISO(b.checkOutDate || b.checkOut), 1);
             return rangesOverlap(start, end, bStart, bEnd);
         });
     }, [checkIn, checkOut, stayType, filteredBookings]);
+
+    // FIX: COLOR LOGIC (Dito na-aapply yung rules mo sa kulay)
+    // Ang Red ay maba-block kung:
+    // 1. May overlap (Mismong May 6-12)
+    // 2. May adjacency (May 5 o May 13)
+    useEffect(() => {
+        if (!selectedColor || !checkIn) return;
+
+        const start = parseISO(checkIn);
+        const end = stayType === "full" ? parseISO(checkOut) : start;
+
+        const isColorBlocked = filteredBookings.some(b => {
+            if (b.color !== selectedColor) return false;
+
+            const bStart = parseISO(b.checkInDate || b.checkIn);
+            const bEnd = parseISO(b.checkOutDate || b.checkOut);
+
+            // A. Overlap check
+            const overlaps = start <= bEnd && bStart <= end;
+
+            // B. Adjacency check
+            const isDayAfter = isSameDay(start, addDays(bEnd, 1));
+            const isDayBefore = isSameDay(end, subDays(bStart, 1));
+
+            return overlaps || isDayAfter || isDayBefore;
+        });
+
+        if (isColorBlocked) {
+            setSelectedColor(""); // Reset kung bawal ang kulay sa date na yan
+        }
+    }, [checkIn, checkOut, stayType, selectedColor, filteredBookings]);
 
     // --- BOOKING HANDLER ---
     const handleBooking = async (finalPrice: number) => {
@@ -93,7 +126,12 @@ export function useBooking() {
         }
 
         if (!selectedColor) {
-            alert("Please select a color slot.");
+            alert("Please select an available color slot.");
+            return false;
+        }
+
+        if (!isDateRangeValid) {
+            alert("This date range is already fully booked.");
             return false;
         }
 
@@ -123,6 +161,7 @@ export function useBooking() {
                 isHighRate,
                 totalPrice: finalPrice,
                 status: "Pending",
+                createdAt: new Date().toISOString(),
             };
 
             setLastBookingData(bookingPayload);
@@ -138,44 +177,13 @@ export function useBooking() {
     };
 
     return {
-        // States
-        cabin,
-        stayType,
-        checkIn,
-        checkOut,
-        guests,
-        kids,
-        pets,
-        specialOccasion,
-        selectedColor,
-        currentViewDate,
-        dbBookings,
-        dbHolidays,
-        submitting,
-        showConfirmation,
-        lastBookingData,
-        // Setters
-        setCabin,
-        setStayType,
-        setCheckIn,
-        setCheckOut,
-        setGuests,
-        setKids,
-        setPets,
-        setSpecialOccasion,
-        setSelectedColor,
-        setCurrentViewDate,
-        setShowConfirmation,
-        // Computed
-        filteredBookings,
-        durationCount,
-        isHighRate,
-        isDateRangeValid,
-        todayStr,
-        fullStayOption,
-        setFullStayOption,
-        // Handlers
-        handleDateLogic,
-        handleBooking,
+        cabin, stayType, checkIn, checkOut, guests, kids, pets, specialOccasion,
+        selectedColor, currentViewDate, dbBookings, dbHolidays, submitting,
+        showConfirmation, lastBookingData,
+        setCabin, setStayType, setCheckIn, setCheckOut, setGuests, setKids, setPets,
+        setSpecialOccasion, setSelectedColor, setCurrentViewDate, setShowConfirmation,
+        filteredBookings, durationCount, isHighRate, isDateRangeValid, todayStr,
+        fullStayOption, setFullStayOption,
+        handleDateLogic, handleBooking,
     };
 }

@@ -106,8 +106,14 @@ export function PriceSummary({
 
             {showModal && (
                 <div className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-6" onClick={() => setShowModal(false)}>
-                    <X className="absolute top-10 right-10 text-white cursor-pointer" size={32} />
-                    <img src="/section/price.jpg" className="max-w-4xl w-full rounded-2xl" alt="Rates" />
+                    <div className="max-w-4xl w-full rounded-2xl overflow-hidden bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                        <div className="p-6 border-b border-zinc-200 text-left">
+                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Rate Chart</p>
+                            <h2 className="text-xl font-black text-zinc-950 mt-2">Price list only</h2>
+                            <p className="text-[9px] text-zinc-500 mt-1">This is a rate chart view. No booking dates are shown here.</p>
+                        </div>
+                        <img src="/section/price.jpg" className="max-w-full w-full rounded-b-2xl" alt="Rate chart" />
+                    </div>
                 </div>
             )}
         </div>

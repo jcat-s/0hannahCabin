@@ -4,6 +4,7 @@ import { Inbox, Calendar, TrendingUp } from "lucide-react";
 import { db } from "../shared/lib/firebase";
 import { Reservations } from "./Reservations";
 import { Analytics } from "./Analytics";
+import { CalendarView } from "./Calendar";
 
 export default function AdminApp() {
   const [bookings, setBookings] = useState<any[]>([]);
@@ -52,11 +53,11 @@ export default function AdminApp() {
         <header className="mb-12">
           <h2 className="text-4xl font-serif italic font-black">
             {activeTab === 'bookings' ? 'Reservations' :
-             activeTab === 'calendar' ? 'Calendar' : 'Analytics'}
+              activeTab === 'calendar' ? 'Calendar' : 'Analytics'}
           </h2>
           <p className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.3em] mt-2 italic">
             {activeTab === 'bookings' ? 'Dashboard' :
-             activeTab === 'calendar' ? 'Booking Overview' : 'Business Insights'}
+              activeTab === 'calendar' ? 'Booking Overview' : 'Business Insights'}
           </p>
         </header>
 
@@ -72,10 +73,7 @@ export default function AdminApp() {
               />
             )}
             {activeTab === 'calendar' && (
-              <div className="text-center py-20">
-                <Calendar size={48} className="mx-auto text-zinc-300 mb-4" />
-                <p className="text-zinc-400 font-black uppercase tracking-widest">Calendar View Coming Soon</p>
-              </div>
+              <CalendarView bookings={bookings} />
             )}
             {activeTab === 'analytics' && (
               <Analytics bookings={bookings} />

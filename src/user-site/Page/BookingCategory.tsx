@@ -16,11 +16,58 @@ const BOOKING_COLORS = [
 
 type FullStayOption = "9AM-7AM" | "8PM-5PM";
 
+interface StayCategorySectionProps {
+    stayType: StayType;
+    setStayType: (v: StayType) => void;
+    fullStayOption: FullStayOption;
+    setFullStayOption: (v: FullStayOption) => void;
+    checkIn: string;
+    checkOut: string;
+}
+
+export function StayCategorySection({ stayType, setStayType, fullStayOption, setFullStayOption, checkIn, checkOut }: StayCategorySectionProps) {
+    return (
+        <section className="bg-white rounded-[3rem] p-12 border border-zinc-100 shadow-sm">
+            <div className="space-y-10">
+                <div className="space-y-4">
+                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                        <Clock size={14} className="text-[#D4AF37]" /> Stay Category
+                    </label>
+                    <select
+                        value={stayType}
+                        onChange={(e) => setStayType(e.target.value as StayType)}
+                        className="w-full p-5 rounded-2xl bg-zinc-50 border-none outline-none text-[11px] font-bold uppercase focus:ring-2 focus:ring-[#D4AF37]/20"
+                    >
+                        <option value="day">☀️ Day Lounge (9AM-5PM)</option>
+                        <option value="evening">🌙 Evening Chill (8PM-7AM)</option>
+                        <option value="full">🏠 Full Stay (9AM-7AM or 8PM-5PM)</option>
+                    </select>
+                    {stayType === "full" && (
+                        <div className="mt-6 grid grid-cols-2 gap-3">
+                            {(["9AM-7AM", "8PM-5PM"] as FullStayOption[]).map(option => (
+                                <button
+                                    key={option}
+                                    type="button"
+                                    onClick={() => setFullStayOption(option)}
+                                    className={`py-4 rounded-2xl text-[10px] font-black uppercase transition-all border ${fullStayOption === option ? 'bg-zinc-950 text-white border-zinc-950 shadow-lg' : 'bg-zinc-50 text-zinc-600 border-zinc-200 hover:border-zinc-300'}`}
+                                >
+                                    {option}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+
+            </div>
+        </section>
+    );
+}
+
 interface BookingCategoryProps {
     cabin: CabinId; stayType: StayType; setStayType: (v: StayType) => void;
     fullStayOption: FullStayOption; setFullStayOption: (v: FullStayOption) => void;
-    checkIn: string; setCheckIn: (v: string) => void;
-    checkOut: string; setCheckOut: (v: string) => void;
+    checkIn: string; setCheckIn: (v: string) => void; checkOut: string; setCheckOut: (v: string) => void;
     guests: number; setGuests: (v: number) => void;
     kids: number; setKids: (v: number) => void;
     pets: number; setPets: (v: number) => void;
@@ -30,7 +77,7 @@ interface BookingCategoryProps {
 }
 
 export function BookingCategory({
-    cabin, stayType, setStayType, fullStayOption, setFullStayOption, checkIn, setCheckIn, checkOut, setCheckOut,
+    cabin, stayType, setStayType, fullStayOption, setFullStayOption, checkIn, checkOut,
     guests, setGuests, kids, setKids, pets, setPets, specialOccasion, setSpecialOccasion,
     selectedColor, setSelectedColor, filteredBookings, todayStr
 }: BookingCategoryProps) {
@@ -84,65 +131,39 @@ export function BookingCategory({
 
     return (
         <section className="bg-white rounded-[3rem] p-12 border border-zinc-100 space-y-12 shadow-sm">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-
-                {/* LEFT: STAY & DATES */}
-                <div className="space-y-10">
-                    <div className="space-y-4">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                            <Clock size={14} className="text-[#D4AF37]" /> Stay Category
-                        </label>
-                        <select
-                            value={stayType}
-                            onChange={(e) => {
-                                const val = e.target.value as StayType;
-                                setStayType(val);
-                                if (val !== "full") setCheckOut(checkIn);
-                            }}
-                            className="w-full p-5 rounded-2xl bg-zinc-50 border-none outline-none text-[11px] font-bold uppercase focus:ring-2 focus:ring-[#D4AF37]/20"
-                        >
-                            <option value="day">☀️ Day Lounge (9AM-5PM)</option>
-                            <option value="evening">🌙 Evening Chill (8PM-7AM)</option>
-                            <option value="full">🏠 Full Stay (9AM-7AM or 8PM-5PM)</option>
-                        </select>
-                        {stayType === "full" && (
-                            <div className="mt-6 grid grid-cols-2 gap-3">
-                                {(["9AM-7AM", "8PM-5PM"] as FullStayOption[]).map(option => (
-                                    <button
-                                        key={option}
-                                        type="button"
-                                        onClick={() => setFullStayOption(option)}
-                                        className={`py-4 rounded-2xl text-[10px] font-black uppercase transition-all border ${fullStayOption === option ? 'bg-zinc-950 text-white border-zinc-950 shadow-lg' : 'bg-zinc-50 text-zinc-600 border-zinc-200 hover:border-zinc-300'}`}
-                                    >
-                                        {option}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
+            <div className="space-y-10">
+                <div className="space-y-4">
+                    <div className="flex items-center gap-3 text-zinc-500 uppercase tracking-[0.3em] text-[10px] font-black">
+                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#D4AF37]/10 text-[#D4AF37]">4</span>
+                        Select Color Slot
                     </div>
-
-                    <div className="space-y-4">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                            <CalendarIcon size={14} className="text-[#D4AF37]" /> Check-in/Out
-                        </label>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                                <span className="text-[8px] text-zinc-300 font-bold uppercase ml-1">Check-in</span>
-                                <input type="date" value={checkIn} min={todayStr} onChange={(e) => {
-                                    setCheckIn(e.target.value);
-                                    if (stayType !== "full") setCheckOut(e.target.value);
-                                }} className="w-full p-4 rounded-xl bg-zinc-50 border-none text-[11px] font-bold" />
-                            </div>
-                            <div className="space-y-1">
-                                <span className="text-[8px] text-zinc-300 font-bold uppercase ml-1">Check-out</span>
-                                <input type="date" value={checkOut} disabled={stayType !== "full"} min={checkIn} onChange={(e) => setCheckOut(e.target.value)} className="w-full p-4 rounded-xl bg-zinc-50 border-none text-[11px] font-bold disabled:opacity-30" />
-                            </div>
-                        </div>
-                    </div>
+                    <p className="text-[9px] text-zinc-400 uppercase tracking-[0.2em]">If a color is unavailable, it is already booked on your dates or adjacent dates.</p>
                 </div>
 
-                {/* RIGHT: GUESTS, KIDS, PETS */}
-                <div className="space-y-10">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {dynamicColors.map(c => (
+                        <button
+                            key={c.id}
+                            type="button"
+                            disabled={c.isBlocked}
+                            onClick={() => setSelectedColor(c.id)}
+                            className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${selectedColor === c.id
+                                ? 'bg-zinc-950 text-white border-zinc-950 scale-105 shadow-xl'
+                                : 'bg-white text-zinc-400 border-zinc-50 hover:border-zinc-200'
+                                } ${c.isBlocked ? 'opacity-20 grayscale cursor-not-allowed' : ''}`}
+                        >
+                            <span className={`w-4 h-4 rounded-full ${c.bg} border border-black/5`} />
+                            <span className="text-[9px] font-black uppercase tracking-widest">{c.isBlocked ? 'In Use' : c.label}</span>
+                        </button>
+                    ))}
+                </div>
+
+                <div className="space-y-8 pt-12 border-t border-zinc-50">
+                    <div className="flex items-center gap-3 text-zinc-500 uppercase tracking-[0.3em] text-[10px] font-black">
+                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#D4AF37]/10 text-[#D4AF37]">5</span>
+                        Guest Details
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-4">
                             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
@@ -200,29 +221,6 @@ export function BookingCategory({
                             />
                         </div>
                     </div>
-                </div>
-            </div>
-
-            {/* COLOR SELECTION */}
-            <div className="pt-12 border-t border-zinc-50">
-                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em] block mb-4 text-center">Select Personal Slot Color</label>
-                <p className="text-[9px] text-zinc-400 uppercase tracking-[0.2em] text-center mb-6">If a color is unavailable, it is booked on your dates or an adjacent date.</p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    {dynamicColors.map(c => (
-                        <button
-                            key={c.id}
-                            type="button"
-                            disabled={c.isBlocked}
-                            onClick={() => setSelectedColor(c.id)}
-                            className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${selectedColor === c.id
-                                ? 'bg-zinc-950 text-white border-zinc-950 scale-105 shadow-xl'
-                                : 'bg-white text-zinc-400 border-zinc-50 hover:border-zinc-200'
-                                } ${c.isBlocked ? 'opacity-20 grayscale cursor-not-allowed' : ''}`}
-                        >
-                            <span className={`w-4 h-4 rounded-full ${c.bg} border border-black/5`} />
-                            <span className="text-[9px] font-black uppercase tracking-widest">{c.isBlocked ? 'In Use' : c.label}</span>
-                        </button>
-                    ))}
                 </div>
             </div>
         </section>

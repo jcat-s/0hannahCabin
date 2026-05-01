@@ -10,11 +10,13 @@ import {
     addMonths,
     getDay,
     isWithinInterval,
-    startOfDay
+    startOfDay,
+    isSameDay,
 } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../shared/lib/firebase";
+import { StayType } from "../../shared/lib/bookingPricing";
 
 const FIXED_PH_HOLIDAYS = ["01-01", "04-09", "05-01", "06-12", "08-31", "11-30", "12-25", "12-30", "02-17", "08-21", "11-01", "11-02", "12-08", "12-24", "12-31"];
 
@@ -42,10 +44,16 @@ interface CalendarBookedProps {
     currentViewDate: Date;
     setCurrentViewDate: (d: Date) => void;
     filteredBookings: any[];
+    checkIn: string;
+    setCheckIn: (v: string) => void;
+    checkOut: string;
+    setCheckOut: (v: string) => void;
+    stayType: StayType;
 }
 
-export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBookings }: CalendarBookedProps) {
+export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBookings, checkIn, setCheckIn, checkOut, setCheckOut, stayType }: CalendarBookedProps) {
     const [dbHolidays, setDbHolidays] = useState<string[]>([]);
+    const [activeField, setActiveField] = useState<"checkIn" | "checkOut">("checkIn");
 
     useEffect(() => {
         if (!db) return;
@@ -59,7 +67,42 @@ export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBo
         end: endOfMonth(currentViewDate)
     });
 
+    const confirmedBookings = filteredBookings.filter(b => String(b.status).toLowerCase() === "confirmed");
+
     const firstDow = (startOfMonth(currentViewDate).getDay() + 6) % 7;
+    const selectedCheckIn = checkIn ? parseISO(checkIn) : null;
+    const selectedCheckOut = checkOut ? parseISO(checkOut) : null;
+
+    const handleDayClick = (date: Date) => {
+        const iso = format(date, "yyyy-MM-dd");
+
+        if (activeField === "checkIn") {
+            setCheckIn(iso);
+            if (stayType !== "full") {
+                setCheckOut(iso);
+            } else {
+                const nextDay = format(addDays(date, 1), "yyyy-MM-dd");
+                setCheckOut(nextDay);
+            }
+            return;
+        }
+
+        if (activeField === "checkOut") {
+            if (stayType !== "full") {
+                setCheckIn(iso);
+                setCheckOut(iso);
+                return;
+            }
+
+            const parsedCheckIn = parseISO(checkIn);
+            if (date <= parsedCheckIn) {
+                setCheckIn(iso);
+                setCheckOut(format(addDays(date, 1), "yyyy-MM-dd"));
+            } else {
+                setCheckOut(iso);
+            }
+        }
+    };
 
     return (
         <section className="bg-white rounded-[3rem] shadow-[0_20px_80px_rgba(0,0,0,0.03)] border border-zinc-100 overflow-hidden">
@@ -86,8 +129,32 @@ export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBo
             </div>
 
             <div className="p-10">
+                <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h3 className="text-sm font-black uppercase tracking-[0.3em] text-zinc-400">Step 3: Pick Dates</h3>
+                        <p className="text-[10px] text-zinc-500 mt-2">Tap "Select Check-in" or "Select Check-out" then choose the day on the calendar.</p>
+                    </div>
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                        <button
+                            type="button"
+                            onClick={() => setActiveField("checkIn")}
+                            className={`rounded-full px-4 py-3 text-[10px] font-black uppercase tracking-[0.3em] transition ${activeField === "checkIn" ? 'bg-[#D4AF37] text-white' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'}`}
+                        >
+                            Select Check-in
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveField("checkOut")}
+                            disabled={stayType !== "full"}
+                            className={`rounded-full px-4 py-3 text-[10px] font-black uppercase tracking-[0.3em] transition ${activeField === "checkOut" ? 'bg-[#D4AF37] text-white' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'} ${stayType !== "full" ? 'opacity-40 cursor-not-allowed' : ''}`}
+                        >
+                            Select Check-out
+                        </button>
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-7 gap-4">
-                    {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map(d => (
+                    {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(d => (
                         <div key={d} className="text-center text-[10px] font-bold text-zinc-300 uppercase pb-8">{d}</div>
                     ))}
 
@@ -98,30 +165,39 @@ export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBo
                         const isHighRate = checkIsHoliday(d, dbHolidays);
 
                         // logic para mahanap ang booking sa range
-                        const booking = filteredBookings.find(b => {
-                            const start = startOfDay(parseISO(b.checkIn));
-                            const end = startOfDay(parseISO(b.checkOut));
+                        const booking = confirmedBookings.find(b => {
+                            const start = startOfDay(parseISO(b.checkInDate || b.checkIn));
+                            const end = startOfDay(parseISO(b.checkOutDate || b.checkOut));
 
                             // Kung May 5 to 13, dapat kasama ang 5 at 13 sa interval
                             return isWithinInterval(currentIterationDay, { start, end });
                         });
 
                         const bgColorClass = booking ? (CALENDAR_COLORS[booking.color] || "bg-zinc-400") : "";
+                        const isSelectedCheckIn = selectedCheckIn ? isSameDay(currentIterationDay, selectedCheckIn) : false;
+                        const isSelectedCheckOut = selectedCheckOut ? isSameDay(currentIterationDay, selectedCheckOut) : false;
+                        const isInSelectedRange = selectedCheckIn && selectedCheckOut && stayType === "full" && isWithinInterval(currentIterationDay, { start: selectedCheckIn, end: selectedCheckOut });
+                        const isSelectable = !booking && currentIterationDay >= startOfDay(new Date());
+                        const statusClasses = booking
+                            ? `${bgColorClass} text-white z-10 scale-[1.05] shadow-lg cursor-not-allowed`
+                            : isSelectedCheckIn || isSelectedCheckOut
+                                ? "bg-[#D4AF37] text-white shadow-lg"
+                                : isInSelectedRange
+                                    ? "bg-[#D4AF37]/10 text-zinc-900"
+                                    : "hover:bg-zinc-50 text-zinc-400 cursor-pointer";
 
                         return (
-                            <div
+                            <button
                                 key={d.toString()}
-                                className={`h-14 border border-zinc-50 flex flex-col items-center justify-center rounded-[1.2rem] relative transition-all
-                                    ${booking
-                                        ? `${bgColorClass} text-white z-10 scale-[1.05] shadow-lg`
-                                        : "hover:bg-zinc-50 text-zinc-400"
-                                    }`}
+                                type="button"
+                                onClick={() => isSelectable && handleDayClick(currentIterationDay)}
+                                disabled={!isSelectable}
+                                className={`h-14 border border-zinc-50 flex flex-col items-center justify-center rounded-[1.2rem] relative transition-all text-sm font-bold ${statusClasses}`}
                             >
-                                <span className="text-sm font-bold">{format(d, "d")}</span>
+                                <span>{format(d, "d")}</span>
 
                                 {booking ? (
                                     <span className="text-[6px] uppercase font-black mt-1">
-                                        {/* Labeling para mas malinaw kung Day/Night/Full */}
                                         {booking.stayType === "day" ? "Day" : (booking.fullStayOption || "Stay")}
                                     </span>
                                 ) : (
@@ -129,7 +205,7 @@ export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBo
                                         <div className="absolute top-2 right-2 w-1 h-1 rounded-full bg-[#D4AF37]" />
                                     )
                                 )}
-                            </div>
+                            </button>
                         );
                     })}
                 </div>

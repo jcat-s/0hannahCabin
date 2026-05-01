@@ -3,7 +3,7 @@ import { ChevronLeft } from "lucide-react";
 import { useBooking } from "../hooks/useBooking";
 import { PriceSummary } from "./PriceSummary";
 import { CalendarBooked } from "./CalendarBooked";
-import { BookingCategory } from "./BookingCategory";
+import { BookingCategory, StayCategorySection } from "./BookingCategory";
 import { BookingConfirmation } from "./BookingConfirmation";
 
 export function BookingContainer({ onBack, onRequireAuth }: { onBack: () => void; onRequireAuth?: () => void }) {
@@ -33,57 +33,95 @@ export function BookingContainer({ onBack, onRequireAuth }: { onBack: () => void
 
             <div className="max-w-7xl mx-auto px-6 mt-12 grid grid-cols-1 lg:grid-cols-12 gap-12">
                 <div className="lg:col-span-8 space-y-12">
-                    {/* Cabin Selection */}
-                    <section className="bg-zinc-950 p-2 rounded-[2rem] flex gap-2 shadow-2xl">
-                        {(["ohannah", "dream"] as const).map(c => (
-                            <button
-                                key={c}
-                                onClick={() => {
-                                    booking.setCabin(c);
-                                    booking.setSelectedColor("");
-                                }}
-                                className={`flex-1 py-4 rounded-[1.6rem] text-[10px] font-bold uppercase tracking-[0.3em] transition-all ${booking.cabin === c ? 'bg-white text-zinc-950 shadow-lg' : 'text-zinc-500 hover:text-white'
-                                    }`}
-                            >
-                                {c === 'ohannah' ? 'Ohannah Cabin' : 'The Dream'}
-                            </button>
-                        ))}
-                    </section>
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-4 text-zinc-500 uppercase tracking-[0.25em] text-[10px] font-black">
+                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#D4AF37]/10 text-[#D4AF37]">1</span>
+                            Stay Category
+                        </div>
+                        <StayCategorySection
+                            stayType={booking.stayType}
+                            setStayType={(t) => {
+                                booking.setStayType(t);
+                                booking.handleDateLogic(booking.checkIn, t);
+                            }}
+                            fullStayOption={booking.fullStayOption}
+                            setFullStayOption={booking.setFullStayOption}
+                            checkIn={booking.checkIn}
+                            checkOut={booking.checkOut}
+                        />
+                    </div>
 
-                    {/* Calendar */}
-                    <CalendarBooked
-                        currentViewDate={booking.currentViewDate}
-                        setCurrentViewDate={booking.setCurrentViewDate}
-                        filteredBookings={booking.filteredBookings}
-                    />
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-4 text-zinc-500 uppercase tracking-[0.25em] text-[10px] font-black">
+                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#D4AF37]/10 text-[#D4AF37]">2</span>
+                            Select Cabin
+                        </div>
+                        <section className="bg-zinc-950 p-2 rounded-[2rem] flex gap-2 shadow-2xl">
+                            {(["ohannah", "dream"] as const).map(c => (
+                                <button
+                                    key={c}
+                                    onClick={() => {
+                                        booking.setCabin(c);
+                                        booking.setSelectedColor("");
+                                    }}
+                                    className={`flex-1 py-4 rounded-[1.6rem] text-[10px] font-bold uppercase tracking-[0.3em] transition-all ${booking.cabin === c ? 'bg-white text-zinc-950 shadow-lg' : 'text-zinc-500 hover:text-white'
+                                        }`}
+                                >
+                                    {c === 'ohannah' ? 'Ohannah Cabin' : 'The Dream'}
+                                </button>
+                            ))}
+                        </section>
+                    </div>
 
-                    {/* Booking Form */}
-                    <BookingCategory
-                        cabin={booking.cabin}
-                        stayType={booking.stayType}
-                        setStayType={(t) => {
-                            booking.setStayType(t);
-                            booking.handleDateLogic(booking.checkIn, t);
-                        }}
-                        checkIn={booking.checkIn}
-                        setCheckIn={(d) => booking.handleDateLogic(d, booking.stayType)}
-                        checkOut={booking.checkOut}
-                        setCheckOut={booking.setCheckOut}
-                        guests={booking.guests}
-                        setGuests={booking.setGuests}
-                        kids={booking.kids}
-                        setKids={booking.setKids}
-                        pets={booking.pets}
-                        setPets={booking.setPets}
-                        specialOccasion={booking.specialOccasion}
-                        setSpecialOccasion={booking.setSpecialOccasion}
-                        selectedColor={booking.selectedColor}
-                        setSelectedColor={booking.setSelectedColor}
-                        fullStayOption={booking.fullStayOption}
-                        setFullStayOption={booking.setFullStayOption}
-                        filteredBookings={booking.filteredBookings}
-                        todayStr={booking.todayStr}
-                    />
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-4 text-zinc-500 uppercase tracking-[0.25em] text-[10px] font-black">
+                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#D4AF37]/10 text-[#D4AF37]">3</span>
+                            Pick Your Dates
+                        </div>
+                        <CalendarBooked
+                            currentViewDate={booking.currentViewDate}
+                            setCurrentViewDate={booking.setCurrentViewDate}
+                            filteredBookings={booking.filteredBookings}
+                            checkIn={booking.checkIn}
+                            setCheckIn={booking.setCheckIn}
+                            checkOut={booking.checkOut}
+                            setCheckOut={booking.setCheckOut}
+                            stayType={booking.stayType}
+                        />
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-4 text-zinc-500 uppercase tracking-[0.25em] text-[10px] font-black">
+                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#D4AF37]/10 text-[#D4AF37]">4</span>
+                            Booking Details
+                        </div>
+                        <BookingCategory
+                            cabin={booking.cabin}
+                            stayType={booking.stayType}
+                            setStayType={(t) => {
+                                booking.setStayType(t);
+                                booking.handleDateLogic(booking.checkIn, t);
+                            }}
+                            checkIn={booking.checkIn}
+                            setCheckIn={(d) => booking.handleDateLogic(d, booking.stayType)}
+                            checkOut={booking.checkOut}
+                            setCheckOut={booking.setCheckOut}
+                            guests={booking.guests}
+                            setGuests={booking.setGuests}
+                            kids={booking.kids}
+                            setKids={booking.setKids}
+                            pets={booking.pets}
+                            setPets={booking.setPets}
+                            specialOccasion={booking.specialOccasion}
+                            setSpecialOccasion={booking.setSpecialOccasion}
+                            selectedColor={booking.selectedColor}
+                            setSelectedColor={booking.setSelectedColor}
+                            fullStayOption={booking.fullStayOption}
+                            setFullStayOption={booking.setFullStayOption}
+                            filteredBookings={booking.filteredBookings}
+                            todayStr={booking.todayStr}
+                        />
+                    </div>
                 </div>
 
                 {/* Price Summary Sidebar */}

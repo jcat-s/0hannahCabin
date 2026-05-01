@@ -61,7 +61,7 @@ export function useBooking() {
     };
 
     const filteredBookings = useMemo(() =>
-        dbBookings.filter(b => b.cabin === cabin && b.status === "Confirmed"),
+        dbBookings.filter(b => b.cabin === cabin && String(b.status).toLowerCase() === "confirmed"),
         [cabin, dbBookings]);
 
     const durationCount = useMemo(() => {

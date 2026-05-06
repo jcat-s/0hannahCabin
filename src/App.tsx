@@ -20,7 +20,7 @@ export default function App() {
       <NotificationProvider>
         <div className="min-h-screen bg-[#FDFCFB]">
 
-          {/* Header condition: Itatago lang kung nasa booking confirmation mode sa loob ng BookingPage */}
+          {/* Header condition: This will only be hidden if in booking confirmation mode inside BookingPage */}
           <Header
             currentPage={activePage}
             onNavigate={(page) => setActivePage(page)}

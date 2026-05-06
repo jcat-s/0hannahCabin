@@ -48,7 +48,7 @@ export function Header({ onNavigate, currentPage }: HeaderProps) {
           <img src="/section/logo.png" alt="Logo" className="h-10 w-auto" />
         </button>
 
-        {/* Lilitaw lang ang links kung nasa Home */}
+        {/* Links will only appear if on Home */}
         {currentPage === 'home' && (
           <div className="hidden md:flex items-center gap-10">
             {navLinks.map((link) => (

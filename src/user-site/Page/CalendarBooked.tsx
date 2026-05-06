@@ -210,7 +210,7 @@ export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBo
                         const isSelectedCheckOut = selectedCheckOut ? isSameDay(currentIterationDay, selectedCheckOut) : false;
                         const isInSelectedRange = selectedCheckIn && selectedCheckOut && stayType === "full" && isWithinInterval(currentIterationDay, { start: selectedCheckIn, end: selectedCheckOut });
 
-                        // Kung "checkOut" ang pinipili, hindi dapat selectable ang date kung may mada-daanang booking mula sa checkIn
+                        // If "checkOut" is selected, the date should not be selectable if there is an existing booking passing through from checkIn
                         const isBlockedByExisting = activeField === "checkOut" && selectedCheckIn ?
                             confirmedBookings.some(b => {
                                 const bStart = startOfDay(parseISO(b.checkInDate || b.checkIn));

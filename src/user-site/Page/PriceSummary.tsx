@@ -1,26 +1,47 @@
-import React, { useMemo, useState } from "react";
-import { Image as ImageIcon, X, Receipt, Info, PartyPopper, ShieldCheck } from "lucide-react";
+import React, { useMemo, useState, useEffect } from "react";
+import { Image as ImageIcon, Receipt, PartyPopper, ShieldCheck } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "../../shared/lib/firebase";
 import { CabinId, StayType, calculateTotal } from "../../shared/lib/bookingPricing";
 
 interface PriceSummaryProps {
-    cabin: CabinId; stayType: StayType; fullStayOption?: "9AM-7AM" | "8PM-5PM"; guests: number; kids: number;
-    pets: number; checkIn: string; checkOut: string;
-    specialOccasion?: string; durationCount: number;
-    isHighRate: boolean; canBookCore: boolean;
-    submitting: boolean; onSubmit: (total: number) => void;
+    cabin: CabinId;
+    stayType: StayType;
+    fullStayOption?: "9AM-7AM" | "8PM-5PM";
+    guests: number;
+    kids: number;
+    pets: number;
+    checkIn: string;
+    checkOut: string;
+    specialOccasion?: string;
+    durationCount: number;
+    canBookCore: boolean;
+    submitting: boolean;
+    onSubmit: (total: number) => void;
 }
 
 export function PriceSummary({
-    cabin, stayType, fullStayOption, guests, kids, pets, checkIn, checkOut, specialOccasion,
-    durationCount, isHighRate, canBookCore, submitting, onSubmit
+    cabin, stayType, fullStayOption, guests, kids, pets, checkIn, checkOut,
+    specialOccasion, durationCount, canBookCore, submitting, onSubmit
 }: PriceSummaryProps) {
     const [showModal, setShowModal] = useState(false);
+    const [dbHolidays, setDbHolidays] = useState<string[]>([]);
 
-    // Dito kinakalikot ang presyo. Tandaan: Kids = Free kaya hindi sila kailangang i-multiply sa calculateTotal
+    // Makinig sa database para sa custom holidays (para sa weekend rate)
+    useEffect(() => {
+        if (!db) return;
+        return onSnapshot(doc(db, "metadata", "holidays"), (docSnap) => {
+            if (docSnap.exists()) {
+                setDbHolidays(docSnap.data().dates || []);
+            }
+        });
+    }, []);
+
+    // Dito ipinapasa ang dbHolidays para mag-apply ang Holiday Rate base sa image
     const pricing = useMemo(() =>
-        calculateTotal(cabin, stayType, guests, pets, isHighRate, durationCount),
-        [cabin, stayType, guests, pets, isHighRate, durationCount]
+        calculateTotal(cabin, stayType, guests, pets, checkIn, checkOut, dbHolidays),
+        [cabin, stayType, guests, pets, checkIn, checkOut, dbHolidays]
     );
 
     const stayLabels = {
@@ -56,17 +77,15 @@ export function PriceSummary({
                     </div>
                 </div>
 
-                <SummaryRow label="Stay" value={`${durationCount} ${stayLabels[stayType].label}${stayType === 'full' && fullStayOption ? ` (${fullStayOption})` : ''}`} />
+                <SummaryRow
+                    label="Stay"
+                    value={`${durationCount} ${stayLabels[stayType].label}${stayType === 'full' && fullStayOption ? ` (${fullStayOption})` : ''}`}
+                />
 
                 <div className="pt-2 space-y-3">
                     <SummaryRow label="Adults" value={`${guests} Pax`} />
-                    {/* Pakita natin ang Kids dito para alam ng customer na na-record sila */}
-                    {kids > 0 && (
-                        <SummaryRow label="Kids (Free)" value={`${kids} Pax`} />
-                    )}
-                    {pets > 0 && (
-                        <SummaryRow label="Pets" value={`${pets} Pax`} />
-                    )}
+                    {kids > 0 && <SummaryRow label="Kids (Free)" value={`${kids} Pax`} />}
+                    {pets > 0 && <SummaryRow label="Pets" value={`${pets} Pax`} />}
                 </div>
 
                 {specialOccasion && (
@@ -106,13 +125,8 @@ export function PriceSummary({
 
             {showModal && (
                 <div className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-6" onClick={() => setShowModal(false)}>
-                    <div className="max-w-4xl w-full rounded-2xl overflow-hidden bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-                        <div className="p-6 border-b border-zinc-200 text-left">
-                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Rate Chart</p>
-                            <h2 className="text-xl font-black text-zinc-950 mt-2">Price list only</h2>
-                            <p className="text-[9px] text-zinc-500 mt-1">This is a rate chart view. No booking dates are shown here.</p>
-                        </div>
-                        <img src="/section/price.jpg" className="max-w-full w-full rounded-b-2xl" alt="Rate chart" />
+                    <div className="max-w-4xl w-full rounded-2xl overflow-hidden bg-white shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
+                        <img src="/section/price.jpg" className="max-w-full w-full" alt="Rate chart" />
                     </div>
                 </div>
             )}

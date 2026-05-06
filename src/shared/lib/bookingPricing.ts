@@ -1,4 +1,4 @@
-import { isWeekend, format, getDay } from "date-fns";
+import { format, getDay, eachDayOfInterval, subDays, parseISO } from "date-fns";
 
 export type CabinId = "ohannah" | "dream";
 export type StayType = "day" | "evening" | "full";
@@ -19,11 +19,11 @@ export const PRICING_DATA: Record<CabinId, Record<StayType, { weekday: number; w
 const FIXED_PH_HOLIDAYS = ["01-01", "04-09", "05-01", "06-12", "08-31", "11-30", "12-25", "12-30", "02-17", "08-21", "11-01", "11-02", "12-08", "12-24", "12-31"];
 
 /**
- * CUSTOM WEEKEND CHECK: Biyernes (5), Sabado (6), at Linggo (0)
+ * CUSTOM WEEKEND CHECK: Friday (5), Saturday (6), and Sunday (0)
  */
 export function checkIsHighRate(date: Date, dbHolidays: string[] = []): boolean {
   const day = getDay(date);
-  const isFriSatSun = day === 5 || day === 6 || day === 0; // Fri, Sat, Sun
+  const isFriSatSun = day === 5 || day === 6 || day === 0;
 
   const monthDay = format(date, "MM-dd");
   const fullDate = format(date, "yyyy-MM-dd");
@@ -31,29 +31,41 @@ export function checkIsHighRate(date: Date, dbHolidays: string[] = []): boolean 
   return isFriSatSun || FIXED_PH_HOLIDAYS.includes(monthDay) || dbHolidays.includes(fullDate);
 }
 
-/** * Logic: Base rate covers 4 Adults + 2 Kids (FREE). 
- * Extra pax charges only apply to Adults beyond the first 4.
- * Kids are strictly max 2 and always free based on UI.
+/**
+ * Logic: Calculates total by checking the rate for EACH night of the stay.
  */
 export function calculateTotal(
   cabin: CabinId,
   stayType: StayType,
   adults: number,
   pets: number,
-  isHighRate: boolean,
-  durationCount: number
+  checkIn: string,
+  checkOut: string,
+  dbHolidays: string[] = []
 ) {
   const config = PRICING_DATA[cabin][stayType];
-  const basePricePerUnit = isHighRate ? config.weekend : config.weekday;
 
-  // Base price multiplied by duration (nights or slots)
-  const totalBasePrice = basePricePerUnit * durationCount;
+  if (!checkIn || !checkOut) {
+    return { basePrice: 0, extraPaxCount: 0, extraPaxRate: config.extraPax, extraPaxTotal: 0, petTotal: 0, grandTotal: 0 };
+  }
 
-  // Extra Pax: 4 Adults included. 5th adult onwards has charge.
+  // Get all nights of the stay (from check-in until the day BEFORE check-out)
+  const stayDates = eachDayOfInterval({
+    start: parseISO(checkIn),
+    end: stayType === 'full' ? subDays(parseISO(checkOut), 1) : parseISO(checkIn)
+  });
+
+  // Calculate base price by checking high rate for every single day in the range
+  const totalBasePrice = stayDates.reduce((acc, date) => {
+    const isHigh = checkIsHighRate(date, dbHolidays);
+    return acc + (isHigh ? config.weekend : config.weekday);
+  }, 0);
+
+  // Extra Pax: 4 Adults included. Charge per night for Full Stay.
   const extraPaxCount = Math.max(0, adults - 4);
-  const extraPaxTotal = extraPaxCount * config.extraPax;
+  const extraPaxTotal = extraPaxCount * config.extraPax * stayDates.length;
 
-  // Pets: 250 each
+  // Pets: 250 each (one-time fee or per stay logic)
   const petTotal = pets * 250;
 
   return {

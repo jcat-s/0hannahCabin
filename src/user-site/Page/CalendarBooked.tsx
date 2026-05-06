@@ -13,7 +13,7 @@ import {
     startOfDay,
     isSameDay,
 } from "date-fns";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, XCircle, AlertCircle } from "lucide-react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../shared/lib/firebase";
 import { StayType } from "../../shared/lib/bookingPricing";
@@ -30,14 +30,14 @@ export const checkIsHoliday = (date: Date, dbHolidays: string[]) => {
 };
 
 const CALENDAR_COLORS: Record<string, string> = {
-    pink: "bg-pink-400",
-    red: "bg-red-400",
-    orange: "bg-orange-400",
-    yellow: "bg-yellow-400",
-    green: "bg-green-400",
-    blue: "bg-blue-400",
-    indigo: "bg-indigo-400",
-    violet: "bg-violet-400",
+    pink: "bg-pink-200",
+    red: "bg-red-200",
+    orange: "bg-orange-200",
+    yellow: "bg-yellow-200",
+    green: "bg-green-200",
+    blue: "bg-blue-200",
+    indigo: "bg-indigo-200",
+    violet: "bg-violet-200",
 };
 
 interface CalendarBookedProps {
@@ -54,6 +54,7 @@ interface CalendarBookedProps {
 export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBookings, checkIn, setCheckIn, checkOut, setCheckOut, stayType }: CalendarBookedProps) {
     const [dbHolidays, setDbHolidays] = useState<string[]>([]);
     const [activeField, setActiveField] = useState<"checkIn" | "checkOut">("checkIn");
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     useEffect(() => {
         if (!db) return;
@@ -78,34 +79,68 @@ export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBo
 
         if (activeField === "checkIn") {
             setCheckIn(iso);
-            if (stayType !== "full") {
+
+            if (stayType === "day") {
                 setCheckOut(iso);
-            } else {
+            } else if (stayType === "evening") {
                 const nextDay = format(addDays(date, 1), "yyyy-MM-dd");
                 setCheckOut(nextDay);
+            } else if (stayType === "full") {
+                const nextDay = format(addDays(date, 1), "yyyy-MM-dd");
+                setCheckOut(nextDay);
+                setActiveField("checkOut");
             }
             return;
         }
 
         if (activeField === "checkOut") {
-            if (stayType !== "full") {
-                setCheckIn(iso);
-                setCheckOut(iso);
-                return;
-            }
+            if (stayType !== "full") return;
 
             const parsedCheckIn = parseISO(checkIn);
             if (date <= parsedCheckIn) {
                 setCheckIn(iso);
                 setCheckOut(format(addDays(date, 1), "yyyy-MM-dd"));
-            } else {
-                setCheckOut(iso);
+                return;
             }
+
+            // --- OVERLAP VALIDATION ---
+            const range = eachDayOfInterval({ start: parsedCheckIn, end: date });
+            const hasConflict = range.some(day =>
+                confirmedBookings.some(b => {
+                    const bStart = startOfDay(parseISO(b.checkInDate || b.checkIn));
+                    const bEnd = startOfDay(parseISO(b.checkOutDate || b.checkOut));
+                    return day >= bStart && day < bEnd;
+                })
+            );
+
+            if (hasConflict) {
+                setErrorMessage("The selected range overlaps with an existing booking. Please choose available dates.");
+                return;
+            }
+
+            setCheckOut(iso);
         }
     };
 
     return (
-        <section className="bg-white rounded-[3rem] shadow-[0_20px_80px_rgba(0,0,0,0.03)] border border-zinc-100 overflow-hidden">
+        <section className="bg-white rounded-[3rem] shadow-[0_20px_80px_rgba(0,0,0,0.03)] border border-zinc-100 overflow-hidden relative">
+            {/* --- Error Modal --- */}
+            {errorMessage && (
+                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-sm p-6">
+                    <div className="bg-white rounded-3xl p-8 shadow-2xl max-w-sm w-full border border-zinc-100 text-center flex flex-col items-center">
+                        <AlertCircle className="text-red-500 mb-4" size={48} />
+                        <h4 className="text-lg font-bold text-zinc-900 mb-2">Unavailable Dates</h4>
+                        <p className="text-sm text-zinc-500 mb-6 leading-relaxed">{errorMessage}</p>
+                        <button
+                            onClick={() => setErrorMessage(null)}
+                            className="w-full py-3 bg-zinc-900 text-white rounded-full font-bold text-xs uppercase tracking-widest hover:bg-zinc-800 transition"
+                        >
+                            Got it
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div className="p-8 border-b border-zinc-50 flex justify-between items-center bg-zinc-50/30">
                 <div className="flex items-center gap-6">
                     <button
@@ -122,6 +157,25 @@ export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBo
                         <ChevronRight size={16} />
                     </button>
                 </div>
+
+                <div className="flex flex-col gap-3 sm:flex-row">
+                    <button
+                        type="button"
+                        onClick={() => setActiveField("checkIn")}
+                        className={`rounded-full px-4 py-3 text-[10px] font-black uppercase tracking-[0.3em] transition ${activeField === "checkIn" ? 'bg-[#D4AF37] text-white' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'}`}
+                    >
+                        Check-in
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveField("checkOut")}
+                        disabled={stayType !== "full"}
+                        className={`rounded-full px-4 py-3 text-[10px] font-black uppercase tracking-[0.3em] transition ${activeField === "checkOut" ? 'bg-[#D4AF37] text-white' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'} ${stayType !== "full" ? 'opacity-40 cursor-not-allowed' : ''}`}
+                    >
+                        Check-out
+                    </button>
+                </div>
+
                 <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-[#D4AF37]" />
                     <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Holiday/Weekend Rate</span>
@@ -130,27 +184,8 @@ export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBo
 
             <div className="p-10">
                 <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h3 className="text-sm font-black uppercase tracking-[0.3em] text-zinc-400">Step 3: Pick Dates</h3>
-                        <p className="text-[10px] text-zinc-500 mt-2">Tap "Select Check-in" or "Select Check-out" then choose the day on the calendar.</p>
-                    </div>
-                    <div className="flex flex-col gap-3 sm:flex-row">
-                        <button
-                            type="button"
-                            onClick={() => setActiveField("checkIn")}
-                            className={`rounded-full px-4 py-3 text-[10px] font-black uppercase tracking-[0.3em] transition ${activeField === "checkIn" ? 'bg-[#D4AF37] text-white' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'}`}
-                        >
-                            Select Check-in
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setActiveField("checkOut")}
-                            disabled={stayType !== "full"}
-                            className={`rounded-full px-4 py-3 text-[10px] font-black uppercase tracking-[0.3em] transition ${activeField === "checkOut" ? 'bg-[#D4AF37] text-white' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'} ${stayType !== "full" ? 'opacity-40 cursor-not-allowed' : ''}`}
-                        >
-                            Select Check-out
-                        </button>
-                    </div>
+
+
                 </div>
 
                 <div className="grid grid-cols-7 gap-4">
@@ -164,12 +199,9 @@ export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBo
                         const currentIterationDay = startOfDay(d);
                         const isHighRate = checkIsHoliday(d, dbHolidays);
 
-                        // logic para mahanap ang booking sa range
                         const booking = confirmedBookings.find(b => {
                             const start = startOfDay(parseISO(b.checkInDate || b.checkIn));
                             const end = startOfDay(parseISO(b.checkOutDate || b.checkOut));
-
-                            // Kung May 5 to 13, dapat kasama ang 5 at 13 sa interval
                             return isWithinInterval(currentIterationDay, { start, end });
                         });
 
@@ -177,9 +209,18 @@ export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBo
                         const isSelectedCheckIn = selectedCheckIn ? isSameDay(currentIterationDay, selectedCheckIn) : false;
                         const isSelectedCheckOut = selectedCheckOut ? isSameDay(currentIterationDay, selectedCheckOut) : false;
                         const isInSelectedRange = selectedCheckIn && selectedCheckOut && stayType === "full" && isWithinInterval(currentIterationDay, { start: selectedCheckIn, end: selectedCheckOut });
-                        const isSelectable = !booking && currentIterationDay >= startOfDay(new Date());
+
+                        // Kung "checkOut" ang pinipili, hindi dapat selectable ang date kung may mada-daanang booking mula sa checkIn
+                        const isBlockedByExisting = activeField === "checkOut" && selectedCheckIn ?
+                            confirmedBookings.some(b => {
+                                const bStart = startOfDay(parseISO(b.checkInDate || b.checkIn));
+                                return isWithinInterval(bStart, { start: selectedCheckIn, end: currentIterationDay });
+                            }) : false;
+
+                        const isSelectable = !booking && currentIterationDay >= startOfDay(new Date()) && !isBlockedByExisting;
+
                         const statusClasses = booking
-                            ? `${bgColorClass} text-white z-10 scale-[1.05] shadow-lg cursor-not-allowed`
+                            ? `${bgColorClass} text-zinc-900 z-10 scale-[1.05] shadow-md cursor-not-allowed`
                             : isSelectedCheckIn || isSelectedCheckOut
                                 ? "bg-[#D4AF37] text-white shadow-lg"
                                 : isInSelectedRange
@@ -197,8 +238,8 @@ export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBo
                                 <span>{format(d, "d")}</span>
 
                                 {booking ? (
-                                    <span className="text-[6px] uppercase font-black mt-1">
-                                        {booking.stayType === "day" ? "Day" : (booking.fullStayOption || "Stay")}
+                                    <span className="text-[7px] uppercase font-black mt-1 opacity-60">
+                                        Booked
                                     </span>
                                 ) : (
                                     isHighRate && (

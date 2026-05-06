@@ -91,10 +91,7 @@ export function BookingContainer({ onBack, onRequireAuth }: { onBack: () => void
                     </div>
 
                     <div className="space-y-6">
-                        <div className="flex items-center gap-4 text-zinc-500 uppercase tracking-[0.25em] text-[10px] font-black">
-                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#D4AF37]/10 text-[#D4AF37]">4</span>
-                            Booking Details
-                        </div>
+
                         <BookingCategory
                             cabin={booking.cabin}
                             stayType={booking.stayType}
@@ -137,7 +134,7 @@ export function BookingContainer({ onBack, onRequireAuth }: { onBack: () => void
                         checkOut={booking.checkOut}
                         specialOccasion={booking.specialOccasion}
                         durationCount={booking.durationCount}
-                        isHighRate={booking.isHighRate}
+
                         canBookCore={booking.isDateRangeValid && booking.selectedColor !== "" && booking.durationCount > 0}
                         submitting={booking.submitting}
                         onSubmit={booking.handleBooking}

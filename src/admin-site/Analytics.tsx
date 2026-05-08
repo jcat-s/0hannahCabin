@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Users, Baby, Dog, Calendar, LucideProps } from "lucide-react";
-import { format, parseISO, getDay, isWithinInterval } from 'date-fns';
+import { Users, Baby, Dog, LucideProps, TrendingUp } from "lucide-react";
+import { format, parseISO, getDay, isWithinInterval, subMonths, isSameMonth } from 'date-fns';
 
 // Import separated components
 import { Descriptive } from './Analytics/Descriptive';
@@ -36,19 +36,11 @@ export function Analytics({ bookings }: { bookings: any[] }) {
             return true;
         });
 
-        // 2. Filter by Status
         const confirmedList = filteredByRange.filter(b => b.status === 'Confirmed' || b.status === 'Approved');
         const pendingList = filteredByRange.filter(b => b.status === 'Pending');
         const rejectedList = filteredByRange.filter(b => b.status === 'Rejected' || b.status === 'Cancelled');
 
-        // 3. Status Distribution (para sa unang Pie Chart)
-        const statusData = [
-            { name: 'Approved', value: confirmedList.length, color: '#4ade80' },
-            { name: 'Pending', value: pendingList.length, color: '#fb923c' },
-            { name: 'Rejected', value: rejectedList.length, color: '#f87171' }
-        ].filter(i => i.value >= 0); // Wag i-filter para laging may label kahit 0
-
-        // 4. Revenue per Cabin (para sa pangalawang Pie Chart)
+        // 2. Revenue per Cabin
         const cabinRevenue = [
             {
                 name: 'Ohannah',
@@ -62,7 +54,7 @@ export function Analytics({ bookings }: { bookings: any[] }) {
             }
         ];
 
-        // 5. Stay Type Breakdown (para sa listahan sa dulo)
+        // 3. Stay Type Breakdown (Fixes the TS Error 2741)
         const stayTypeStats = ['full', 'evening', 'day'].map(type => {
             const matches = confirmedList.filter(b => (b.stayType || 'full').toLowerCase() === type);
             return {
@@ -72,7 +64,7 @@ export function Analytics({ bookings }: { bookings: any[] }) {
             };
         });
 
-        // 6. Day Type Stats
+        // 4. Day Type Stats
         const dayTypeStats = ['weekday', 'weekend', 'holiday'].map(type => {
             const matches = confirmedList.filter(b => classifyDayType(parseISO(b.checkInDate || b.checkIn)) === type);
             return {
@@ -82,34 +74,46 @@ export function Analytics({ bookings }: { bookings: any[] }) {
             };
         });
 
-        const totalRevenue = confirmedList.reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0);
+        // 5. Growth Rate Calculation
+        const now = new Date();
+        const currentMonthBookings = bookings.filter(b => isSameMonth(parseISO(b.checkInDate || b.checkIn), now));
+        const lastMonthBookings = bookings.filter(b => isSameMonth(parseISO(b.checkInDate || b.checkIn), subMonths(now, 1)));
+
+        const currentRev = currentMonthBookings.reduce((s, b) => s + Number(b.totalPrice || 0), 0);
+        const lastRev = lastMonthBookings.reduce((s, b) => s + Number(b.totalPrice || 0), 0);
+        const growthRate = lastRev > 0 ? ((currentRev - lastRev) / lastRev) * 100 : 0;
 
         return {
-            totalRevenue,
-            totalAdults: confirmedList.reduce((sum, b) => sum + (Number(b.guests) || 0), 0),
-            totalKids: confirmedList.reduce((sum, b) => sum + (Number(b.kids) || 0), 0),
-            totalPets: confirmedList.reduce((sum, b) => sum + (Number(b.pets) || 0), 0),
+            totalRevenue: confirmedList.reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0),
+            totalAdults: confirmedList.reduce((sum, b) => sum + (Number(b.adults || b.guests || 0)), 0),
+            totalKids: confirmedList.reduce((sum, b) => sum + (Number(b.children || b.kids || 0)), 0),
+            totalPets: confirmedList.reduce((sum, b) => sum + (Number(b.pets || 0)), 0),
             totalBookings: confirmedList.length,
             confirmedList,
-            statusData,
             cabinRevenue,
-            stayTypeStats, // Ipinapasa na may 's' para match sa interface
+            stayTypeStats,
             dayTypeStats,
-            pendingCount: pendingList.length
+            growthRate,
+            statusData: [
+                { name: 'Approved', value: confirmedList.length, color: '#D4AF37' },
+                { name: 'Pending', value: pendingList.length, color: '#18181b' },
+                { name: 'Rejected', value: rejectedList.length, color: '#ef4444' }
+            ]
         };
     }, [bookings, dateRange, startDate, endDate]);
 
     return (
         <div className="p-4 lg:p-6 space-y-8 bg-[#f8f9fa] min-h-screen font-sans text-zinc-900">
+
             {/* FILTERS */}
-            <div className="flex flex-col md:flex-row gap-4 p-5 bg-white rounded-2xl border border-zinc-100 shadow-sm justify-between items-center">
-                <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex flex-col md:flex-row gap-4 p-5 bg-white rounded-[2rem] border border-zinc-100 shadow-sm justify-between items-center">
+                <div className="flex items-center gap-2 flex-wrap text-left">
                     <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Quick Filter:</span>
                     {['all', 'month', 'year'].map((r) => (
                         <button
                             key={r}
                             onClick={() => setDateRange(r as any)}
-                            className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition ${dateRange === r ? 'bg-[#D4AF37] text-white' : 'bg-zinc-50 text-zinc-600 hover:bg-zinc-100'}`}
+                            className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition ${dateRange === r ? 'bg-zinc-900 text-white' : 'bg-zinc-50 text-zinc-600 hover:bg-zinc-100'}`}
                         >
                             {r === 'all' ? 'All Time' : r}
                         </button>
@@ -117,37 +121,39 @@ export function Analytics({ bookings }: { bookings: any[] }) {
                 </div>
                 <div className="flex items-center gap-2">
                     <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setDateRange('custom'); }} className="text-[10px] font-bold border border-zinc-200 rounded-lg p-1.5 focus:outline-none focus:ring-1 focus:ring-[#D4AF37]" />
-                    <span className="text-zinc-400 text-[10px] font-bold">TO</span>
+                    <span className="text-zinc-400 text-[10px] font-bold uppercase">To</span>
                     <input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setDateRange('custom'); }} className="text-[10px] font-bold border border-zinc-200 rounded-lg p-1.5 focus:outline-none focus:ring-1 focus:ring-[#D4AF37]" />
                 </div>
             </div>
 
             {/* KPI ROW */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                <KPICard title="Gross Revenue" value={`₱${analysis.totalRevenue.toLocaleString()}`} icon="₱" color="text-emerald-600" bg="bg-emerald-50" />
-                <KPICard title="Total Bookings" value={analysis.totalBookings} icon={<Calendar />} color="text-orange-600" bg="bg-orange-50" />
-                <KPICard title="Total Adults" value={analysis.totalAdults} icon={<Users />} color="text-blue-600" bg="bg-blue-50" />
-                <KPICard title="Total Kids" value={analysis.totalKids} icon={<Baby />} color="text-purple-600" bg="bg-purple-50" />
-                <KPICard title="Total Pets" value={analysis.totalPets} icon={<Dog />} color="text-amber-600" bg="bg-amber-50" />
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <KPICard title="Total Adults" value={analysis.totalAdults} icon={<Users />} color="text-zinc-900" bg="bg-zinc-50" />
+                <KPICard title="Total Kids" value={analysis.totalKids} icon={<Baby />} color="text-zinc-900" bg="bg-zinc-50" />
+                <KPICard title="Total Pets" value={analysis.totalPets} icon={<Dog />} color="text-zinc-900" bg="bg-zinc-50" />
             </div>
 
-            {/* THE BIG THREE SECTIONS */}
-            <div className="space-y-20 pt-10">
-                {/* 1. DESCRIPTIVE (Yung main report na inayos natin) */}
+            {/* ANALYTICS SUITE */}
+            <div className="space-y-24 pt-10">
+                {/* 1. DESCRIPTIVE (Historical Data) */}
                 <section>
                     <Descriptive analysis={analysis} />
                 </section>
 
-                {/* 2. PREDICTIVE (Data-driven forecasting) */}
-                <section className="pt-10 border-t border-zinc-200">
+                {/* 2. PREDICTIVE (Forecasting) */}
+                <section className="pt-16 border-t border-zinc-200">
                     <Predictive bookings={analysis.confirmedList} />
                 </section>
 
-                {/* 3. PRESCRIPTIVE (Business Recommendations) */}
-                <section className="pt-10 border-t border-zinc-200">
+                {/* 3. PRESCRIPTIVE (Strategy) */}
+                <section className="pt-16 border-t border-zinc-200">
                     <Prescriptive
-                        revenueData={analysis.cabinRevenue}
-                        dayStats={analysis.dayTypeStats}
+                        analysis={{
+                            revenueData: analysis.cabinRevenue,
+                            dayStats: analysis.dayTypeStats,
+                            growthRate: analysis.growthRate,
+                            occupancyRate: (analysis.totalBookings / 30) * 100
+                        }}
                     />
                 </section>
             </div>
@@ -157,13 +163,13 @@ export function Analytics({ bookings }: { bookings: any[] }) {
 
 function KPICard({ title, value, icon, color, bg }: any) {
     return (
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-zinc-100 flex items-center justify-between hover:scale-[1.02] transition-all">
-            <div className="min-w-0">
-                <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-0.5">{title}</p>
-                <h4 className="text-lg font-black text-zinc-900 tracking-tighter">{value}</h4>
+        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-zinc-100 flex items-center justify-between hover:border-[#D4AF37] transition-all group">
+            <div className="min-w-0 text-left">
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-1">{title}</p>
+                <h4 className="text-2xl font-black text-zinc-900 tracking-tighter">{value}</h4>
             </div>
-            <div className={`w-10 h-10 rounded-xl ${bg} ${color} flex items-center justify-center flex-shrink-0 font-black text-lg`}>
-                {typeof icon === 'string' ? icon : React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<LucideProps>, { size: 18, strokeWidth: 3 }) : icon}
+            <div className={`w-12 h-12 rounded-2xl ${bg} ${color} flex items-center justify-center flex-shrink-0 group-hover:bg-[#D4AF37] group-hover:text-white transition-colors shadow-sm`}>
+                {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<LucideProps>, { size: 20, strokeWidth: 2.5 }) : icon}
             </div>
         </div>
     );

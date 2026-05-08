@@ -5,7 +5,12 @@ import { useAuth } from "../../shared/context/AuthContext";
 import { ChevronLeft, User, Users, Phone, MapPin, Calendar, Clock, CreditCard, LogOut, PartyPopper, Baby, Dog } from "lucide-react";
 import { format } from "date-fns";
 
-export function ProfilePage({ onBack }: { onBack: () => void }) {
+// Ito ang hiningi mong interface
+interface ProfilePageProps {
+    onBookClick: () => void;
+}
+
+export function ProfilePage({ onBookClick }: ProfilePageProps) {
     const { user } = useAuth();
     const [profile, setProfile] = useState<any>(null);
     const [myBookings, setMyBookings] = useState<any[]>([]);
@@ -49,7 +54,7 @@ export function ProfilePage({ onBack }: { onBack: () => void }) {
         const unsub = onSnapshot(q, (snap) => {
             try {
                 const bookings = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
-                // Sort by latest (handle both Firestore Timestamp and regular dates)
+                // Sort by latest
                 const sorted = bookings.sort((a, b) => {
                     const aTime = a.createdAt?.seconds || (a.createdAt instanceof Date ? a.createdAt.getTime() / 1000 : 0);
                     const bTime = b.createdAt?.seconds || (b.createdAt instanceof Date ? b.createdAt.getTime() / 1000 : 0);
@@ -99,9 +104,10 @@ export function ProfilePage({ onBack }: { onBack: () => void }) {
         <div className="min-h-screen bg-[#FDFCFB] text-zinc-900 pb-24">
             {/* Navigation */}
             <nav className="px-8 py-8 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur-md z-50">
-                <button onClick={onBack} className="flex items-center gap-2 text-zinc-400 hover:text-zinc-950 transition-colors">
+                {/* Pinalitan ang onBack ng onBookClick */}
+                <button onClick={onBookClick} className="flex items-center gap-2 text-zinc-400 hover:text-zinc-950 transition-colors">
                     <ChevronLeft size={20} />
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em]">Back</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em]">Back to Booking</span>
                 </button>
                 <button onClick={handleLogout} className="flex items-center gap-2 text-red-400 hover:text-red-600 transition-colors">
                     <LogOut size={16} />
@@ -174,7 +180,8 @@ export function ProfilePage({ onBack }: { onBack: () => void }) {
                         <div className="bg-white rounded-[3rem] p-20 text-center border-2 border-dashed border-zinc-100">
                             <Calendar className="mx-auto text-zinc-200 mb-4" size={48} />
                             <p className="text-zinc-400 text-sm italic">No bookings found yet.</p>
-                            <button onClick={onBack} className="mt-6 text-[10px] font-black uppercase tracking-widest text-[#D4AF37] hover:tracking-[0.3em] transition-all">Start Booking Now</button>
+                            {/* Pinalitan ang onBack ng onBookClick */}
+                            <button onClick={onBookClick} className="mt-6 text-[10px] font-black uppercase tracking-widest text-[#D4AF37] hover:tracking-[0.3em] transition-all">Start Booking Now</button>
                         </div>
                     ) : (
                         <div className="space-y-4">
@@ -228,7 +235,7 @@ export function ProfilePage({ onBack }: { onBack: () => void }) {
 
                                         <div className="flex items-center gap-6 w-full lg:w-auto justify-between lg:justify-end lg:flex-col lg:items-end">
                                             <div className="text-right">
-                                                <p className="text-[10px] font-black text-zinc-300 uppercase tracking-widest mb-1">Total Paid</p>
+                                                <p className="text-[10px] font-black text-zinc-300 uppercase tracking-widest mb-1">Total</p>
                                                 <p className="text-sm font-bold text-zinc-900">₱{booking.totalPrice?.toLocaleString()}</p>
                                             </div>
                                             <div className="text-right">
@@ -262,6 +269,7 @@ export function ProfilePage({ onBack }: { onBack: () => void }) {
                 </div>
             </div>
 
+            {/* Modal - Details */}
             {showProfileModal && (
                 <div className="fixed inset-0 z-[999] bg-zinc-950/60 backdrop-blur-xl flex items-center justify-center p-6" onClick={() => setShowProfileModal(false)}>
                     <div className="bg-white rounded-[3rem] w-full max-w-2xl p-8" onClick={(e) => e.stopPropagation()}>
@@ -295,6 +303,7 @@ export function ProfilePage({ onBack }: { onBack: () => void }) {
     );
 }
 
+// Support components
 function InfoItem({ icon, label, value }: { icon: any; label: string; value: any }) {
     return (
         <div className="space-y-1">
@@ -306,7 +315,6 @@ function InfoItem({ icon, label, value }: { icon: any; label: string; value: any
     );
 }
 
-// Sub-component para sa details
 function DetailItem({ icon, label, value, isEditing, onChange }: any) {
     return (
         <div className="space-y-1">

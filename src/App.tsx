@@ -48,7 +48,9 @@ export default function App() {
             )}
 
             {activePage === "profile" && (
-              <ProfilePage onBack={() => setActivePage("home")} />
+              <ProfilePage
+                onBookClick={() => setActivePage("booking")}
+              />
             )}
           </main>
         </div>

@@ -19,7 +19,7 @@ import {
 // Import separated components
 import { Descriptive } from './Analytics/Descriptive';
 import { Predictive } from './Analytics/Predictive';
-import { Prescriptive } from './Analytics/Prescriptive';
+
 
 const FIXED_PH_HOLIDAYS = ["01-01", "04-09", "05-01", "06-12", "08-31", "11-30", "12-25", "12-30", "02-17", "08-21", "11-01", "11-02", "12-08", "12-24", "12-31"];
 
@@ -247,16 +247,7 @@ export function Analytics({ bookings }: { bookings: any[] }) {
             <div className="space-y-2 pt-1">
                 <section><Descriptive analysis={analysis} /></section>
                 <section className="pt-8"><Predictive bookings={analysis.confirmedList} /></section>
-                <section className="pt-16 border-t border-zinc-200">
-                    <Prescriptive
-                        analysis={{
-                            revenueData: analysis.cabinRevenue,
-                            dayStats: analysis.dayTypeStats,
-                            growthRate: analysis.growthRate,
-                            occupancyRate: (analysis.totalBookings / 30) * 100
-                        }}
-                    />
-                </section>
+
             </div>
         </div>
     );

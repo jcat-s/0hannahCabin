@@ -1,6 +1,20 @@
 import React, { useMemo, useState } from 'react';
-import { Users, Baby, Dog, LucideProps, TrendingUp } from "lucide-react";
-import { format, parseISO, getDay, isWithinInterval, subMonths, isSameMonth } from 'date-fns';
+import { Users, Baby, Dog, LucideProps, XCircle, Calendar, X } from "lucide-react";
+import {
+    format,
+    parseISO,
+    getDay,
+    isWithinInterval,
+    subMonths,
+    isSameMonth,
+    isAfter,
+    isBefore,
+    startOfDay,
+    startOfYear,
+    endOfYear,
+    startOfMonth,
+    endOfMonth
+} from 'date-fns';
 
 // Import separated components
 import { Descriptive } from './Analytics/Descriptive';
@@ -14,33 +28,118 @@ const classifyDayType = (date: Date, dbHolidays: string[] = []): 'weekday' | 'we
     const monthDay = format(date, "MM-dd");
     const fullDate = format(date, "yyyy-MM-dd");
     if (FIXED_PH_HOLIDAYS.includes(monthDay) || dbHolidays.includes(fullDate)) return 'holiday';
-    // Friday (5), Saturday (6), Sunday (0) are weekends
     if (day === 0 || day === 6 || day === 5) return 'weekend';
     return 'weekday';
 };
+
+// --- MODAL COMPONENT ---
+function BookedDatesModal({ isOpen, onClose, dates }: { isOpen: boolean; onClose: () => void; dates: any[] }) {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 ">
+            <div className="bg-white rounded-[2.5rem] w-full max-w-md shadow-2xl overflow-hidden border border-zinc-100">
+                <div className="p-6 border-b border-zinc-50 flex justify-between items-center bg-zinc-50/50">
+                    <div className="flex items-center gap-2">
+                        <Calendar className="text-[#D4AF37]" size={20} />
+                        <h3 className="font-black text-sm uppercase tracking-widest text-zinc-800">Booked Dates</h3>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-zinc-200 rounded-full transition-colors">
+                        <X size={20} className="text-zinc-500" />
+                    </button>
+                </div>
+                <div className="p-6 max-h-[60vh] overflow-y-auto">
+                    {dates.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-2">
+                            {dates.map((item, idx) => (
+                                <div key={idx} className="flex justify-between items-center p-3 bg-zinc-50 rounded-2xl border border-zinc-100">
+                                    <span className="text-xs font-bold text-zinc-700">{item.date}</span>
+                                    <span className="text-[10px] font-black uppercase px-2 py-1 bg-white rounded-lg text-[#D4AF37] border border-zinc-100">
+                                        {item.cabin}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-center text-zinc-400 text-xs font-medium py-10">No bookings found for this range.</p>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export function Analytics({ bookings }: { bookings: any[] }) {
     const [dateRange, setDateRange] = useState<'all' | 'month' | 'year' | 'custom'>('all');
     const [startDate, setStartDate] = useState<string>('');
     const [endDate, setEndDate] = useState<string>('');
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    const handleRangeChange = (range: 'all' | 'month' | 'year') => {
+        setDateRange(range);
+        const today = new Date();
+        if (range === 'year') {
+            setStartDate(format(startOfYear(today), 'yyyy-MM-dd'));
+            setEndDate(format(endOfYear(today), 'yyyy-MM-dd'));
+        } else if (range === 'month') {
+            setStartDate(format(startOfMonth(today), 'yyyy-MM-dd'));
+            setEndDate(format(endOfMonth(today), 'yyyy-MM-dd'));
+        } else {
+            setStartDate('');
+            setEndDate('');
+        }
+    };
+
+    const handleClearFilters = () => {
+        setDateRange('all');
+        setStartDate('');
+        setEndDate('');
+    };
 
     const analysis = useMemo(() => {
-        // 1. Filter by Date Range
+        // 1. Base Filter
         const filteredByRange = bookings.filter(b => {
-            const checkInDate = parseISO(b.checkInDate || b.checkIn);
-            if (dateRange === 'custom' && startDate && endDate) {
-                return isWithinInterval(checkInDate, { start: parseISO(startDate), end: parseISO(endDate) });
-            }
-            if (dateRange === 'month') return checkInDate.getMonth() === new Date().getMonth();
-            if (dateRange === 'year') return checkInDate.getFullYear() === new Date().getFullYear();
+            const checkInDate = startOfDay(parseISO(b.checkInDate || b.checkIn));
+            const start = startDate ? startOfDay(parseISO(startDate)) : null;
+            const end = endDate ? startOfDay(parseISO(endDate)) : null;
+
+            if (start && end) return isWithinInterval(checkInDate, { start, end });
+            if (start && !end) return isAfter(checkInDate, start) || checkInDate.getTime() === start.getTime();
+            if (!start && end) return isBefore(checkInDate, end) || checkInDate.getTime() === end.getTime();
             return true;
         });
 
+        // 2. Status Lists
         const confirmedList = filteredByRange.filter(b => b.status === 'Confirmed' || b.status === 'Approved');
         const pendingList = filteredByRange.filter(b => b.status === 'Pending');
         const rejectedList = filteredByRange.filter(b => b.status === 'Rejected' || b.status === 'Cancelled');
 
-        // 2. Revenue per Cabin
+        // 3. Status Data (Needed for Descriptive.tsx)
+        const statusData = [
+            { name: 'Approved', value: confirmedList.length, color: '#D4AF37' },
+            { name: 'Pending', value: pendingList.length, color: '#18181b' },
+            { name: 'Rejected', value: rejectedList.length, color: '#ef4444' }
+        ];
+
+        // 4. Stay Type Stats (Needed for Descriptive.tsx)
+        const stayTypeStats = ['full', 'evening', 'day'].map(type => {
+            const matches = confirmedList.filter(b => (b.stayType || 'full').toLowerCase() === type);
+            return {
+                name: type.toUpperCase(),
+                count: matches.length,
+                revenue: matches.reduce((s, b) => s + Number(b.totalPrice || 0), 0)
+            };
+        });
+
+        // 5. Booked Dates for Modal
+        const detailedBookedDates = confirmedList
+            .map(b => ({
+                date: format(parseISO(b.checkInDate || b.checkIn), "MMMM dd, yyyy"),
+                cabin: b.cabin || 'Standard Cabin',
+                rawDate: parseISO(b.checkInDate || b.checkIn)
+            }))
+            .sort((a, b) => a.rawDate.getTime() - b.rawDate.getTime());
+
+        // 6. Cabin Revenue
         const cabinRevenue = [
             {
                 name: 'Ohannah',
@@ -54,17 +153,7 @@ export function Analytics({ bookings }: { bookings: any[] }) {
             }
         ];
 
-        // 3. Stay Type Breakdown (Fixes the TS Error 2741)
-        const stayTypeStats = ['full', 'evening', 'day'].map(type => {
-            const matches = confirmedList.filter(b => (b.stayType || 'full').toLowerCase() === type);
-            return {
-                name: type.toUpperCase(),
-                count: matches.length,
-                revenue: matches.reduce((s, b) => s + Number(b.totalPrice || 0), 0)
-            };
-        });
-
-        // 4. Day Type Stats
+        // 7. Day Type Stats
         const dayTypeStats = ['weekday', 'weekend', 'holiday'].map(type => {
             const matches = confirmedList.filter(b => classifyDayType(parseISO(b.checkInDate || b.checkIn)) === type);
             return {
@@ -74,11 +163,10 @@ export function Analytics({ bookings }: { bookings: any[] }) {
             };
         });
 
-        // 5. Growth Rate Calculation
+        // 8. Growth Logic
         const now = new Date();
         const currentMonthBookings = bookings.filter(b => isSameMonth(parseISO(b.checkInDate || b.checkIn), now));
         const lastMonthBookings = bookings.filter(b => isSameMonth(parseISO(b.checkInDate || b.checkIn), subMonths(now, 1)));
-
         const currentRev = currentMonthBookings.reduce((s, b) => s + Number(b.totalPrice || 0), 0);
         const lastRev = lastMonthBookings.reduce((s, b) => s + Number(b.totalPrice || 0), 0);
         const growthRate = lastRev > 0 ? ((currentRev - lastRev) / lastRev) * 100 : 0;
@@ -90,34 +178,45 @@ export function Analytics({ bookings }: { bookings: any[] }) {
             totalPets: confirmedList.reduce((sum, b) => sum + (Number(b.pets || 0)), 0),
             totalBookings: confirmedList.length,
             confirmedList,
+            detailedBookedDates,
             cabinRevenue,
-            stayTypeStats,
             dayTypeStats,
-            growthRate,
-            statusData: [
-                { name: 'Approved', value: confirmedList.length, color: '#D4AF37' },
-                { name: 'Pending', value: pendingList.length, color: '#18181b' },
-                { name: 'Rejected', value: rejectedList.length, color: '#ef4444' }
-            ]
+            stayTypeStats,
+            statusData,
+            growthRate
         };
-    }, [bookings, dateRange, startDate, endDate]);
+    }, [bookings, startDate, endDate]);
 
     return (
-        <div className="p-4 lg:p-6 space-y-8 bg-[#f8f9fa] min-h-screen font-sans text-zinc-900">
+        <div className="p-1 lg:p-1 space-y-8 bg-[#f8f9fa] min-h-screen font-sans text-zinc-900">
+
+            <BookedDatesModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                dates={analysis.detailedBookedDates}
+            />
 
             {/* FILTERS */}
             <div className="flex flex-col md:flex-row gap-4 p-5 bg-white rounded-[2rem] border border-zinc-100 shadow-sm justify-between items-center">
-                <div className="flex items-center gap-2 flex-wrap text-left">
+                <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Quick Filter:</span>
                     {['all', 'month', 'year'].map((r) => (
                         <button
                             key={r}
-                            onClick={() => setDateRange(r as any)}
+                            onClick={() => handleRangeChange(r as any)}
                             className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition ${dateRange === r ? 'bg-zinc-900 text-white' : 'bg-zinc-50 text-zinc-600 hover:bg-zinc-100'}`}
                         >
                             {r === 'all' ? 'All Time' : r}
                         </button>
                     ))}
+                    {(startDate || endDate) && (
+                        <button
+                            onClick={handleClearFilters}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 transition"
+                        >
+                            <XCircle size={14} /> Clear
+                        </button>
+                    )}
                 </div>
                 <div className="flex items-center gap-2">
                     <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setDateRange('custom'); }} className="text-[10px] font-bold border border-zinc-200 rounded-lg p-1.5 focus:outline-none focus:ring-1 focus:ring-[#D4AF37]" />
@@ -127,25 +226,27 @@ export function Analytics({ bookings }: { bookings: any[] }) {
             </div>
 
             {/* KPI ROW */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <KPICard title="Total Adults" value={analysis.totalAdults} icon={<Users />} color="text-zinc-900" bg="bg-zinc-50" />
                 <KPICard title="Total Kids" value={analysis.totalKids} icon={<Baby />} color="text-zinc-900" bg="bg-zinc-50" />
                 <KPICard title="Total Pets" value={analysis.totalPets} icon={<Dog />} color="text-zinc-900" bg="bg-zinc-50" />
+
+                <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="bg-white p-6 rounded-[2rem] shadow-sm border border-zinc-100 flex flex-col justify-center hover:border-[#D4AF37] transition-all group active:scale-95"
+                >
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-1 group-hover:text-[#D4AF37]">Booked Dates</p>
+                    <div className="flex items-center gap-2">
+                        <Calendar size={16} className="text-[#D4AF37]" />
+                        <span className="text-sm font-bold text-zinc-700">{analysis.detailedBookedDates.length} Days View</span>
+                    </div>
+                </button>
             </div>
 
             {/* ANALYTICS SUITE */}
-            <div className="space-y-24 pt-10">
-                {/* 1. DESCRIPTIVE (Historical Data) */}
-                <section>
-                    <Descriptive analysis={analysis} />
-                </section>
-
-                {/* 2. PREDICTIVE (Forecasting) */}
-                <section className="pt-16 border-t border-zinc-200">
-                    <Predictive bookings={analysis.confirmedList} />
-                </section>
-
-                {/* 3. PRESCRIPTIVE (Strategy) */}
+            <div className="space-y-2 pt-1">
+                <section><Descriptive analysis={analysis} /></section>
+                <section className="pt-8"><Predictive bookings={analysis.confirmedList} /></section>
                 <section className="pt-16 border-t border-zinc-200">
                     <Prescriptive
                         analysis={{

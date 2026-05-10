@@ -52,16 +52,7 @@ export function Prescriptive({ analysis }: PrescriptiveProps) {
                 : `₱${weekdayRevenue.toLocaleString()} (Weekday Rev) × 0.10 = +₱${(weekdayRevenue * 0.10).toLocaleString()} Potential Gain. Total Target: ₱${targetRevenue.toLocaleString()}`,
             impact: "Revenue"
         },
-        {
-            id: 'occupancy',
-            title: "Occupancy Boost",
-            icon: <Clock className="text-[#D4AF37]" size={20} />,
-            condition: true,
-            recommendation: "Mid-week 'Stay-More' bundles.",
-            details: `Weekday revenue is ₱${weekdayRevenue.toLocaleString()}. A 50% discount on the 3rd night incentivizes longer stays during low-demand days.`,
-            math: `₱${weekdayRevenue.toLocaleString()} ÷ ${analysis.dayStats?.find(d => d.name.toLowerCase().includes('weekday'))?.count || 1} (Avg/Night) × 2.5 Nights = Target Revenue per Booking.`,
-            impact: "Occupancy"
-        },
+
         {
             id: 'inventory',
             title: "Asset Focus",
@@ -71,26 +62,6 @@ export function Prescriptive({ analysis }: PrescriptiveProps) {
             details: `${topCabin?.name} leads your portfolio. Focus marketing here to maximize conversion rates.`,
             math: `${topCabin?.count || 0} (Cabin Bookings) ÷ ${totalBookings} (Total Bookings) = ${(((topCabin?.count || 0) / (totalBookings || 1)) * 100).toFixed(1)}% Portfolio Contribution.`,
             impact: "Assets"
-        },
-        {
-            id: 'seasonal',
-            title: "Seasonal Strategy",
-            icon: <CalendarDays className="text-[#D4AF37]" size={20} />,
-            condition: true,
-            recommendation: "Holiday Peak Adjustment.",
-            details: "Block-off common peak holidays 6 months in advance with a 25% base rate increase.",
-            math: "Base Rate × 1.25 for red-marked calendar dates.",
-            impact: "Scheduling"
-        },
-        {
-            id: 'retention',
-            title: "Guest Loyalty",
-            icon: <ShieldCheck className="text-[#D4AF37]" size={20} />,
-            condition: true,
-            recommendation: "10% Re-booking Coupon.",
-            details: "Bringing back a past guest is 5x cheaper than acquiring a new one. Send this 30 days after checkout.",
-            math: `Average Booking (₱${((weekendRevenue + weekdayRevenue) / (totalBookings || 1)).toLocaleString()}) - 10% Discount = ₱${(((weekendRevenue + weekdayRevenue) / (totalBookings || 1)) * 0.9).toLocaleString()} Net Profit per Return Guest.`,
-            impact: "Loyalty"
         },
 
     ];

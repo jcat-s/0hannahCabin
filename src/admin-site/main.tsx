@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import { onAuthStateChanged, User } from 'firebase/auth'; // Import User type for TS
+import { BrowserRouter } from 'react-router-dom'; // 1. Import BrowserRouter
+import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '../shared/lib/firebase';
 import AdminApp from './AdminApp';
 import { AdminLogin } from './AdminAuth';
-import '../styles/index.css'; // Siguraduhing tama ang path ng CSS mo
+import '../styles/index.css';
 
 function Root() {
     const [user, setUser] = useState<User | null>(null);
@@ -13,7 +14,6 @@ function Root() {
     useEffect(() => {
         if (!auth) return;
 
-        // Ito ang "Secret Sauce" - nakikinig ito sa auth changes
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             console.log("Auth State Changed:", currentUser ? "User Logged In" : "User Logged Out");
             setUser(currentUser);
@@ -33,16 +33,19 @@ function Root() {
         );
     }
 
-    // KUNG WALANG USER, LOGIN PAGE. KUNG MERON, ADMIN APP.
+    // 2. Ang User login status ay magdedetermine kung anong UI ang lalabas,
+    // pero dapat pareho silang nasa loob ng Router context.
     return user ? <AdminApp /> : <AdminLogin />;
 }
 
-// Siguraduhing naka-wrap sa StrictMode at Root component ang nire-render
 const rootElement = document.getElementById('root');
 if (rootElement) {
     ReactDOM.createRoot(rootElement).render(
         <React.StrictMode>
-            <Root />
+            {/* 3. I-wrap ang buong Root sa BrowserRouter */}
+            <BrowserRouter>
+                <Root />
+            </BrowserRouter>
         </React.StrictMode>
     );
 }

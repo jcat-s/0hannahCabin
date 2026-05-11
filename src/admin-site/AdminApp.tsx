@@ -9,11 +9,15 @@ import { db, auth } from "../shared/lib/firebase";
 import { Reservations } from "./Reservations";
 import { Analytics } from "./Analytics";
 import { CalendarView } from "./Calendar";
+// 1. IMPORT MO ITO DITO
+import { SystemConfig } from "./Settings";
 
 export default function AdminApp() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'bookings' | 'calendar' | 'analytics'>('bookings');
+
+  // 2. DAGDAGAN ANG 'settings' DITO SA TYPE DEFINITION
+  const [activeTab, setActiveTab] = useState<'bookings' | 'calendar' | 'analytics' | 'settings'>('bookings');
 
   const [adminData, setAdminData] = useState<{ name: string; email: string } | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -75,10 +79,9 @@ export default function AdminApp() {
   };
 
   return (
-    // "h-screen" and "overflow-hidden" are CRITICAL here to prevent the whole page from scrolling
     <div className="h-screen w-full bg-[#F8F9FA] flex flex-col lg:flex-row font-sans text-zinc-900 overflow-hidden">
 
-      {/* --- MOBILE TOP BAR (Always Fixed at Top) --- */}
+      {/* --- MOBILE TOP BAR --- */}
       <div className="lg:hidden bg-zinc-950 text-white p-4 flex justify-between items-center z-[70] border-b border-white/5 shrink-0">
         <h1 className="text-lg font-serif italic tracking-tight">
           Ohannah <span className="text-[#D4AF37] font-black not-italic">Admin</span>
@@ -91,7 +94,7 @@ export default function AdminApp() {
         </button>
       </div>
 
-      {/* --- SIDEBAR (Fixed/Sticky on Desktop) --- */}
+      {/* --- SIDEBAR --- */}
       <aside className={`
         fixed inset-y-0 left-0 z-[80] w-72 bg-zinc-950 flex flex-col text-white border-r border-white/5 transition-transform duration-500 ease-in-out lg:translate-x-0 lg:relative lg:h-screen shrink-0
         ${isSidebarOpen ? "translate-x-0 shadow-[20px_0_60px_rgba(0,0,0,0.5)]" : "-translate-x-full"}
@@ -108,7 +111,6 @@ export default function AdminApp() {
           </button>
         </div>
 
-        {/* Scrollable Nav inside Sidebar */}
         <nav className="flex-1 px-4 space-y-2 overflow-y-auto scrollbar-hide">
           <NavItem
             icon={<Inbox size={18} />}
@@ -131,11 +133,16 @@ export default function AdminApp() {
 
           <div className="pt-8 mt-8 border-t border-white/5">
             <p className="px-6 text-[8px] font-black uppercase tracking-[0.4em] mb-4 text-zinc-500">Settings</p>
-            <NavItem icon={<Settings size={18} />} label="System Config" active={false} onClick={() => { }} />
+            {/* 3. INAYOS ANG CLICK LOGIC NG SETTINGS NAV */}
+            <NavItem
+              icon={<Settings size={18} />}
+              label="System Config"
+              active={activeTab === 'settings'}
+              onClick={() => { setActiveTab('settings'); setIsSidebarOpen(false); }}
+            />
           </div>
         </nav>
 
-        {/* Sidebar Footer */}
         <div className="p-6 bg-zinc-950 border-t border-white/10 shrink-0">
           <div className="flex items-center gap-3 mb-6 px-2">
             <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center text-[#D4AF37] border border-white/5 shrink-0">
@@ -161,7 +168,6 @@ export default function AdminApp() {
         </div>
       </aside>
 
-      {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm z-[75] lg:hidden"
@@ -169,13 +175,14 @@ export default function AdminApp() {
         />
       )}
 
-      {/* --- MAIN CONTENT AREA (The only one that scrolls) --- */}
+      {/* --- MAIN CONTENT AREA --- */}
       <main className="flex-1 overflow-y-auto scroll-smooth relative">
         <div className="max-w-7xl mx-auto p-6 lg:p-12 pb-32">
           <header className="mb-8 lg:mb-12">
             <h2 className="text-4xl lg:text-6xl font-serif italic font-black tracking-tighter">
               {activeTab === 'bookings' ? 'Bookings' :
-                activeTab === 'calendar' ? 'Calendar' : 'Analytics'}
+                activeTab === 'calendar' ? 'Calendar' :
+                  activeTab === 'analytics' ? 'Analytics' : 'Settings'}
             </h2>
             <p className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.4em] mt-3 italic">
               Management Terminal
@@ -202,6 +209,10 @@ export default function AdminApp() {
               {activeTab === 'analytics' && (
                 <Analytics bookings={bookings} />
               )}
+              {/* 4. DITO LALABAS ANG COMPONENT KAPAG NAKA-SETTINGS TAB */}
+              {activeTab === 'settings' && (
+                <SystemConfig />
+              )}
             </div>
           )}
         </div>
@@ -210,14 +221,14 @@ export default function AdminApp() {
       {/* Logout Modal */}
       {showLogoutModal && (
         <div className="fixed inset-0 z-[100] bg-zinc-950/80 backdrop-blur-xl flex items-center justify-center p-6">
-          <div className="bg-white rounded-[3rem] p-10 max-w-sm w-full text-center">
+          <div className="bg-white rounded-[3rem] p-10 max-w-sm w-full text-center shadow-2xl">
             <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
               <AlertTriangle size={32} />
             </div>
             <h3 className="text-xl font-black uppercase tracking-tighter text-zinc-900">Sign Out?</h3>
             <div className="flex flex-col gap-2 mt-8">
-              <button onClick={handleLogout} className="w-full py-4 bg-zinc-900 text-white rounded-xl font-black uppercase text-[10px] tracking-[0.2em]">Logout</button>
-              <button onClick={() => setShowLogoutModal(false)} className="w-full py-4 bg-zinc-100 text-zinc-400 rounded-xl font-black uppercase text-[10px] tracking-[0.2em]">Cancel</button>
+              <button onClick={handleLogout} className="w-full py-4 bg-zinc-900 text-white rounded-xl font-black uppercase text-[10px] tracking-[0.2em] hover:bg-zinc-800 transition-all">Logout</button>
+              <button onClick={() => setShowLogoutModal(false)} className="w-full py-4 bg-zinc-100 text-zinc-400 rounded-xl font-black uppercase text-[10px] tracking-[0.2em] hover:bg-zinc-200 transition-all">Cancel</button>
             </div>
           </div>
         </div>

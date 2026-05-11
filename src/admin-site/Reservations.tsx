@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
     Phone, ChevronRight, ImageIcon, CheckCircle, Trash2,
     X, CreditCard, User, MapPin, PartyPopper, Users, Calendar,
-    MessageSquare, AlertCircle, Clock, Dog, Baby
+    MessageSquare, AlertCircle, Clock, Dog, Baby, Search, Filter
 } from "lucide-react";
 import { getSlotBg } from "../shared/lib/constants";
 
@@ -17,6 +17,24 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
     const [approvalMessage, setApprovalMessage] = useState("");
     const [showApprovalModal, setShowApprovalModal] = useState(false);
     const [pendingAction, setPendingAction] = useState<{ id: string, status: string } | null>(null);
+
+    // --- FILTER STATES ---
+    const [searchQuery, setSearchQuery] = useState("");
+    const [filterStatus, setFilterStatus] = useState("All");
+
+    // --- FILTER LOGIC ---
+    const filteredBookings = useMemo(() => {
+        return bookings.filter((booking) => {
+            const matchesSearch =
+                booking.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                booking.userEmail?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                booking.mobile?.includes(searchQuery);
+
+            const matchesStatus = filterStatus === "All" || booking.status === filterStatus;
+
+            return matchesSearch && matchesStatus;
+        });
+    }, [bookings, searchQuery, filterStatus]);
 
     const handleApprovalAction = (id: string, status: string) => {
         setPendingAction({ id, status });
@@ -34,103 +52,143 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
 
     return (
         <>
+            {/* Filter Bar Section */}
+            <div className="mb-8 flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-6 rounded-[2.5rem] border border-zinc-100 shadow-sm">
+                <div className="relative flex-1 w-full">
+                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+                    <input
+                        type="text"
+                        placeholder="Search guest name, email, or mobile..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-14 pr-6 py-4 bg-zinc-50 rounded-2xl border-none outline-none text-sm font-bold focus:ring-2 ring-[#D4AF37]/20 transition-all"
+                    />
+                </div>
+
+                <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
+                    <Filter size={16} className="text-zinc-400 mr-2 shrink-0" />
+                    {["All", "Pending", "Confirmed", "Rejected"].map((status) => (
+                        <button
+                            key={status}
+                            onClick={() => setFilterStatus(status)}
+                            className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0 ${filterStatus === status
+                                    ? 'bg-zinc-900 text-white shadow-lg shadow-zinc-200'
+                                    : 'bg-zinc-50 text-zinc-400 hover:bg-zinc-100'
+                                }`}
+                        >
+                            {status}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             <div className="grid gap-6">
-                {bookings.map((booking) => {
-                    const activeColor = booking.color || booking.selectedColor || booking.slot || null;
+                {filteredBookings.length > 0 ? (
+                    filteredBookings.map((booking) => {
+                        const activeColor = booking.color || booking.selectedColor || booking.slot || null;
 
-                    return (
-                        <div key={booking.id} className="bg-white rounded-[3rem] p-8 border border-zinc-100 shadow-sm flex items-center justify-between group hover:shadow-md transition-all">
-                            <div className="flex items-center gap-8 flex-1">
+                        return (
+                            <div key={booking.id} className="bg-white rounded-[3rem] p-8 border border-zinc-100 shadow-sm flex items-center justify-between group hover:shadow-md transition-all">
+                                <div className="flex items-center gap-8 flex-1">
 
-                                {/* Color indicator */}
-                                <div className={`w-3 h-20 rounded-full shrink-0 ${getSlotBg(activeColor)}`} />
+                                    {/* Color indicator */}
+                                    <div className={`w-3 h-20 rounded-full shrink-0 ${getSlotBg(activeColor)}`} />
 
-                                <div className="grid grid-cols-4 gap-8 w-full">
-                                    <div className="space-y-3">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-full bg-zinc-100 overflow-hidden flex items-center justify-center">
-                                                {booking.userPhotoURL ? (
-                                                    <img src={booking.userPhotoURL} alt="Guest" className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <span className="text-base font-black text-zinc-700">{(booking.customerName || booking.userEmail || 'G').charAt(0).toUpperCase()}</span>
-                                                )}
+                                    <div className="grid grid-cols-4 gap-8 w-full">
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-full bg-zinc-100 overflow-hidden flex items-center justify-center">
+                                                    {booking.userPhotoURL ? (
+                                                        <img src={booking.userPhotoURL} alt="Guest" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <span className="text-base font-black text-zinc-700">{(booking.customerName || booking.userEmail || 'G').charAt(0).toUpperCase()}</span>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <span className="text-[9px] font-black uppercase tracking-widest text-[#D4AF37]">{booking.cabin || "Cabin"}</span>
+                                                    <h3 className="text-xl font-black uppercase tracking-tighter">{booking.customerName}</h3>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <span className="text-[9px] font-black uppercase tracking-widest text-[#D4AF37]">{booking.cabin || "Cabin"}</span>
-                                                <h3 className="text-xl font-black uppercase tracking-tighter">{booking.customerName}</h3>
+                                            <div className="flex flex-col gap-1 text-zinc-500 text-[11px] font-bold">
+                                                <div className="flex items-center gap-2"><Phone size={12} /> {booking.mobile}</div>
+                                                <div className="flex items-center gap-2"><User size={12} /> {booking.userEmail || booking.email || 'No email'}</div>
                                             </div>
                                         </div>
-                                        <div className="flex flex-col gap-1 text-zinc-500 text-[11px] font-bold">
-                                            <div className="flex items-center gap-2"><Phone size={12} /> {booking.mobile}</div>
-                                            <div className="flex items-center gap-2"><User size={12} /> {booking.userEmail || booking.email || 'No email'}</div>
-                                        </div>
-                                    </div>
 
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-2">
-                                            <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase ${booking.status === 'Confirmed' ? 'bg-emerald-50 text-emerald-600' :
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase ${booking.status === 'Confirmed' ? 'bg-emerald-50 text-emerald-600' :
                                                     booking.status === 'Rejected' ? 'bg-red-50 text-red-600' :
                                                         'bg-orange-50 text-orange-600'
-                                                }`}>
-                                                {booking.status}
-                                            </span>
-                                            <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase bg-blue-50 text-blue-600">
-                                                {booking.paymentMethod || 'E-Wallet'}
-                                            </span>
-                                        </div>
-                                        <div className="text-sm font-black flex items-center gap-2 uppercase">
-                                            {booking.checkIn} <ChevronRight size={14} /> {booking.checkOut}
-                                        </div>
-                                        <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-                                            {booking.duration} {booking.stayType}{booking.fullStayOption ? ` (${booking.fullStayOption})` : ''}
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                        <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Guests</div>
-                                        <div className="flex items-center gap-3 text-sm font-black">
-                                            <span className="flex items-center gap-1"><Users size={12} /> {booking.guests}</span>
-                                            {booking.kids > 0 && <span className="flex items-center gap-1"><Baby size={12} /> {booking.kids}</span>}
-                                            {booking.pets > 0 && <span className="flex items-center gap-1"><Dog size={12} /> {booking.pets}</span>}
-                                        </div>
-                                        {booking.specialOccasion && (
-                                            <div className="flex items-center gap-1 text-[9px] text-zinc-500 font-medium">
-                                                <PartyPopper size={10} /> {booking.specialOccasion}
+                                                    }`}>
+                                                    {booking.status}
+                                                </span>
+                                                <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase bg-blue-50 text-blue-600">
+                                                    {booking.paymentMethod || 'E-Wallet'}
+                                                </span>
                                             </div>
-                                        )}
-                                    </div>
-
-                                    <div className="flex items-center gap-6">
-                                        <div className="text-right">
-                                            <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest block">Total</span>
-                                            <span className="text-2xl font-black tracking-tighter">₱{booking.totalPrice?.toLocaleString()}</span>
+                                            <div className="text-sm font-black flex items-center gap-2 uppercase">
+                                                {booking.checkIn} <ChevronRight size={14} /> {booking.checkOut}
+                                            </div>
+                                            <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                                                {booking.duration} {booking.stayType}{booking.fullStayOption ? ` (${booking.fullStayOption})` : ''}
+                                            </div>
                                         </div>
-                                        <button onClick={() => setSelectedBooking(booking)} className="p-4 bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 rounded-3xl text-[#D4AF37] flex flex-col items-center gap-1">
-                                            <ImageIcon size={24} />
-                                            <span className="text-[8px] font-black uppercase">Verify Pic</span>
-                                        </button>
+
+                                        <div className="space-y-1">
+                                            <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Guests</div>
+                                            <div className="flex items-center gap-3 text-sm font-black">
+                                                <span className="flex items-center gap-1"><Users size={12} /> {booking.guests}</span>
+                                                {booking.kids > 0 && <span className="flex items-center gap-1"><Baby size={12} /> {booking.kids}</span>}
+                                                {booking.pets > 0 && <span className="flex items-center gap-1"><Dog size={12} /> {booking.pets}</span>}
+                                            </div>
+                                            {booking.specialOccasion && (
+                                                <div className="flex items-center gap-1 text-[9px] text-zinc-500 font-medium">
+                                                    <PartyPopper size={10} /> {booking.specialOccasion}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center gap-6">
+                                            <div className="text-right">
+                                                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest block">Total</span>
+                                                <span className="text-2xl font-black tracking-tighter">₱{booking.totalPrice?.toLocaleString()}</span>
+                                            </div>
+                                            <button onClick={() => setSelectedBooking(booking)} className="p-4 bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 rounded-3xl text-[#D4AF37] flex flex-col items-center gap-1">
+                                                <ImageIcon size={24} />
+                                                <span className="text-[8px] font-black uppercase">Verify Pic</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="flex items-center gap-2 ml-10">
-                                {booking.status === "Pending" && (
-                                    <>
-                                        <button onClick={() => handleApprovalAction(booking.id, "Confirmed")} className="p-4 text-emerald-500 hover:bg-emerald-50 rounded-2xl transition-all">
-                                            <CheckCircle size={28} />
-                                        </button>
-                                        <button onClick={() => handleApprovalAction(booking.id, "Rejected")} className="p-4 text-red-500 hover:bg-red-50 rounded-2xl transition-all">
-                                            <AlertCircle size={28} />
-                                        </button>
-                                    </>
-                                )}
-                                <button onClick={() => onDelete(booking.id)} className="p-4 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all">
-                                    <Trash2 size={24} />
-                                </button>
+                                <div className="flex items-center gap-2 ml-10">
+                                    {booking.status === "Pending" && (
+                                        <>
+                                            <button onClick={() => handleApprovalAction(booking.id, "Confirmed")} className="p-4 text-emerald-500 hover:bg-emerald-50 rounded-2xl transition-all">
+                                                <CheckCircle size={28} />
+                                            </button>
+                                            <button onClick={() => handleApprovalAction(booking.id, "Rejected")} className="p-4 text-red-500 hover:bg-red-50 rounded-2xl transition-all">
+                                                <AlertCircle size={28} />
+                                            </button>
+                                        </>
+                                    )}
+                                    <button onClick={() => onDelete(booking.id)} className="p-4 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all">
+                                        <Trash2 size={24} />
+                                    </button>
+                                </div>
                             </div>
+                        );
+                    })
+                ) : (
+                    <div className="py-20 text-center bg-white rounded-[3rem] border border-dashed border-zinc-200">
+                        <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Search className="text-zinc-300" size={32} />
                         </div>
-                    );
-                })}
+                        <h3 className="text-zinc-900 font-black uppercase tracking-tighter text-xl">No results found</h3>
+                        <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mt-1">Try adjusting your filters or search query</p>
+                    </div>
+                )}
             </div>
 
             {/* Approval Modal */}
@@ -165,8 +223,8 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                                 <button
                                     onClick={confirmApprovalAction}
                                     className={`flex-1 py-4 rounded-2xl font-black uppercase text-sm ${pendingAction?.status === 'Confirmed'
-                                            ? 'bg-emerald-500 text-white'
-                                            : 'bg-red-500 text-white'
+                                        ? 'bg-emerald-500 text-white'
+                                        : 'bg-red-500 text-white'
                                         }`}
                                 >
                                     {pendingAction?.status === 'Confirmed' ? 'Approve' : 'Reject'}

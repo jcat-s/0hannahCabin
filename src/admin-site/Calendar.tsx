@@ -2,13 +2,15 @@ import React, { useMemo, useState } from "react";
 import {
     format, startOfMonth, endOfMonth, eachDayOfInterval,
     parseISO, subMonths, addMonths, isSameDay, getDaysInMonth,
+    setMonth, setYear, getYear
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Printer } from "lucide-react";
-import { PrintBookingItem } from "./PrintCalendar"; // Import natin yung design
+import { ChevronLeft, ChevronRight, Printer, X, Calendar as CalendarIcon } from "lucide-react";
+import { PrintBookingItem } from "./PrintCalendar";
 
 export function CalendarView({ bookings }: { bookings: any[] }) {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedCabin, setSelectedCabin] = useState<"ohannah" | "dream">("ohannah");
+    const [showPicker, setShowPicker] = useState(false);
 
     const filteredBookings = useMemo(() => {
         return bookings.filter(b =>
@@ -16,6 +18,25 @@ export function CalendarView({ bookings }: { bookings: any[] }) {
             b.cabin?.toLowerCase().includes(selectedCabin)
         );
     }, [bookings, selectedCabin]);
+
+    // Helpers para sa Manual Picker
+    const months = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
+
+    const years = useMemo(() => {
+        const currentYear = getYear(new Date());
+        return Array.from({ length: 10 }, (_, i) => currentYear - 2 + i);
+    }, []);
+
+    const handleMonthChange = (monthIdx: number) => {
+        setCurrentDate(setMonth(currentDate, monthIdx));
+    };
+
+    const handleYearChange = (year: number) => {
+        setCurrentDate(setYear(currentDate, year));
+    };
 
     return (
         <div className="min-h-screen bg-zinc-100 print:bg-white font-sans overflow-x-hidden">
@@ -35,7 +56,18 @@ export function CalendarView({ bookings }: { bookings: any[] }) {
 
                 <div className="flex items-center gap-6 text-white">
                     <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="hover:scale-125 transition-transform"><ChevronLeft size={24} /></button>
-                    <h3 className="text-lg font-black uppercase tracking-widest min-w-[200px] text-center">{format(currentDate, "MMMM yyyy")}</h3>
+
+                    {/* TRIGGER MODAL ON CLICK */}
+                    <button
+                        onClick={() => setShowPicker(true)}
+                        className="group flex flex-col items-center px-4 py-1 hover:bg-white/10 rounded-xl transition-all"
+                    >
+                        <h3 className="text-lg font-black uppercase tracking-widest min-w-[200px] text-center group-hover:text-[#D4AF37]">
+                            {format(currentDate, "MMMM yyyy")}
+                        </h3>
+                        <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-[0.3em] group-hover:text-zinc-300">Click to Change</span>
+                    </button>
+
                     <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="hover:scale-125 transition-transform"><ChevronRight size={24} /></button>
                 </div>
 
@@ -43,6 +75,77 @@ export function CalendarView({ bookings }: { bookings: any[] }) {
                     <Printer size={16} /> PRINT CALENDAR
                 </button>
             </div>
+
+            {/* QUICK PICKER MODAL */}
+            {showPicker && (
+                <div className="fixed inset-0 z-[200] bg-zinc-950/80 backdrop-blur-md flex items-center justify-center p-6 print:hidden">
+                    <div className="bg-white rounded-[2.5rem] w-full max-w-2xl p-8 shadow-2xl relative animate-in fade-in zoom-in duration-300">
+                        <button
+                            onClick={() => setShowPicker(false)}
+                            className="absolute top-6 right-6 p-2 hover:bg-zinc-100 rounded-full transition-colors"
+                        >
+                            <X size={24} />
+                        </button>
+
+                        <div className="flex items-center gap-3 mb-8 border-b border-zinc-100 pb-6">
+                            <div className="w-12 h-12 bg-zinc-900 rounded-2xl flex items-center justify-center text-[#D4AF37]">
+                                <CalendarIcon size={24} />
+                            </div>
+                            <div>
+                                <h4 className="text-xl font-black uppercase tracking-tighter">Jump to Date</h4>
+                                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Select month and year to view</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                            {/* Months Grid */}
+                            <div>
+                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Select Month</p>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {months.map((m, idx) => (
+                                        <button
+                                            key={m}
+                                            onClick={() => handleMonthChange(idx)}
+                                            className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${currentDate.getMonth() === idx
+                                                    ? "bg-zinc-900 text-white"
+                                                    : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100"
+                                                }`}
+                                        >
+                                            {m.substring(0, 3)}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Years Grid */}
+                            <div>
+                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Select Year</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {years.map((y) => (
+                                        <button
+                                            key={y}
+                                            onClick={() => handleYearChange(y)}
+                                            className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${getYear(currentDate) === y
+                                                    ? "bg-zinc-900 text-white shadow-xl shadow-zinc-200"
+                                                    : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100"
+                                                }`}
+                                        >
+                                            {y}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => setShowPicker(false)}
+                            className="w-full mt-10 py-5 bg-[#D4AF37] text-white rounded-2xl font-black uppercase tracking-[0.2em] text-sm hover:brightness-110 transition-all shadow-lg shadow-[#D4AF37]/20"
+                        >
+                            Apply Selection
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* PRINT AREA */}
             <div id="print-content" className="w-full mx-auto bg-white p-12 print:p-0 min-h-screen flex flex-col shadow-2xl print:shadow-none">

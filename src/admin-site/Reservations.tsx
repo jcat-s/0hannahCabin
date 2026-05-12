@@ -3,7 +3,7 @@ import {
     Phone, ChevronRight, ImageIcon, Trash2,
     X, CreditCard, User, MapPin, PartyPopper, Users, Calendar,
     MessageSquare, Clock, Dog, Baby, Search, Filter, Send,
-    CheckSquare, Square, Mail, Wallet, AlertCircle
+    CheckSquare, Square, Mail, Wallet, AlertCircle, ChevronDown
 } from "lucide-react";
 import { getSlotBg } from "../shared/lib/constants";
 
@@ -12,10 +12,11 @@ interface ReservationsProps {
     onStatusUpdate: (id: string, status: string, message?: string) => void;
     onDelete: (id: string | string[]) => void;
 }
+
 const stayLabels: Record<string, { label: string; time: string }> = {
     day: { label: "Day Lounge", time: "9AM - 5PM" },
     evening: { label: "Evening Chill", time: "8PM - 7AM" },
-    full: { label: "Full Stay", time: "Flexible" },
+    full: { label: "Full Stay", time: " " },
     "9AM-7AM": { label: "Full Stay", time: "9AM - 7AM" },
     "8PM-5PM": { label: "Full Stay", time: "8PM - 5PM" }
 };
@@ -27,6 +28,8 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
 
     const [searchQuery, setSearchQuery] = useState("");
     const [filterStatus, setFilterStatus] = useState("All");
+    const [filterStayType, setFilterStayType] = useState("All");
+    const [filterPayment, setFilterPayment] = useState("All");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -44,15 +47,22 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
 
             const matchesStatus = filterStatus === "All" || booking.status === filterStatus;
 
+            // STAY TYPE FILTER LOGIC
+            const matchesStayType = filterStayType === "All" || booking.stayType === filterStayType;
+
+            // PAYMENT FILTER LOGIC
+            const matchesPayment = filterPayment === "All" ||
+                booking.paymentMethod?.toLowerCase() === filterPayment.toLowerCase();
+
             const bookingDate = booking.checkIn;
             let matchesDate = true;
             if (fromDate && !toDate) matchesDate = bookingDate >= fromDate;
             if (fromDate && toDate) matchesDate = bookingDate >= fromDate && bookingDate <= toDate;
             if (!fromDate && toDate) matchesDate = bookingDate <= toDate;
 
-            return matchesSearch && matchesStatus && matchesDate;
+            return matchesSearch && matchesStatus && matchesDate && matchesStayType && matchesPayment;
         });
-    }, [bookings, searchQuery, filterStatus, fromDate, toDate]);
+    }, [bookings, searchQuery, filterStatus, fromDate, toDate, filterStayType, filterPayment]);
 
     const toggleSelectAll = () => {
         if (selectedIds.length === filteredBookings.length) {
@@ -114,7 +124,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                         {["All", "Pending", "Confirmed", "Rejected"].map((status) => (
                             <button
                                 key={status}
@@ -124,6 +134,36 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                                 {status}
                             </button>
                         ))}
+
+                        <div className="h-10 w-[1px] bg-zinc-100 mx-2 hidden md:block" />
+
+                        {/* NEW FILTERS */}
+                        <div className="relative group">
+                            <select
+                                value={filterStayType}
+                                onChange={(e) => setFilterStayType(e.target.value)}
+                                className="appearance-none bg-white border border-zinc-100 rounded-xl px-5 py-2.5 pr-10 text-[11px] font-bold text-zinc-500 outline-none shadow-sm hover:border-[#D4AF37] transition-all cursor-pointer"
+                            >
+                                <option value="All">STAY TYPE: ALL</option>
+                                <option value="day">DAY LOUNGE</option>
+                                <option value="evening">EVENING CHILL</option>
+                                <option value="full">FULL STAY</option>
+                            </select>
+                            <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                        </div>
+
+                        <div className="relative">
+                            <select
+                                value={filterPayment}
+                                onChange={(e) => setFilterPayment(e.target.value)}
+                                className="appearance-none bg-white border border-zinc-100 rounded-xl px-5 py-2.5 pr-10 text-[11px] font-bold text-zinc-500 outline-none shadow-sm hover:border-[#D4AF37] transition-all cursor-pointer"
+                            >
+                                <option value="All">PAYMENT: ALL</option>
+                                <option value="GCash">GCASH</option>
+                                <option value="Maya">MAYA</option>
+                            </select>
+                            <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -142,88 +182,94 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
 
             {/* Bookings List */}
             <div className="grid gap-6">
-                {filteredBookings.map((booking) => {
-                    const activeColor = booking.color || booking.selectedColor || booking.slot || null;
-                    const isSelected = selectedIds.includes(booking.id);
-                    const stayInfo = stayLabels[booking.stayType] || { label: booking.stayType || "Standard Stay", time: "" };
+                {filteredBookings.length > 0 ? (
+                    filteredBookings.map((booking) => {
+                        const activeColor = booking.color || booking.selectedColor || booking.slot || null;
+                        const isSelected = selectedIds.includes(booking.id);
+                        const stayInfo = stayLabels[booking.stayType as string] || { label: booking.stayType || "Standard Stay", time: "" };
 
-                    return (
-                        <div key={booking.id} className={`bg-white rounded-[2.5rem] p-7 border-2 transition-all flex flex-col lg:flex-row lg:items-center relative ${isSelected ? 'border-[#D4AF37] bg-[#D4AF37]/5' : 'border-zinc-50 shadow-sm'}`}>
+                        return (
+                            <div key={booking.id} className={`bg-white rounded-[2.5rem] p-7 border-2 transition-all flex flex-col lg:flex-row lg:items-center relative ${isSelected ? 'border-[#D4AF37] bg-[#D4AF37]/5' : 'border-zinc-50 shadow-sm'}`}>
 
-                            <button onClick={() => toggleSelect(booking.id)} className={`absolute top-6 left-6 z-10 transition-colors ${isSelected ? 'text-[#D4AF37]' : 'text-zinc-200 hover:text-zinc-400'}`}>
-                                {isSelected ? <CheckSquare size={24} /> : <Square size={24} />}
-                            </button>
+                                <button onClick={() => toggleSelect(booking.id)} className={`absolute top-6 left-6 z-10 transition-colors ${isSelected ? 'text-[#D4AF37]' : 'text-zinc-200 hover:text-zinc-400'}`}>
+                                    {isSelected ? <CheckSquare size={24} /> : <Square size={24} />}
+                                </button>
 
-                            <div className={`absolute top-0 left-0 lg:static w-full lg:w-3 h-2 lg:h-24 rounded-full shrink-0 ${getSlotBg(activeColor)}`} />
+                                <div className={`absolute top-0 left-0 lg:static w-full lg:w-3 h-2 lg:h-24 rounded-full shrink-0 ${getSlotBg(activeColor)}`} />
 
-                            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:ml-10 mt-8 lg:mt-0">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-16 h-16 rounded-2xl bg-zinc-100 overflow-hidden shrink-0 border border-zinc-100">
-                                        {booking.userPhotoURL ? <img src={booking.userPhotoURL} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold">G</div>}
+                                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:ml-10 mt-8 lg:mt-0">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-16 h-16 rounded-2xl bg-zinc-100 overflow-hidden shrink-0 border border-zinc-100">
+                                            {booking.userPhotoURL ? <img src={booking.userPhotoURL} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold">G</div>}
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-wider">{booking.cabin}</span>
+                                            <h3 className="text-xl font-bold text-zinc-900 leading-tight">{booking.customerName}</h3>
+                                            <p className="text-xs text-zinc-500 font-medium">{booking.mobile}</p>
+                                        </div>
                                     </div>
-                                    <div className="space-y-1">
-                                        <span className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-wider">{booking.cabin}</span>
-                                        <h3 className="text-xl font-bold text-zinc-900 leading-tight">{booking.customerName}</h3>
-                                        <p className="text-xs text-zinc-500 font-medium">{booking.mobile}</p>
-                                    </div>
-                                </div>
 
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase ${booking.status === 'Confirmed' ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'}`}>
-                                            {booking.status}
-                                        </span>
-                                        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-tighter">
-                                            {stayInfo.label}
-                                        </span>
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase ${booking.status === 'Confirmed' ? 'bg-emerald-50 text-emerald-600' : booking.status === 'Rejected' ? 'bg-red-50 text-red-600' : 'bg-orange-50 text-orange-600'}`}>
+                                                {booking.status}
+                                            </span>
+                                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-tighter">
+                                                {stayInfo.label}
+                                            </span>
+                                        </div>
+                                        <div className="text-[15px] font-bold text-zinc-800">{booking.checkIn} → {booking.checkOut}</div>
+                                        <div className="text-[10px] font-bold text-zinc-400 flex items-center gap-1 uppercase">
+                                            <Clock size={12} /> {booking.duration} {stayInfo.label} {booking.stayOption === 'full' && booking.fullStayOption ? `(${booking.fullStayOption})` : ''}
+                                        </div>
                                     </div>
-                                    <div className="text-[15px] font-bold text-zinc-800">{booking.checkIn} → {booking.checkOut}</div>
-                                    <div className="text-[10px] font-bold text-zinc-400 flex items-center gap-1 uppercase">
-                                        <Clock size={12} /> {booking.duration} {stayInfo.label} {booking.stayOption === 'full' && booking.fullStayOption ? `(${booking.fullStayOption})` : ''}
-                                    </div>
-                                </div>
 
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-4 text-sm font-bold text-zinc-700">
-                                        <div className="flex items-center gap-1.5"><Users size={16} className="text-zinc-400" /> {booking.guests}</div>
-                                        {booking.kids > 0 && <div className="flex items-center gap-1.5"><Baby size={16} className="text-zinc-400" /> {booking.kids}</div>}
-                                        {booking.pets > 0 && <div className="flex items-center gap-1.5"><Dog size={16} className="text-zinc-400" /> {booking.pets}</div>}
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-4 text-sm font-bold text-zinc-700">
+                                            <div className="flex items-center gap-1.5"><Users size={16} className="text-zinc-400" /> {booking.guests}</div>
+                                            {booking.kids > 0 && <div className="flex items-center gap-1.5"><Baby size={16} className="text-zinc-400" /> {booking.kids}</div>}
+                                            {booking.pets > 0 && <div className="flex items-center gap-1.5"><Dog size={16} className="text-zinc-400" /> {booking.pets}</div>}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${booking.paymentMethod === 'GCash' ? 'bg-blue-50 text-blue-600' : 'bg-pink-50 text-pink-600'}`}>
+                                                {booking.paymentMethod}
+                                            </span>
+                                            {booking.specialOccasion && (
+                                                <div className="text-[11px] font-bold text-[#D4AF37] flex items-center gap-1.5 bg-[#D4AF37]/10 px-3 py-1 rounded-full w-fit">
+                                                    <PartyPopper size={12} /> {booking.specialOccasion}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${booking.paymentMethod === 'GCash' ? 'bg-blue-50 text-blue-600' : 'bg-zinc-100 text-zinc-600'}`}>
-                                            {booking.paymentMethod}
-                                        </span>
-                                        {booking.specialOccasion && (
-                                            <div className="text-[11px] font-bold text-[#D4AF37] flex items-center gap-1.5 bg-[#D4AF37]/10 px-3 py-1 rounded-full w-fit">
-                                                <PartyPopper size={12} /> {booking.specialOccasion}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
 
-                                <div className="flex items-center justify-between lg:justify-end gap-6">
-                                    <div className="text-right">
-                                        <span className="text-[10px] font-bold text-zinc-400 block uppercase tracking-widest">Total</span>
-                                        <span className="text-2xl font-black text-zinc-900">₱{booking.totalPrice?.toLocaleString()}</span>
+                                    <div className="flex items-center justify-between lg:justify-end gap-6">
+                                        <div className="text-right">
+                                            <span className="text-[10px] font-bold text-zinc-400 block uppercase tracking-widest">Total</span>
+                                            <span className="text-2xl font-black text-zinc-900">₱{booking.totalPrice?.toLocaleString()}</span>
+                                        </div>
+                                        <button
+                                            onClick={() => { setSelectedBooking(booking); setPendingStatus(null); setApprovalMessage(""); }}
+                                            className="h-14 w-14 bg-zinc-900 text-[#D4AF37] rounded-[1.25rem] flex items-center justify-center hover:scale-105 transition-all shadow-lg"
+                                        >
+                                            <ImageIcon size={24} />
+                                        </button>
                                     </div>
-                                    <button
-                                        onClick={() => { setSelectedBooking(booking); setPendingStatus(null); setApprovalMessage(""); }}
-                                        className="h-14 w-14 bg-zinc-900 text-[#D4AF37] rounded-[1.25rem] flex items-center justify-center hover:scale-105 transition-all shadow-lg"
-                                    >
-                                        <ImageIcon size={24} />
-                                    </button>
                                 </div>
                             </div>
-                        </div>
-                    );
-                })}
+                        );
+                    })
+                ) : (
+                    <div className="bg-white rounded-[2.5rem] p-20 text-center border-2 border-zinc-50">
+                        <Filter size={48} className="mx-auto text-zinc-100 mb-4" />
+                        <h3 className="text-lg font-bold text-zinc-400 uppercase tracking-widest">No matching reservations</h3>
+                    </div>
+                )}
             </div>
 
             {/* Full Details Modal */}
             {selectedBooking && (
                 <div className="fixed inset-0 z-[999] bg-zinc-950/90 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setSelectedBooking(null)}>
                     <div className="bg-white rounded-[3rem] w-full max-w-6xl h-[90vh] overflow-hidden flex flex-col lg:flex-row shadow-2xl animate-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
-
                         <div className="flex-[1.3] p-8 md:p-12 overflow-y-auto order-2 lg:order-1 space-y-10">
                             <div className="flex justify-between items-start">
                                 <div className="flex items-center gap-6">
@@ -252,7 +298,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                                 <DetailItem icon={<Calendar size={14} />} label="Check-In" value={selectedBooking.checkIn} />
                                 <DetailItem icon={<Calendar size={14} />} label="Check-Out" value={selectedBooking.checkOut} />
                                 <DetailItem icon={<Clock size={14} />} label="Total Duration"
-                                    value={`${selectedBooking.duration} ${stayLabels[selectedBooking.stayOption]?.label || 'Stay'}${selectedBooking.stayOption === 'full' && selectedBooking.fullStayOption ? ` (${selectedBooking.fullStayOption})` : ''}`}
+                                    value={`${selectedBooking.duration} ${stayLabels[selectedBooking.stayOption as string]?.label || 'Stay'}${selectedBooking.stayOption === 'full' && selectedBooking.fullStayOption ? ` (${selectedBooking.fullStayOption})` : ''}`}
                                 />
                                 <DetailItem icon={<Users size={14} />} label="Adult Guests" value={selectedBooking.guests} />
                                 <DetailItem icon={<Baby size={14} />} label="Children" value={selectedBooking.kids} />
@@ -266,7 +312,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                                 <div className="space-y-6">
                                     <div className="flex gap-4">
                                         <button
-                                            onClick={() => { setPendingStatus("Confirmed"); setApprovalMessage("Booking Confirmed! We're excited to host you at Ohannah Cabin."); }}
+                                            onClick={() => { setPendingStatus("Confirmed"); setApprovalMessage("Booking Confirmed! See you soon!"); }}
                                             className={`flex-1 py-4 rounded-2xl font-bold uppercase text-xs transition-all ${pendingStatus === 'Confirmed' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-zinc-50 text-zinc-400'}`}
                                         >
                                             Approve Stay

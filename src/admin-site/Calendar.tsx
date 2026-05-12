@@ -107,8 +107,8 @@ export function CalendarView({ bookings }: { bookings: any[] }) {
                                             key={m}
                                             onClick={() => handleMonthChange(idx)}
                                             className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${currentDate.getMonth() === idx
-                                                    ? "bg-zinc-900 text-white"
-                                                    : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100"
+                                                ? "bg-zinc-900 text-white"
+                                                : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100"
                                                 }`}
                                         >
                                             {m.substring(0, 3)}
@@ -126,8 +126,8 @@ export function CalendarView({ bookings }: { bookings: any[] }) {
                                             key={y}
                                             onClick={() => handleYearChange(y)}
                                             className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${getYear(currentDate) === y
-                                                    ? "bg-zinc-900 text-white shadow-xl shadow-zinc-200"
-                                                    : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100"
+                                                ? "bg-zinc-900 text-white shadow-xl shadow-zinc-200"
+                                                : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100"
                                                 }`}
                                         >
                                             {y}
@@ -185,24 +185,57 @@ export function CalendarView({ bookings }: { bookings: any[] }) {
             </div>
 
             <style>{`
-                @media print {
-                    @page { size: landscape; margin: 5mm; }
-                    html, body { height: 100%; overflow: hidden; margin: 0 !important; padding: 0 !important; }
-                    .print\\:hidden { display: none !important; }
-                    #print-content { 
-                        position: absolute; top: 0; left: 0;
-                        width: 100vw !important; height: 100vh !important; 
-                        padding: 8mm !important; margin: 0 !important;
-                    }
-                    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                }
-                .day-box { 
-                    border-right: 1.5px solid black; border-bottom: 1.5px solid black; 
-                    position: relative; flex: 1; min-height: 0; min-width: 0;
-                }
-                .day-box:nth-child(7n) { border-right: 0; }
-                .calendar-row { flex: 1; display: flex; min-height: 0; }
-            `}</style>
+    @media print {
+        /* 1. Force Landscape and Remove Margins */
+        @page { 
+            size: landscape; 
+            margin: 0 !important; 
+        }
+
+        /* 2. Hide EVERYTHING by default */
+        body * {
+            visibility: hidden;
+        }
+
+        /* 3. Show ONLY the print content and its children */
+        #print-content, #print-content * {
+            visibility: visible;
+        }
+
+        /* 4. Fix the print content to the very top-left */
+        #print-content {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            margin: 0 !important;
+            padding: 8mm !important; /* Proper padding for bond paper content */
+            background: white !important;
+            z-index: 9999;
+        }
+
+        /* 5. Extra safety to hide the Navbar/Header */
+        .print\:hidden { 
+            display: none !important; 
+        }
+
+        /* Adjust colors for print */
+        * { 
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important; 
+        }
+    }
+
+    /* Standard Web Layout (Non-Print) */
+    .day-box { 
+        border-right: 1.5px solid black; 
+        border-bottom: 1.5px solid black; 
+        position: relative; flex: 1; min-height: 0; min-width: 0;
+    }
+    .day-box:nth-child(7n) { border-right: 0; }
+    .calendar-row { flex: 1; display: flex; min-height: 0; }
+`}</style>
         </div>
     );
 }

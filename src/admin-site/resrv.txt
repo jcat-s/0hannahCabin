@@ -3,7 +3,7 @@ import {
     Phone, ChevronRight, ImageIcon, Trash2,
     X, CreditCard, User, MapPin, PartyPopper, Users, Calendar,
     MessageSquare, Clock, Dog, Baby, Search, Filter, Send,
-    CheckSquare, Square, Mail, Wallet, AlertCircle
+    CheckSquare, Square, Mail, Wallet
 } from "lucide-react";
 import { getSlotBg } from "../shared/lib/constants";
 
@@ -12,13 +12,6 @@ interface ReservationsProps {
     onStatusUpdate: (id: string, status: string, message?: string) => void;
     onDelete: (id: string | string[]) => void;
 }
-const stayLabels: Record<string, { label: string; time: string }> = {
-    day: { label: "Day Lounge", time: "9AM - 5PM" },
-    evening: { label: "Evening Chill", time: "8PM - 7AM" },
-    full: { label: "Full Stay", time: "Flexible" },
-    "9AM-7AM": { label: "Full Stay", time: "9AM - 7AM" },
-    "8PM-5PM": { label: "Full Stay", time: "8PM - 5PM" }
-};
 
 export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUpdate, onDelete }) => {
     const [selectedBooking, setSelectedBooking] = useState<any>(null);
@@ -30,10 +23,6 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
-
-    // Delete Confirmation State
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [idsToDelete, setIdsToDelete] = useState<string[]>([]);
 
     const filteredBookings = useMemo(() => {
         return bookings.filter((booking) => {
@@ -71,18 +60,6 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
             onStatusUpdate(selectedBooking.id, pendingStatus, approvalMessage.trim() || undefined);
             setSelectedBooking(null);
         }
-    };
-
-    const triggerDelete = (ids: string | string[]) => {
-        const targets = Array.isArray(ids) ? ids : [ids];
-        setIdsToDelete(targets);
-        setShowDeleteModal(true);
-    };
-
-    const confirmDelete = () => {
-        onDelete(idsToDelete);
-        setShowDeleteModal(false);
-        setSelectedIds([]);
     };
 
     return (
@@ -132,7 +109,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                             <span className="text-xs font-bold uppercase tracking-tight">Select All</span>
                         </button>
                         {selectedIds.length > 0 && (
-                            <button onClick={() => triggerDelete(selectedIds)} className="px-6 py-2.5 bg-red-500 text-white rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-md">
+                            <button onClick={() => onDelete(selectedIds)} className="px-6 py-2.5 bg-red-500 text-white rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-md">
                                 Delete Selected ({selectedIds.length})
                             </button>
                         )}
@@ -145,7 +122,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                 {filteredBookings.map((booking) => {
                     const activeColor = booking.color || booking.selectedColor || booking.slot || null;
                     const isSelected = selectedIds.includes(booking.id);
-                    const stayInfo = stayLabels[booking.stayType] || { label: booking.stayType || "Standard Stay", time: "" };
+
 
                     return (
                         <div key={booking.id} className={`bg-white rounded-[2.5rem] p-7 border-2 transition-all flex flex-col lg:flex-row lg:items-center relative ${isSelected ? 'border-[#D4AF37] bg-[#D4AF37]/5' : 'border-zinc-50 shadow-sm'}`}>
@@ -173,13 +150,11 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                                         <span className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase ${booking.status === 'Confirmed' ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'}`}>
                                             {booking.status}
                                         </span>
-                                        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-tighter">
-                                            {stayInfo.label}
-                                        </span>
+                                        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-tighter">{booking.stayType}</span>
                                     </div>
                                     <div className="text-[15px] font-bold text-zinc-800">{booking.checkIn} → {booking.checkOut}</div>
                                     <div className="text-[10px] font-bold text-zinc-400 flex items-center gap-1 uppercase">
-                                        <Clock size={12} /> {booking.duration} {stayInfo.label} {booking.stayOption === 'full' && booking.fullStayOption ? `(${booking.fullStayOption})` : ''}
+                                        <Clock size={12} /> {booking.duration} Days Stay
                                     </div>
                                 </div>
 
@@ -235,10 +210,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                                         <h2 className="text-4xl font-bold text-zinc-900 leading-none">{selectedBooking.customerName}</h2>
                                         <div className="flex gap-2 mt-4">
                                             <span className="px-3 py-1 bg-zinc-100 rounded-lg text-[10px] font-bold text-zinc-500 uppercase">{selectedBooking.stayType}</span>
-                                            <span className="px-3 py-1 bg-[#D4AF37]/20 rounded-lg text-[10px] font-bold text-[#D4AF37] uppercase">
-                                                {stayLabels[selectedBooking.stayType]?.time || selectedBooking.stayType}
-                                                {selectedBooking.stayType === 'full' && selectedBooking.fullStayOption ? ` (${stayLabels[selectedBooking.fullStayOption]?.time})` : ''}
-                                            </span>
+                                            <span className="px-3 py-1 bg-[#D4AF37]/20 rounded-lg text-[10px] font-bold text-[#D4AF37] uppercase">{selectedBooking.paymentMethod}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -251,9 +223,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                                 <DetailItem icon={<MapPin size={14} />} label="Home Address" value={selectedBooking.address || 'Not Provided'} />
                                 <DetailItem icon={<Calendar size={14} />} label="Check-In" value={selectedBooking.checkIn} />
                                 <DetailItem icon={<Calendar size={14} />} label="Check-Out" value={selectedBooking.checkOut} />
-                                <DetailItem icon={<Clock size={14} />} label="Total Duration"
-                                    value={`${selectedBooking.duration} ${stayLabels[selectedBooking.stayOption]?.label || 'Stay'}${selectedBooking.stayOption === 'full' && selectedBooking.fullStayOption ? ` (${selectedBooking.fullStayOption})` : ''}`}
-                                />
+                                <DetailItem icon={<Clock size={14} />} label="Total Duration" value={`${selectedBooking.duration} Days`} />
                                 <DetailItem icon={<Users size={14} />} label="Adult Guests" value={selectedBooking.guests} />
                                 <DetailItem icon={<Baby size={14} />} label="Children" value={selectedBooking.kids} />
                                 <DetailItem icon={<Dog size={14} />} label="Pets" value={selectedBooking.pets} />
@@ -316,35 +286,6 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                                     <p className="text-white/20 text-xs font-bold uppercase tracking-widest">No Receipt Image</p>
                                 </div>
                             )}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Custom Delete Confirmation Modal */}
-            {showDeleteModal && (
-                <div className="fixed inset-0 z-[1000] bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full text-center shadow-2xl animate-in fade-in zoom-in duration-200">
-                        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <AlertCircle size={32} />
-                        </div>
-                        <h3 className="text-xl font-bold text-zinc-900 mb-2">Confirm Delete</h3>
-                        <p className="text-zinc-500 text-sm mb-8">
-                            Are you sure you want to delete {idsToDelete.length} {idsToDelete.length === 1 ? 'record' : 'records'}? This action cannot be undone.
-                        </p>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setShowDeleteModal(false)}
-                                className="flex-1 py-3 rounded-xl text-xs font-bold text-zinc-500 bg-zinc-100 hover:bg-zinc-200 transition-colors uppercase"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={confirmDelete}
-                                className="flex-1 py-3 rounded-xl text-xs font-bold text-white bg-red-500 hover:bg-red-600 transition-colors uppercase shadow-lg shadow-red-200"
-                            >
-                                Yes, Delete
-                            </button>
                         </div>
                     </div>
                 </div>

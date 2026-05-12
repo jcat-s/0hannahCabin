@@ -1,5 +1,17 @@
 {
   "projects": {
     "default": "ohannah-cabin"
+  },
+  "targets": {
+    "ohannah-cabin": {
+      "hosting": {
+        "main-site": [
+          "ohannah-cabin"
+        ],
+        "admin-site": [
+          "admin-ocbooking"
+        ]
+      }
+    }
   }
 }

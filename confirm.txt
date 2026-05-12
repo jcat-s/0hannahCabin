@@ -1,44 +1,25 @@
-THE DREAM BY OHANNAH
-BOOKING CONFIRMATION
-Name: Teressa Yap
-Mobile # 09457364861
-Adress: Batasan Hills Quezon
+Build the project:
 
-Check-in: 9AM of March
-15,2026
-Check-out: 5PM of March
-15,2026
-Length of Stay: 1 Day Lounge
-#of Pax: 9 pax
+Bash
+npm run build
+(Siguraduhin na ang build command mo sa Vite ay nilalabas ang parehong index.html at admin.html sa loob ng dist folder).
 
-Special Occasion (optional):
-5th Year Anniversary
+Deploy both sites:
 
-Breakdown:
-1 Day Lounge (Weekend Rate)
-P7,000 (4 adults & 2 kids)
+Bash
+firebase deploy --only hosting
+Kung gusto mo namang i-deploy ang Admin lang:
 
-Additional 5 paxx 300 = 1,500
-Total: P8,500
-Less: P3,000 Downpayment
+Bash
+firebase deploy --only hosting:admin-site
+Kung ang User Site lang:
 
-Reservation Received:
-3,000 via (Gcash Transfer)
-March 1, 2026
+Bash
+firebase deploy --only hosting:main-site
 
-Remaining Balance to be
-settled upon Check In: P5,500
-Note:
-There will be a security
-deposit of 2,000 upon
-check-in and will be
-refunded on check-out
-** We don't accept last
-minute rescheduling/
-cancellation. Changing of
-dates should be at least 2
-weeks prior to your booked
-date. Reservation fee is
-non-refundable if this is
-done in less than 2 weeks
-prior to check-in.
+
+# Deploy User Site muna
+firebase deploy --only hosting:main-site
+
+# Kapag success, i-deploy ang Admin
+firebase deploy --only hosting:admin-site

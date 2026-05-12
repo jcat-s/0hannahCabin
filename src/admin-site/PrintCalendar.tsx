@@ -2,6 +2,7 @@ import React from "react";
 import { format, parseISO } from "date-fns";
 import { PartyPopper, Users, Baby, Dog, Clock, CalendarDays } from "lucide-react";
 
+// Light shades for background, but the text will stay dark
 const PRINT_COLORS: Record<string, string> = {
     pink: "bg-pink-200",
     red: "bg-red-200",
@@ -13,31 +14,24 @@ const PRINT_COLORS: Record<string, string> = {
     violet: "bg-violet-200",
 };
 
-const stayLabels: Record<string, { label: string; time: string }> = {
-    day: { label: "Day Lounge", time: "9AM - 5PM" },
-    evening: { label: "Evening Chill", time: "8PM - 7AM" },
-    full: { label: "Full Stay", time: "" },
-    "9AM-7AM": { label: "Full Stay", time: "9AM - 7AM" },
-    "8PM-5PM": { label: "Full Stay", time: "8PM - 5PM" }
-};
+export const PrintBookingItem = ({ booking }: { booking: any }) => {
+    const stayLabels: Record<string, { label: string; time: string }> = {
+        day: { label: "Day Lounge", time: "9AM-5PM" },
+        evening: { label: "Evening Chill", time: "8PM-7AM" },
+        full: { label: "Full Stay", time: "" },
+        "9AM-7AM": { label: "Full Stay", time: "9AM-7AM" },
+        "8PM-5PM": { label: "Full Stay", time: "8PM-5PM" }
+    };
 
-interface PrintCalendarProps {
-    booking: any;
-}
-
-export const PrintBookingItem = ({ booking }: PrintCalendarProps) => {
-    // Logic para makuha ang tamang label at time
     const getStayDisplay = () => {
         const base = stayLabels[booking.stayType];
-
         if (booking.stayType === 'full' && booking.fullStayOption) {
             const option = stayLabels[booking.fullStayOption];
             return {
-                label: base?.label || "Full Stay",
+                label: "Full Stay",
                 time: option?.time || booking.fullStayOption
             };
         }
-
         return {
             label: base?.label || booking.stayType,
             time: base?.time || ""
@@ -48,56 +42,56 @@ export const PrintBookingItem = ({ booking }: PrintCalendarProps) => {
     const stayRange = `${format(parseISO(booking.checkIn), "MMM d")} - ${format(parseISO(booking.checkOut), "d")}`;
 
     return (
-        <div className={`h-full w-full p-1 flex flex-col justify-between ${PRINT_COLORS[booking.color] || 'bg-zinc-200'} overflow-hidden border-b border-black/5`}>
+        <div className={`h-full w-full p-1.5 flex flex-col justify-between ${PRINT_COLORS[booking.color] || 'bg-zinc-200'} border-b border-black/20 print:border-black`}>
             <div className="flex flex-col gap-0.5">
-                {/* Name */}
-                <span className="font-black text-[9px] uppercase leading-none truncate">
+                {/* Customer Name - Pinakaimportante sa Print */}
+                <span className="font-black text-[10px] text-black uppercase leading-tight break-words">
                     {booking.customerName}
                 </span>
 
-                {/* Type & Time */}
-                <div className="flex items-center gap-1 leading-none mt-0.5">
-                    <Clock size={7} strokeWidth={3} />
-                    <span className="text-[7px] font-black italic uppercase">
+                {/* Stay Type & Time */}
+                <div className="flex items-center gap-1 mt-0.5 text-black">
+                    <Clock size={8} strokeWidth={3} />
+                    <span className="text-[7.5px] font-black uppercase italic">
                         {display.label} {display.time && `(${display.time})`}
                     </span>
                 </div>
 
-                {/* Length of Stay */}
-                <div className="flex items-center gap-1 text-black/70 leading-none">
-                    <CalendarDays size={7} strokeWidth={3} />
-                    <span className="text-[7px] font-black uppercase truncate">
+                {/* Dates */}
+                <div className="flex items-center gap-1 text-black">
+                    <CalendarDays size={8} strokeWidth={3} />
+                    <span className="text-[7.5px] font-black uppercase">
                         {stayRange}
                     </span>
                 </div>
 
                 {/* Occasion */}
                 {booking.specialOccasion && (
-                    <div className="flex items-center gap-1 leading-none">
-                        <PartyPopper size={7} strokeWidth={3} />
-                        <span className="text-[7px] font-black uppercase italic truncate">
+                    <div className="flex items-center gap-1 text-black">
+                        <PartyPopper size={8} strokeWidth={3} />
+                        <span className="text-[7.5px] font-black uppercase italic truncate">
                             {booking.specialOccasion}
                         </span>
                     </div>
                 )}
             </div>
 
-            {/* Pax Details */}
-            <div className="border-t border-black/10 pt-0.5 flex flex-wrap gap-x-1 gap-y-0 mt-auto">
-                <div className="flex items-center gap-0.5">
-                    <Users size={7} strokeWidth={3} />
-                    <span className="text-[7px] font-black">{booking.guests} PAX</span>
+            {/* PAX Summary - High Contrast Bottom Bar */}
+            <div className="border-t-[1.5px] border-black/30 pt-1 flex flex-wrap gap-x-2 gap-y-0 mt-auto">
+                <div className="flex items-center gap-0.5 text-black">
+                    <Users size={8} strokeWidth={3} />
+                    <span className="text-[8px] font-black">{booking.guests}</span>
                 </div>
                 {booking.kids > 0 && (
-                    <div className="flex items-center gap-0.5">
-                        <Baby size={7} strokeWidth={3} />
-                        <span className="text-[7px] font-black">{booking.kids}K</span>
+                    <div className="flex items-center gap-0.5 text-black">
+                        <Baby size={8} strokeWidth={3} />
+                        <span className="text-[8px] font-black">{booking.kids}K</span>
                     </div>
                 )}
                 {booking.pets > 0 && (
-                    <div className="flex items-center gap-0.5">
-                        <Dog size={7} strokeWidth={3} />
-                        <span className="text-[7px] font-black">{booking.pets}P</span>
+                    <div className="flex items-center gap-0.5 text-black">
+                        <Dog size={8} strokeWidth={3} />
+                        <span className="text-[8px] font-black">{booking.pets}P</span>
                     </div>
                 )}
             </div>

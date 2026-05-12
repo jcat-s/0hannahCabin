@@ -184,25 +184,24 @@ export function CalendarView({ bookings }: { bookings: any[] }) {
                 </div>
             </div>
 
+
             <style>{`
     @media print {
-        /* 1. Force Landscape and Remove Margins */
         @page { 
             size: landscape; 
             margin: 0 !important; 
         }
 
-        /* 2. Hide EVERYTHING by default */
         body * {
             visibility: hidden;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
         }
 
-        /* 3. Show ONLY the print content and its children */
         #print-content, #print-content * {
             visibility: visible;
         }
 
-        /* 4. Fix the print content to the very top-left */
         #print-content {
             position: fixed !important;
             top: 0 !important;
@@ -210,31 +209,41 @@ export function CalendarView({ bookings }: { bookings: any[] }) {
             width: 100vw !important;
             height: 100vh !important;
             margin: 0 !important;
-            padding: 8mm !important; /* Proper padding for bond paper content */
+            padding: 10mm !important;
             background: white !important;
             z-index: 9999;
         }
 
-        /* 5. Extra safety to hide the Navbar/Header */
         .print\:hidden { 
             display: none !important; 
         }
 
-        /* Adjust colors for print */
-        * { 
-            -webkit-print-color-adjust: exact !important; 
-            print-color-adjust: exact !important; 
+        /* Pinatinding Grid Lines para sa B&W Printers */
+        .calendar-row {
+            border-bottom: 2px solid black !important;
+        }
+        .day-box {
+            border-right: 2px solid black !important;
+            background-color: transparent !important;
+        }
+        .day-box:last-child {
+            border-right: 2px solid black !important;
         }
     }
 
-    /* Standard Web Layout (Non-Print) */
+    /* Layout para sa Screen */
     .day-box { 
-        border-right: 1.5px solid black; 
-        border-bottom: 1.5px solid black; 
-        position: relative; flex: 1; min-height: 0; min-width: 0;
+        border-right: 2px solid black; 
+        position: relative; 
+        flex: 1; 
+        min-height: 0; 
+        min-width: 0;
     }
-    .day-box:nth-child(7n) { border-right: 0; }
-    .calendar-row { flex: 1; display: flex; min-height: 0; }
+    .calendar-row { 
+        flex: 1; 
+        display: flex; 
+        min-height: 0; 
+    }
 `}</style>
         </div>
     );

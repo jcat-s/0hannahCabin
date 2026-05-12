@@ -2,19 +2,18 @@ import React, { useState, useEffect } from "react";
 import { collection, query, onSnapshot, doc, getDoc, updateDoc, deleteDoc, orderBy, Firestore } from "firebase/firestore";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import {
-  Inbox, Calendar, TrendingUp, LogOut, Settings,
+  Inbox, Calendar, TrendingUp, LogOut,
   UserCircle, AlertTriangle, Menu, X
 } from "lucide-react";
 import { db, auth } from "../shared/lib/firebase";
 import { Reservations } from "./Reservations";
 import { Analytics } from "./Analytics";
 import { CalendarView } from "./Calendar";
-import { SystemConfig } from "./Settings";
 
 export default function AdminApp() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'bookings' | 'calendar' | 'analytics' | 'settings'>('bookings');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'calendar' | 'analytics'>('bookings');
   const [adminData, setAdminData] = useState<{ name: string; email: string } | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -65,18 +64,14 @@ export default function AdminApp() {
     }
   };
 
-  // --- FIXED DELETE FUNCTION ---
-  // Tinatanggap na nito ang string | string[] para mawala ang TS error
   const deleteBooking = async (id: string | string[]) => {
     if (!window.confirm("Are you sure you want to delete this record?")) return;
 
     try {
       if (Array.isArray(id)) {
-        // Kung maramihan ang id (bulk delete)
         const deletePromises = id.map(singleId => deleteDoc(doc(db as Firestore, "bookings", singleId)));
         await Promise.all(deletePromises);
       } else {
-        // Kung iisang id lang
         await deleteDoc(doc(db as Firestore, "bookings", id));
       }
     } catch (e) {
@@ -136,16 +131,6 @@ export default function AdminApp() {
             active={activeTab === 'analytics'}
             onClick={() => { setActiveTab('analytics'); setIsSidebarOpen(false); }}
           />
-
-          <div className="pt-8 mt-8 border-t border-white/5">
-            <p className="px-6 text-[8px] font-black uppercase tracking-[0.4em] mb-4 text-zinc-500">Settings</p>
-            <NavItem
-              icon={<Settings size={18} />}
-              label="System Config"
-              active={activeTab === 'settings'}
-              onClick={() => { setActiveTab('settings'); setIsSidebarOpen(false); }}
-            />
-          </div>
         </nav>
 
         <div className="p-6 bg-zinc-950 border-t border-white/10 shrink-0">
@@ -184,10 +169,9 @@ export default function AdminApp() {
       <main className="flex-1 overflow-y-auto scroll-smooth relative">
         <div className="max-w-7xl mx-auto p-6 lg:p-12 pb-32">
           <header className="mb-8 lg:mb-12">
-            <h2 className="text-4xl lg:text-6xl font-serif italic font-black tracking-tighter">
+            <h2 className="text-4xl lg:text-6xl font-serif italic font-black tracking-tighter text-zinc-900">
               {activeTab === 'bookings' ? 'Bookings' :
-                activeTab === 'calendar' ? 'Calendar' :
-                  activeTab === 'analytics' ? 'Analytics' : 'Settings'}
+                activeTab === 'calendar' ? 'Calendar' : 'Analytics'}
             </h2>
             <p className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.4em] mt-3 italic">
               Management Terminal
@@ -211,13 +195,8 @@ export default function AdminApp() {
               {activeTab === 'calendar' && (
                 <CalendarView bookings={bookings} />
               )}
-
               {activeTab === 'analytics' && (
                 <Analytics bookings={bookings} />
-              )}
-
-              {activeTab === 'settings' && (
-                <SystemConfig />
               )}
             </div>
           )}
@@ -227,7 +206,7 @@ export default function AdminApp() {
       {/* Logout Modal */}
       {showLogoutModal && (
         <div className="fixed inset-0 z-[100] bg-zinc-950/80 backdrop-blur-xl flex items-center justify-center p-6">
-          <div className="bg-white rounded-[3rem] p-10 max-sm w-full text-center shadow-2xl">
+          <div className="bg-white rounded-[3rem] p-10 max-w-sm w-full text-center shadow-2xl">
             <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
               <AlertTriangle size={32} />
             </div>

@@ -199,33 +199,66 @@ export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBo
                         const currentIterationDay = startOfDay(d);
                         const isHighRate = checkIsHoliday(d, dbHolidays);
 
-                        const booking = confirmedBookings.find(b => {
-                            const start = startOfDay(parseISO(b.checkInDate || b.checkIn));
-                            const end = startOfDay(parseISO(b.checkOutDate || b.checkOut));
-                            return isWithinInterval(currentIterationDay, { start, end });
+                        const bookingsForDay = confirmedBookings.filter(b => {
+                            const t = String(b.stayType).toLowerCase();
+                            const bStart = startOfDay(parseISO(b.checkInDate || b.checkIn));
+                            const bEnd = startOfDay(parseISO(b.checkOutDate || b.checkOut));
+
+                            // For single-slot bookings (day or evening), only mark the start date as occupied for that slot.
+                            if (t === 'day' || t === 'evening') {
+                                return isSameDay(currentIterationDay, bStart);
+                            }
+
+                            // For full/multi-day stays, occupy every date in the interval [bStart, bEnd)
+                            return currentIterationDay >= bStart && currentIterationDay < bEnd;
                         });
 
-                        const bgColorClass = booking ? (CALENDAR_COLORS[booking.color] || "bg-zinc-400") : "";
+                        const daySlot = bookingsForDay.find(b => String(b.stayType).toLowerCase() === 'day');
+                        const eveSlot = bookingsForDay.find(b => String(b.stayType).toLowerCase() === 'evening');
+                        const fullSlot = bookingsForDay.find(b => {
+                            const t = String(b.stayType).toLowerCase();
+                            return t === 'full' || (t !== 'day' && t !== 'evening');
+                        });
+
+                        const bgColorClass = fullSlot ? (CALENDAR_COLORS[fullSlot.color] || "bg-zinc-400") : "";
                         const isSelectedCheckIn = selectedCheckIn ? isSameDay(currentIterationDay, selectedCheckIn) : false;
                         const isSelectedCheckOut = selectedCheckOut ? isSameDay(currentIterationDay, selectedCheckOut) : false;
                         const isInSelectedRange = selectedCheckIn && selectedCheckOut && stayType === "full" && isWithinInterval(currentIterationDay, { start: selectedCheckIn, end: selectedCheckOut });
 
-                        // If "checkOut" is selected, the date should not be selectable if there is an existing booking passing through from checkIn
                         const isBlockedByExisting = activeField === "checkOut" && selectedCheckIn ?
                             confirmedBookings.some(b => {
                                 const bStart = startOfDay(parseISO(b.checkInDate || b.checkIn));
                                 return isWithinInterval(bStart, { start: selectedCheckIn, end: currentIterationDay });
                             }) : false;
 
-                        const isSelectable = !booking && currentIterationDay >= startOfDay(new Date()) && !isBlockedByExisting;
+                        // Determine if the slot needed for current stayType is occupied
+                        let slotOccupied = false;
+                        if (stayType === 'full') {
+                            slotOccupied = Boolean(fullSlot || daySlot || eveSlot);
+                        } else if (stayType === 'day') {
+                            slotOccupied = Boolean(fullSlot || daySlot);
+                        } else if (stayType === 'evening') {
+                            slotOccupied = Boolean(fullSlot || eveSlot);
+                        }
 
-                        const statusClasses = booking
-                            ? `${bgColorClass} text-zinc-900 z-10 scale-[1.05] shadow-md cursor-not-allowed`
-                            : isSelectedCheckIn || isSelectedCheckOut
-                                ? "bg-[#D4AF37] text-white shadow-lg"
-                                : isInSelectedRange
-                                    ? "bg-[#D4AF37]/10 text-zinc-900"
-                                    : "hover:bg-zinc-50 text-zinc-400 cursor-pointer";
+                        // Past dates should always be non-selectable and greyed out
+                        const isPast = currentIterationDay < startOfDay(new Date());
+
+                        const isSelectable = !slotOccupied && !isPast && !isBlockedByExisting;
+
+                        let statusClasses = "";
+
+                        if (isPast) {
+                            statusClasses = "bg-zinc-50 text-zinc-300 cursor-not-allowed";
+                        } else {
+                            statusClasses = fullSlot
+                                ? `${bgColorClass} text-zinc-900 z-10 scale-[1.05] shadow-md cursor-not-allowed`
+                                : isSelectedCheckIn || isSelectedCheckOut
+                                    ? "bg-[#D4AF37] text-white shadow-lg"
+                                    : isInSelectedRange
+                                        ? "bg-[#D4AF37]/10 text-zinc-900"
+                                        : "hover:bg-zinc-50 text-zinc-400 cursor-pointer";
+                        }
 
                         return (
                             <button
@@ -237,14 +270,31 @@ export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBo
                             >
                                 <span>{format(d, "d")}</span>
 
-                                {booking ? (
+                                {fullSlot ? (
                                     <span className="text-[7px] uppercase font-black mt-1 opacity-60">
                                         Booked
                                     </span>
                                 ) : (
-                                    isHighRate && (
-                                        <div className="absolute top-2 right-2 w-1 h-1 rounded-full bg-[#D4AF37]" />
-                                    )
+                                    <>
+                                        {isHighRate && (
+                                            <div className="absolute top-2 right-2 w-1 h-1 rounded-full bg-[#D4AF37]" />
+                                        )}
+
+                                        {(daySlot || eveSlot) && (
+                                            <div className="flex gap-1 mt-1">
+                                                {daySlot && (
+                                                    <span className={`text-[7px] uppercase font-black px-1 rounded ${CALENDAR_COLORS[daySlot.color] || 'bg-zinc-300'}`}>
+                                                        Day
+                                                    </span>
+                                                )}
+                                                {eveSlot && (
+                                                    <span className={`text-[7px] uppercase font-black px-1 rounded ${CALENDAR_COLORS[eveSlot.color] || 'bg-zinc-300'}`}>
+                                                        Eve
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </button>
                         );

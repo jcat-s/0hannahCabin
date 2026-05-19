@@ -3,7 +3,7 @@ import { Image as ImageIcon, Receipt, PartyPopper, ShieldCheck } from "lucide-re
 import { format, parseISO } from "date-fns";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../shared/lib/firebase";
-import { CabinId, StayType, calculateTotal } from "../../shared/lib/bookingPricing";
+import { CabinId, StayType, calculateTotal, PricingData } from "../../shared/lib/bookingPricing";
 
 interface PriceSummaryProps {
     cabin: CabinId;
@@ -27,21 +27,35 @@ export function PriceSummary({
 }: PriceSummaryProps) {
     const [showModal, setShowModal] = useState(false);
     const [dbHolidays, setDbHolidays] = useState<string[]>([]);
+    const [pricingConfig, setPricingConfig] = useState<PricingData | null>(null);
+    const [priceImageUrl, setPriceImageUrl] = useState<string | null>(null);
 
     // Makinig sa database para sa custom holidays (para sa weekend rate)
     useEffect(() => {
         if (!db) return;
-        return onSnapshot(doc(db, "metadata", "holidays"), (docSnap) => {
+        const unsubs: Array<() => void> = [];
+
+        unsubs.push(onSnapshot(doc(db, "metadata", "holidays"), (docSnap) => {
             if (docSnap.exists()) {
                 setDbHolidays(docSnap.data().dates || []);
             }
-        });
+        }));
+
+        unsubs.push(onSnapshot(doc(db, "metadata", "pricing"), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setPricingConfig(data.pricing || null);
+                setPriceImageUrl(data.imageUrl || null);
+            }
+        }));
+
+        return () => unsubs.forEach((u) => typeof u === 'function' && u());
     }, []);
 
     // Dito ipinapasa ang dbHolidays para mag-apply ang Holiday Rate base sa image
     const pricing = useMemo(() =>
-        calculateTotal(cabin, stayType, guests, pets, checkIn, checkOut, dbHolidays),
-        [cabin, stayType, guests, pets, checkIn, checkOut, dbHolidays]
+        calculateTotal(cabin, stayType, guests, pets, checkIn, checkOut, dbHolidays, pricingConfig || undefined),
+        [cabin, stayType, guests, pets, checkIn, checkOut, dbHolidays, pricingConfig]
     );
 
     const stayLabels = {
@@ -126,7 +140,7 @@ export function PriceSummary({
             {showModal && (
                 <div className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-6" onClick={() => setShowModal(false)}>
                     <div className="max-w-4xl w-full rounded-2xl overflow-hidden bg-white shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
-                        <img src="/section/price.jpg" className="max-w-full w-full" alt="Rate chart" />
+                        <img src={priceImageUrl || "/section/price.jpg"} className="max-w-full w-full" alt="Rate chart" />
                     </div>
                 </div>
             )}

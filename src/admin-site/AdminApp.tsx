@@ -3,17 +3,18 @@ import { collection, query, onSnapshot, doc, getDoc, updateDoc, deleteDoc, order
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import {
   Inbox, Calendar, TrendingUp, LogOut,
-  UserCircle, AlertTriangle, Menu, X
+  UserCircle, AlertTriangle, Menu, X, DollarSign
 } from "lucide-react";
 import { db, auth } from "../shared/lib/firebase";
 import { Reservations } from "./Reservations";
 import { Analytics } from "./Analytics";
 import { CalendarView } from "./Calendar";
+import PricingManager from "./PricingManager"; // Imported new control component
 
 export default function AdminApp() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'bookings' | 'calendar' | 'analytics'>('bookings');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'calendar' | 'analytics' | 'pricing'>('bookings');
   const [adminData, setAdminData] = useState<{ name: string; email: string } | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -131,12 +132,18 @@ export default function AdminApp() {
             active={activeTab === 'analytics'}
             onClick={() => { setActiveTab('analytics'); setIsSidebarOpen(false); }}
           />
+          <NavItem
+            icon={<DollarSign size={18} />}
+            label="Rates Settings"
+            active={activeTab === 'pricing'}
+            onClick={() => { setActiveTab('pricing'); setIsSidebarOpen(false); }}
+          />
         </nav>
 
         <div className="p-6 bg-zinc-950 border-t border-white/10 shrink-0">
           <div className="flex items-center gap-3 mb-6 px-2">
             <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center text-[#D4AF37] border border-white/5 shrink-0">
-              <UserCircle size={24} />
+              <div className="text-zinc-400"><UserCircle size={24} /></div>
             </div>
             <div className="overflow-hidden text-left">
               <p className="text-[10px] font-black uppercase tracking-widest truncate">
@@ -171,7 +178,8 @@ export default function AdminApp() {
           <header className="mb-8 lg:mb-12">
             <h2 className="text-4xl lg:text-6xl font-serif italic font-black tracking-tighter text-zinc-900">
               {activeTab === 'bookings' ? 'Bookings' :
-                activeTab === 'calendar' ? 'Calendar' : 'Analytics'}
+                activeTab === 'calendar' ? 'Calendar' :
+                  activeTab === 'analytics' ? 'Analytics' : 'Rates Settings'}
             </h2>
             <p className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.4em] mt-3 italic">
               Management Terminal
@@ -197,6 +205,9 @@ export default function AdminApp() {
               )}
               {activeTab === 'analytics' && (
                 <Analytics bookings={bookings} />
+              )}
+              {activeTab === 'pricing' && (
+                <PricingManager />
               )}
             </div>
           )}

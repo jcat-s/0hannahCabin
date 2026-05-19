@@ -3,7 +3,10 @@ import { format, getDay, eachDayOfInterval, subDays, parseISO } from "date-fns";
 export type CabinId = "ohannah" | "dream";
 export type StayType = "day" | "evening" | "full";
 
-export const PRICING_DATA: Record<CabinId, Record<StayType, { weekday: number; weekend: number; extraPax: number }>> = {
+export type PricingEntry = { weekday: number; weekend: number; extraPax: number };
+export type PricingData = Record<CabinId, Record<StayType, PricingEntry>>;
+
+export const PRICING_DATA: PricingData = {
   ohannah: {
     day: { weekday: 5500, weekend: 6000, extraPax: 300 },
     evening: { weekday: 7500, weekend: 8000, extraPax: 300 },
@@ -41,9 +44,11 @@ export function calculateTotal(
   pets: number,
   checkIn: string,
   checkOut: string,
-  dbHolidays: string[] = []
+  dbHolidays: string[] = [],
+  pricingOverride?: PricingData
 ) {
-  const config = PRICING_DATA[cabin][stayType];
+  const pricingSource = pricingOverride || PRICING_DATA;
+  const config = pricingSource[cabin][stayType];
 
   if (!checkIn || !checkOut) {
     return { basePrice: 0, extraPaxCount: 0, extraPaxRate: config.extraPax, extraPaxTotal: 0, petTotal: 0, grandTotal: 0 };

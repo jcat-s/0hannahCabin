@@ -40,24 +40,14 @@ export const PrintBookingItem = ({ booking }: { booking: any }) => {
     const display = getStayDisplay();
     const stayRange = `${format(parseISO(booking.checkIn), "MMM d")} - ${format(parseISO(booking.checkOut), "d")}`;
 
+    const activeColor = booking.color || booking.selectedColor || booking.slot || '';
+
     return (
-        <div className={`h-full w-full p-1 flex flex-col justify-between overflow-hidden ${PRINT_COLORS[booking.color] || 'bg-zinc-200'}`}>
-            <div className="flex flex-col gap-0.5 relative z-10">
+        <div className={`relative h-full w-full p-1 flex flex-col justify-between overflow-hidden ${PRINT_COLORS[activeColor] || 'bg-zinc-200'}`}>
+                <div className="flex flex-col gap-0.5 relative z-10">
                 <span className="font-black text-[8px] text-black uppercase leading-tight break-words line-clamp-2">
                     {booking.customerName}
                 </span>
-                <div className="flex items-center gap-1 text-black">
-                    <Clock size={7} strokeWidth={3} />
-                    <span className="text-[7px] font-black uppercase italic truncate">
-                        {display.label} {display.time && `(${display.time})`}
-                    </span>
-                </div>
-                <div className="flex items-center gap-1 text-black">
-                    <CalendarDays size={7} strokeWidth={3} />
-                    <span className="text-[7px] font-black uppercase truncate">
-                        {stayRange}
-                    </span>
-                </div>
                 {booking.specialOccasion && (
                     <div className="flex items-center gap-1 text-black">
                         <PartyPopper size={7} strokeWidth={3} />
@@ -132,7 +122,7 @@ export function CalendarView({ bookings }: { bookings: any[] }) {
                         return <div key={dIdx} className="day-box overflow-hidden bg-zinc-50" />;
                     }
 
-                    const bookingsForDay = bookings.filter(b => {
+                    let bookingsForDay = bookings.filter(b => {
                         const t = String(b.stayType).toLowerCase();
                         const bStart = parseISO(b.checkIn);
                         const bEnd = parseISO(b.checkOut);
@@ -143,6 +133,12 @@ export function CalendarView({ bookings }: { bookings: any[] }) {
 
                         return day >= startOfMonth(bStart) ? (day >= bStart && day < bEnd) : (day >= bStart && day < bEnd);
                     });
+
+                    // If there's any full stay covering this day, prefer showing only full stays
+                    const hasFull = bookingsForDay.some(b => String(b.stayType).toLowerCase() === 'full' || (String(b.stayType).toLowerCase() !== 'day' && String(b.stayType).toLowerCase() !== 'evening'));
+                    if (hasFull) {
+                        bookingsForDay = bookingsForDay.filter(b => String(b.stayType).toLowerCase() === 'full' || (String(b.stayType).toLowerCase() !== 'day' && String(b.stayType).toLowerCase() !== 'evening'));
+                    }
 
                     return (
                         <div key={dIdx} className={`day-box overflow-hidden bg-white relative`}>
@@ -261,6 +257,13 @@ export function CalendarView({ bookings }: { bookings: any[] }) {
                     .calendar-row { border-bottom: 2px solid black !important; }
                     .day-box { border-right: 2px solid black !important; }
                     .day-box:last-child { border-right: none !important; }
+                    /* Reduce heading sizes for print to fit on smaller paper */
+                    h1 { font-size: 48px !important; }
+                    h2 { font-size: 20px !important; }
+                    /* Reduce booking item heights and font sizes */
+                    .day-box .h-12 { height: 3rem !important; }
+                    .day-box .h-14 { height: 3.5rem !important; }
+                    .day-box span, .day-box .text-[7px], .day-box .text-[8px] { font-size: 7px !important; }
                 }
                 .day-box { border-right: 2px solid black; position: relative; flex: 1; display: flex; flex-direction: column; min-width: 0; }
                 .day-box:last-child { border-right: none; }

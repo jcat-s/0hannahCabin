@@ -13,7 +13,7 @@ import {
     startOfDay,
     isSameDay,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, XCircle, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, XCircle, AlertCircle, Users, Baby, Dog } from "lucide-react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../shared/lib/firebase";
 import { StayType } from "../../shared/lib/bookingPricing";
@@ -276,9 +276,17 @@ export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBo
                                 <span>{format(d, "d")}</span>
 
                                 {fullSlot ? (
-                                    <span className="text-[7px] uppercase font-black mt-1 opacity-60">
-                                        Booked
-                                    </span>
+                                    <div className="flex flex-col items-center gap-1 mt-1">
+                                        <span className="text-[9px] font-black uppercase truncate text-zinc-900">{fullSlot.customerName}</span>
+                                        <div className="flex items-center gap-2 text-[8px] text-zinc-800">
+                                            <span className="flex items-center gap-1"><Users size={12} />{fullSlot.guests}</span>
+                                            {fullSlot.kids > 0 && <span className="flex items-center gap-1"><Baby size={12} />{fullSlot.kids}K</span>}
+                                            {fullSlot.pets > 0 && <span className="flex items-center gap-1"><Dog size={12} />{fullSlot.pets}P</span>}
+                                        </div>
+                                        {fullSlot.specialOccasion && (
+                                            <span className="text-[7px] truncate text-zinc-800">{fullSlot.specialOccasion}</span>
+                                        )}
+                                    </div>
                                 ) : (
                                     <>
                                         {isHighRate && (
@@ -286,16 +294,28 @@ export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBo
                                         )}
 
                                         {(daySlot || eveSlot) && (
-                                            <div className="flex gap-1 mt-1">
+                                            <div className="flex flex-col gap-1 mt-1 items-center">
                                                 {daySlot && (
-                                                    <span className={`text-[7px] uppercase font-black px-1 rounded ${CALENDAR_COLORS[daySlot.color] || 'bg-zinc-300'}`}>
-                                                        Day
-                                                    </span>
+                                                    <div className={`text-[8px] font-black px-1 rounded ${CALENDAR_COLORS[daySlot.color] || 'bg-zinc-300'} text-zinc-900 truncate flex flex-col items-center`}> 
+                                                        <span className="uppercase">{(daySlot.customerName || 'Guest').split(' ')[0]}</span>
+                                                        <div className="flex items-center gap-1 text-[7px] mt-0.5">
+                                                            <Users size={12} /> <span>{daySlot.guests}</span>
+                                                            {daySlot.kids > 0 && <span>{daySlot.kids}K</span>}
+                                                            {daySlot.pets > 0 && <span>{daySlot.pets}P</span>}
+                                                        </div>
+                                                        {daySlot.specialOccasion && <span className="text-[7px] truncate mt-0.5">{daySlot.specialOccasion}</span>}
+                                                    </div>
                                                 )}
                                                 {eveSlot && (
-                                                    <span className={`text-[7px] uppercase font-black px-1 rounded ${CALENDAR_COLORS[eveSlot.color] || 'bg-zinc-300'}`}>
-                                                        Eve
-                                                    </span>
+                                                    <div className={`text-[8px] font-black px-1 rounded ${CALENDAR_COLORS[eveSlot.color] || 'bg-zinc-300'} text-zinc-900 truncate flex flex-col items-center`}> 
+                                                        <span className="uppercase">{(eveSlot.customerName || 'Guest').split(' ')[0]}</span>
+                                                        <div className="flex items-center gap-1 text-[7px] mt-0.5">
+                                                            <Users size={12} /> <span>{eveSlot.guests}</span>
+                                                            {eveSlot.kids > 0 && <span>{eveSlot.kids}K</span>}
+                                                            {eveSlot.pets > 0 && <span>{eveSlot.pets}P</span>}
+                                                        </div>
+                                                        {eveSlot.specialOccasion && <span className="text-[7px] truncate mt-0.5">{eveSlot.specialOccasion}</span>}
+                                                    </div>
                                                 )}
                                             </div>
                                         )}

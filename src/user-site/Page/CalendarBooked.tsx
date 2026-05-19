@@ -249,7 +249,12 @@ export function CalendarBooked({ currentViewDate, setCurrentViewDate, filteredBo
                         let statusClasses = "";
 
                         if (isPast) {
-                            statusClasses = "bg-zinc-50 text-zinc-300 cursor-not-allowed";
+                            // If the past date had a full booking, still show its color but make it muted/disabled.
+                            if (fullSlot) {
+                                statusClasses = `${bgColorClass} text-zinc-700 opacity-70 cursor-not-allowed`;
+                            } else {
+                                statusClasses = "bg-zinc-50 text-zinc-300 cursor-not-allowed";
+                            }
                         } else {
                             statusClasses = fullSlot
                                 ? `${bgColorClass} text-zinc-900 z-10 scale-[1.05] shadow-md cursor-not-allowed`

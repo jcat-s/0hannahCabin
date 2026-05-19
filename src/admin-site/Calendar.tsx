@@ -41,21 +41,20 @@ export const PrintBookingItem = ({ booking }: { booking: any }) => {
     const stayRange = `${format(parseISO(booking.checkIn), "MMM d")} - ${format(parseISO(booking.checkOut), "d")}`;
 
     return (
-        /* FIXED: Added overflow-hidden and adjusted padding/height to stay within borders */
         <div className={`h-full w-full p-1 flex flex-col justify-between overflow-hidden ${PRINT_COLORS[booking.color] || 'bg-zinc-200'}`}>
             <div className="flex flex-col gap-0.5 relative z-10">
-                <span className="font-black text-[9px] text-black uppercase leading-tight break-words">
+                <span className="font-black text-[8px] text-black uppercase leading-tight break-words line-clamp-2">
                     {booking.customerName}
                 </span>
                 <div className="flex items-center gap-1 text-black">
                     <Clock size={7} strokeWidth={3} />
-                    <span className="text-[7px] font-black uppercase italic">
+                    <span className="text-[7px] font-black uppercase italic truncate">
                         {display.label} {display.time && `(${display.time})`}
                     </span>
                 </div>
                 <div className="flex items-center gap-1 text-black">
                     <CalendarDays size={7} strokeWidth={3} />
-                    <span className="text-[7px] font-black uppercase">
+                    <span className="text-[7px] font-black uppercase truncate">
                         {stayRange}
                     </span>
                 </div>
@@ -69,21 +68,21 @@ export const PrintBookingItem = ({ booking }: { booking: any }) => {
                 )}
             </div>
 
-            <div className="border-t border-black/20 pt-0.5 flex flex-wrap gap-x-1.5 mt-auto relative z-10">
+            <div className="border-t border-black/20 pt-0.5 flex flex-wrap gap-x-1.5 mt-auto relative z-10 text-[7px]">
                 <div className="flex items-center gap-0.5 text-black">
                     <Users size={7} strokeWidth={3} />
-                    <span className="text-[7px] font-black">{booking.guests}</span>
+                    <span className="font-black">{booking.guests}</span>
                 </div>
                 {booking.kids > 0 && (
                     <div className="flex items-center gap-0.5 text-black">
                         <Baby size={7} strokeWidth={3} />
-                        <span className="text-[7px] font-black">{booking.kids}K</span>
+                        <span className="font-black">{booking.kids}K</span>
                     </div>
                 )}
                 {booking.pets > 0 && (
                     <div className="flex items-center gap-0.5 text-black">
                         <Dog size={7} strokeWidth={3} />
-                        <span className="text-[7px] font-black">{booking.pets}P</span>
+                        <span className="font-black">{booking.pets}P</span>
                     </div>
                 )}
             </div>
@@ -146,12 +145,12 @@ export function CalendarView({ bookings }: { bookings: any[] }) {
                     });
 
                     return (
-                        <div key={dIdx} className={`day-box overflow-hidden bg-white relative`}> 
+                        <div key={dIdx} className={`day-box overflow-hidden bg-white relative`}>
                             <span className="absolute top-1 left-1.5 font-bold text-xl text-zinc-300 z-0 select-none opacity-50">{format(day, "d")}</span>
                             <div className="absolute top-0 left-0 right-0 bottom-0 z-10 p-1 flex flex-col gap-1 overflow-hidden">
                                 {bookingsForDay.length === 0 && null}
                                 {bookingsForDay.map((bk, idx) => (
-                                    <div key={bk.id || idx} className="w-full h-14 overflow-hidden">
+                                    <div key={bk.id || idx} className="w-full h-12 overflow-hidden">
                                         <PrintBookingItem booking={bk} />
                                     </div>
                                 ))}

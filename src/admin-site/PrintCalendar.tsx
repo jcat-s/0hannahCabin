@@ -33,24 +33,24 @@ export const PrintBookingItem = ({ booking }: { booking: any }) => {
     const stayRange = `${format(parseISO(booking.checkIn), "MMM d")} - ${format(parseISO(booking.checkOut), "d")}`;
 
     return (
-        <div className={`flex-1 w-full p-2 flex flex-col justify-between ${PRINT_COLORS[booking.color] || 'bg-zinc-100'} border-l-4 border-black/20`}>
+        <div className={`flex-1 w-full p-1 flex flex-col justify-between ${PRINT_COLORS[booking.color] || 'bg-zinc-100'} border-l-4 border-black/20`}>
             <div className="space-y-1">
                 {/* Header: Name */}
-                <h4 className="font-black text-[11px] text-black uppercase leading-tight line-clamp-2">
+                <h4 className="font-black text-[9px] text-black uppercase leading-tight line-clamp-2">
                     {booking.customerName}
                 </h4>
 
                 {/* Info Rows */}
                 <div className="flex flex-col gap-0.5">
                     <div className="flex items-center gap-1 text-black/80">
-                        <Clock size={9} strokeWidth={3} />
-                        <span className="text-[8px] font-black uppercase italic">
+                        <Clock size={8} strokeWidth={3} />
+                        <span className="text-[7px] font-black uppercase italic truncate">
                             {display.label} {display.time && `(${display.time})`}
                         </span>
                     </div>
                     <div className="flex items-center gap-1 text-black/80">
-                        <CalendarDays size={9} strokeWidth={3} />
-                        <span className="text-[8px] font-black uppercase">{stayRange}</span>
+                        <CalendarDays size={8} strokeWidth={3} />
+                        <span className="text-[7px] font-black uppercase truncate">{stayRange}</span>
                     </div>
                     {booking.specialOccasion && (
                         <div className="flex items-center gap-1 text-blue-800">
@@ -62,7 +62,7 @@ export const PrintBookingItem = ({ booking }: { booking: any }) => {
             </div>
 
             {/* Footer: PAX */}
-            <div className="mt-2 pt-1 border-t border-black/10 flex gap-2">
+            <div className="mt-2 pt-1 border-t border-black/10 flex gap-2 text-[8px]">
                 <div className="flex items-center gap-0.5">
                     <Users size={10} strokeWidth={3} />
                     <span className="text-[9px] font-bold">{booking.guests}</span>

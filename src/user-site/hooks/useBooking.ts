@@ -21,7 +21,7 @@ export function useBooking() {
     const [pets, setPets] = useState(0);
     const [specialOccasion, setSpecialOccasion] = useState("");
     const [selectedColor, setSelectedColor] = useState("");
-    const [fullStayOption, setFullStayOption] = useState<"9AM-7AM" | "8PM-5PM">("9AM-7AM");
+    const [fullStayOption, setFullStayOption] = useState<"9AM-7AM" | "8PM-5PM" | "3PM-12NN">("9AM-7AM");
     const [currentViewDate, setCurrentViewDate] = useState(new Date());
     const [dbBookings, setDbBookings] = useState<any[]>([]);
     const [dbHolidays, setDbHolidays] = useState<string[]>([]);

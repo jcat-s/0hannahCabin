@@ -17,7 +17,8 @@ export const PrintBookingItem = ({ booking }: { booking: any }) => {
     const stayLabels: Record<string, { label: string; time: string }> = {
         day: { label: "Day Lounge", time: "9AM-5PM" },
         evening: { label: "Evening Chill", time: "8PM-7AM" },
-        full: { label: "Full Stay", time: "" }
+        full: { label: "Full Stay", time: "" },
+        "3PM-12NN": { label: "Full Stay", time: "3PM-12NN" }
     };
 
     const getStayDisplay = () => {

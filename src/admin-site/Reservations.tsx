@@ -18,7 +18,8 @@ const stayLabels: Record<string, { label: string; time: string }> = {
     evening: { label: "Evening Chill", time: "8PM - 7AM" },
     full: { label: "Full Stay", time: " " },
     "9AM-7AM": { label: "Full Stay", time: "9AM - 7AM" },
-    "8PM-5PM": { label: "Full Stay", time: "8PM - 5PM" }
+    "8PM-5PM": { label: "Full Stay", time: "8PM - 5PM" },
+    "3PM-12NN": { label: "Full Stay", time: "3PM - 12NN" }
 };
 
 export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUpdate, onDelete }) => {

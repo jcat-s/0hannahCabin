@@ -14,7 +14,7 @@ const BOOKING_COLORS = [
     { id: "violet", label: "Violet Slot", bg: "bg-violet-400" },
 ];
 
-type FullStayOption = "9AM-7AM" | "8PM-5PM";
+type FullStayOption = "9AM-7AM" | "8PM-5PM" | "3PM-12NN";
 
 interface StayCategorySectionProps {
     stayType: StayType;
@@ -40,11 +40,11 @@ export function StayCategorySection({ stayType, setStayType, fullStayOption, set
                     >
                         <option value="day">☀️ Day Lounge (9AM-5PM)</option>
                         <option value="evening">🌙 Evening Chill (8PM-7AM)</option>
-                        <option value="full">🏠 Full Stay (9AM-7AM or 8PM-5PM)</option>
+                        <option value="full">🏠 Full Stay (9AM-7AM, 8PM-5PM or 3PM-12NN)</option>
                     </select>
                     {stayType === "full" && (
-                        <div className="mt-6 grid grid-cols-2 gap-3">
-                            {(["9AM-7AM", "8PM-5PM"] as FullStayOption[]).map(option => (
+                        <div className="mt-6 grid grid-cols-3 gap-3">
+                            {(["9AM-7AM", "8PM-5PM", "3PM-12NN"] as FullStayOption[]).map(option => (
                                 <button
                                     key={option}
                                     type="button"

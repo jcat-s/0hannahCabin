@@ -47,7 +47,7 @@ export function PriceSummary({
     const stayLabels = {
         day: { label: "Day Lounge", time: "9AM - 5PM" },
         evening: { label: "Evening Chill", time: "8PM - 7AM" },
-        full: { label: "Full Stay", time: "9AM-7AM / 8PM-5PM" }
+        full: { label: "Full Stay", time: "9AM-7AM / 8PM-5PM / 3PM-12NN" }
     };
 
     return (

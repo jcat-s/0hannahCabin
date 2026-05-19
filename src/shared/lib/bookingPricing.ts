@@ -45,7 +45,8 @@ export function calculateTotal(
   checkIn: string,
   checkOut: string,
   dbHolidays: string[] = [],
-  pricingOverride?: PricingData
+  pricingOverride?: PricingData,
+  petRate: number = 250
 ) {
   const pricingSource = pricingOverride || PRICING_DATA;
   const config = pricingSource[cabin][stayType];
@@ -70,8 +71,8 @@ export function calculateTotal(
   const extraPaxCount = Math.max(0, adults - 4);
   const extraPaxTotal = extraPaxCount * config.extraPax * stayDates.length;
 
-  // Pets: 250 each (one-time fee or per stay logic)
-  const petTotal = pets * 250;
+  // Pets: configured pet fee from policy, default 250 each
+  const petTotal = pets * petRate;
 
   return {
     basePrice: totalBasePrice,

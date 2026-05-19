@@ -31,7 +31,7 @@ interface PriceSummaryProps {
 const defaultPolicies = {
     day: { time: "9AM to 5PM", standardCap: "Rate is good for 4 adults and 2 kids (below 3ft)", maxCap: "12 pax max capacity", petFee: 250 },
     evening: { time: "8PM to 7AM", standardCap: "Rate is good for 4 adults and 2 kids (below 3ft)", maxCap: "12 pax max capacity", petFee: 250 },
-    full: { time: "9AM to 7AM / 8PM to 5PM", standardCap: "Rate is good for 4 adults and 2 kids (below 3ft)", maxCap: "12 pax max capacity", petFee: 250 }
+    full: { time: "9AM to 7AM / 8PM to 5PM / 3PM to 12NN", standardCap: "Rate is good for 4 adults and 2 kids (below 3ft)", maxCap: "12 pax max capacity", petFee: 250 }
 };
 
 export function PriceSummary({
@@ -42,6 +42,8 @@ export function PriceSummary({
     const [dbHolidays, setDbHolidays] = useState<string[]>([]);
     const [pricingConfig, setPricingConfig] = useState<PricingData | null>(null);
     const [policies, setPolicies] = useState(defaultPolicies);
+
+    const currentPolicy = policies[stayType] || defaultPolicies[stayType];
 
     useEffect(() => {
         if (!db) return;
@@ -65,8 +67,8 @@ export function PriceSummary({
     }, []);
 
     const pricing = useMemo(() =>
-        calculateTotal(cabin, stayType, guests, pets, checkIn, checkOut, dbHolidays, pricingConfig || undefined),
-        [cabin, stayType, guests, pets, checkIn, checkOut, dbHolidays, pricingConfig]
+        calculateTotal(cabin, stayType, guests, pets, checkIn, checkOut, dbHolidays, pricingConfig || undefined, currentPolicy.petFee),
+        [cabin, stayType, guests, pets, checkIn, checkOut, dbHolidays, pricingConfig, currentPolicy.petFee]
     );
 
     const stayLabels = {
@@ -131,7 +133,7 @@ export function PriceSummary({
                 <div className="mt-4 flex flex-col gap-1 text-[8px] text-zinc-500 uppercase font-bold tracking-widest">
                     <span>Base: ₱{(pricing?.basePrice || 0).toLocaleString()}</span>
                     {(pricing?.extraPaxTotal || 0) > 0 && <span>Extra Pax: +₱{pricing.extraPaxTotal.toLocaleString()}</span>}
-                    {(pricing?.petTotal || 0) > 0 && <span>Pets: +₱{pricing.petTotal.toLocaleString()}</span>}
+                    {(pricing?.petTotal || 0) > 0 && <span>Pets: +₱{currentPolicy.petFee.toLocaleString()} x {pets} = ₱{pricing.petTotal.toLocaleString()}</span>}
                 </div>
             </div>
 
@@ -213,7 +215,7 @@ export function PriceSummary({
                                                             <div className="text-sm font-bold text-white">₱{rates.weekday.toLocaleString()}</div>
                                                         </div>
                                                         <div className="bg-[#D4AF37]/5 py-2 rounded-lg border border-[#D4AF37]/10">
-                                                            <div className="text-[8px] uppercase tracking-widest text-[#D4AF37]">Weekend</div>
+                                                            <div className="text-[8px] uppercase tracking-widest text-[#D4AF37]">Weekend / Holiday</div>
                                                             <div className="text-sm font-bold text-[#D4AF37]">₱{rates.weekend.toLocaleString()}</div>
                                                         </div>
                                                     </div>
@@ -226,7 +228,7 @@ export function PriceSummary({
                         </div>
 
                         <div className="mt-8 text-[8px] text-zinc-500 text-center uppercase tracking-widest border-t border-white/5 pt-4">
-                            Rates scale automatically based on holiday lists and weekend peak scheduling slots.
+                            Rates scale automatically for Fri/Sat/Sun and holidays listed in the schedule.
                         </div>
                     </div>
                 </div>

@@ -37,7 +37,7 @@ const defaultPricing: PricingData = {
 const defaultPolicies = {
     day: { time: "9AM to 5PM", standardCap: "Rate is good for 4 adults and 2 kids (below 3ft)", maxCap: "12 pax max capacity", petFee: 250 },
     evening: { time: "8PM to 7AM", standardCap: "Rate is good for 4 adults and 2 kids (below 3ft)", maxCap: "12 pax max capacity", petFee: 250 },
-    full: { time: "9AM to 7AM / 8PM to 5PM", standardCap: "Rate is good for 4 adults and 2 kids (below 3ft)", maxCap: "12 pax max capacity", petFee: 250 }
+    full: { time: "9AM to 7AM / 8PM to 5PM / 3PM to 12NN", standardCap: "Rate is good for 4 adults and 2 kids (below 3ft)", maxCap: "12 pax max capacity", petFee: 250 }
 };
 
 export default function PricingManager() {
@@ -151,7 +151,7 @@ export default function PricingManager() {
                         {(["day", "evening", "full"] as Array<keyof PricingData["ohannah"]>).map((stay) => (
                             <div key={stay} className="mb-6 last:mb-0">
                                 <div className="font-bold text-[10px] uppercase tracking-[0.2em] text-zinc-400 mb-3">{stay} Stay Base Rates</div>
-                                <div className="grid grid-cols-3 gap-4">
+                                <div className="grid grid-cols-4 gap-4">
                                     <div>
                                         <label className="text-[9px] font-black uppercase text-zinc-500 tracking-wider block mb-1">Weekday</label>
                                         <input type="number" value={pricing[cabin][stay].weekday}
@@ -168,6 +168,12 @@ export default function PricingManager() {
                                         <label className="text-[9px] font-black uppercase text-zinc-500 tracking-wider block mb-1">Extra Pax</label>
                                         <input type="number" value={pricing[cabin][stay].extraPax}
                                             onChange={(e) => updateField(cabin, stay, 'extraPax', Number(e.target.value))}
+                                            className="w-full px-4 py-3 bg-zinc-50 hover:bg-zinc-100/70 focus:bg-white rounded-xl border border-zinc-100 transition-colors outline-none text-xs font-bold" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[9px] font-black uppercase text-zinc-500 tracking-wider block mb-1">Pet</label>
+                                        <input type="number" value={policies[stay].petFee}
+                                            onChange={(e) => updatePolicy(stay, 'petFee', Number(e.target.value))}
                                             className="w-full px-4 py-3 bg-zinc-50 hover:bg-zinc-100/70 focus:bg-white rounded-xl border border-zinc-100 transition-colors outline-none text-xs font-bold" />
                                     </div>
                                 </div>

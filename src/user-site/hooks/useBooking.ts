@@ -76,14 +76,26 @@ export function useBooking() {
 
     // FIX: Dito titingnan kung VALID ang date (walang sumasapaw na booking kahit anong kulay)
     const isDateRangeValid = useMemo(() => {
-        const start = parseISO(checkIn);
-        // Kung "day" stay, ang end ay saktong kinabukasan para sa comparison
-        const end = stayType === "day" ? addDays(start, 1) : addDays(parseISO(checkOut), 1);
+        const ourStart = parseISO(checkIn);
+        const ourEnd = stayType === 'full' ? addDays(parseISO(checkOut), 1) : addDays(ourStart, 1);
 
         return !filteredBookings.some(b => {
+            const bType = String(b.stayType).toLowerCase();
             const bStart = parseISO(b.checkInDate || b.checkIn);
-            const bEnd = addDays(parseISO(b.checkOutDate || b.checkOut), 1);
-            return rangesOverlap(start, end, bStart, bEnd);
+            const bEnd = bType === 'full' ? addDays(parseISO(b.checkOutDate || b.checkOut), 1) : addDays(bStart, 1);
+
+            // If either is a full stay, use range overlap (multi-day blocking)
+            if (stayType === 'full' || bType === 'full') {
+                return rangesOverlap(ourStart, ourEnd, bStart, bEnd);
+            }
+
+            // Both are single-day slots (day / evening) -> only conflict if same slot on same day
+            if (stayType === bType) {
+                return isSameDay(ourStart, bStart);
+            }
+
+            // Different single-day slots (day vs evening) do NOT conflict
+            return false;
         });
     }, [checkIn, checkOut, stayType, filteredBookings]);
 

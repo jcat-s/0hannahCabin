@@ -129,21 +129,33 @@ export function CalendarView({ bookings }: { bookings: any[] }) {
         return rows.map((week, wIdx) => (
             <div key={wIdx} className="calendar-row border-b-2 border-black last:border-b-0">
                 {week.map((day, dIdx) => {
-                    const booking = day ? bookings.find(b => isSameDay(parseISO(b.checkIn), day)) : null;
+                    if (!day) {
+                        return <div key={dIdx} className="day-box overflow-hidden bg-zinc-50" />;
+                    }
+
+                    const bookingsForDay = bookings.filter(b => {
+                        const t = String(b.stayType).toLowerCase();
+                        const bStart = parseISO(b.checkIn);
+                        const bEnd = parseISO(b.checkOut);
+
+                        if (t === 'day' || t === 'evening') {
+                            return isSameDay(bStart, day);
+                        }
+
+                        return day >= startOfMonth(bStart) ? (day >= bStart && day < bEnd) : (day >= bStart && day < bEnd);
+                    });
+
                     return (
-                        /* FIXED: Added overflow-hidden to day-box */
-                        <div key={dIdx} className={`day-box overflow-hidden ${!day ? 'bg-zinc-50' : 'bg-white'}`}>
-                            {day && (
-                                <>
-                                    <span className="absolute top-1 left-1.5 font-bold text-xl text-zinc-300 z-0 select-none opacity-50">
-                                        {format(day, "d")}
-                                    </span>
-                                    {/* FIXED: absolute inset-0 replaced with direct child for better border handling */}
-                                    <div className="absolute top-0 left-0 right-0 bottom-0 z-10">
-                                        {booking && <PrintBookingItem booking={booking} />}
+                        <div key={dIdx} className={`day-box overflow-hidden bg-white relative`}> 
+                            <span className="absolute top-1 left-1.5 font-bold text-xl text-zinc-300 z-0 select-none opacity-50">{format(day, "d")}</span>
+                            <div className="absolute top-0 left-0 right-0 bottom-0 z-10 p-1 flex flex-col gap-1 overflow-hidden">
+                                {bookingsForDay.length === 0 && null}
+                                {bookingsForDay.map((bk, idx) => (
+                                    <div key={bk.id || idx} className="w-full h-14 overflow-hidden">
+                                        <PrintBookingItem booking={bk} />
                                     </div>
-                                </>
-                            )}
+                                ))}
+                            </div>
                         </div>
                     );
                 })}

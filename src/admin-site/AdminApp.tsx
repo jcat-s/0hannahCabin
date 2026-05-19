@@ -134,7 +134,7 @@ export default function AdminApp() {
           />
           <NavItem
             icon={<DollarSign size={18} />}
-            label="Rates Settings"
+            label="Rates"
             active={activeTab === 'pricing'}
             onClick={() => { setActiveTab('pricing'); setIsSidebarOpen(false); }}
           />
@@ -179,7 +179,7 @@ export default function AdminApp() {
             <h2 className="text-4xl lg:text-6xl font-serif italic font-black tracking-tighter text-zinc-900">
               {activeTab === 'bookings' ? 'Bookings' :
                 activeTab === 'calendar' ? 'Calendar' :
-                  activeTab === 'analytics' ? 'Analytics' : 'Rates Settings'}
+                  activeTab === 'analytics' ? 'Analytics' : 'Rates'}
             </h2>
             <p className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.4em] mt-3 italic">
               Management Terminal

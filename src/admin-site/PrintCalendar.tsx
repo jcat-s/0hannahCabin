@@ -40,7 +40,15 @@ export const PrintBookingItem = ({ booking }: { booking: any }) => {
                     {booking.customerName}
                 </h4>
 
-                {   <div className="flex items-center gap-1 text-black/80">
+                {/* Info Rows */}
+                <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-1 text-black/80">
+                        <Clock size={8} strokeWidth={3} />
+                        <span className="text-[7px] font-black uppercase italic truncate">
+                            {display.label} {display.time && `(${display.time})`}
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-1 text-black/80">
                         <CalendarDays size={8} strokeWidth={3} />
                         <span className="text-[7px] font-black uppercase truncate">{stayRange}</span>
                     </div>

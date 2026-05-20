@@ -1,25 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { db } from "../shared/lib/firebase";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
-import { X, Eye, HelpCircle, Save, Settings } from "lucide-react";
+import { X, Save, Settings, Upload, Link2, Image as ImageIcon, AlertTriangle } from "lucide-react";
 import type { PricingData } from "../shared/lib/bookingPricing";
-
-// Interface para sa mga bulk rules at text na dating nandoon sa picture
-interface PolicyMetadata {
-    time: string;
-    standardCap: string;
-    maxCap: string;
-    petFee: number;
-}
-
-interface FullPricingPayload {
-    pricing: PricingData;
-    policies: {
-        day: PolicyMetadata;
-        evening: PolicyMetadata;
-        full: PolicyMetadata;
-    };
-}
 
 const defaultPricing: PricingData = {
     ohannah: {
@@ -43,9 +26,14 @@ const defaultPolicies = {
 export default function PricingManager() {
     const [pricing, setPricing] = useState<PricingData>(defaultPricing);
     const [policies, setPolicies] = useState(defaultPolicies);
+    const [rateCardImageUrl, setRateCardImageUrl] = useState<string>("");
+    const [inputImageUrl, setInputImageUrl] = useState<string>("");
     const [saving, setSaving] = useState(false);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+    // Controlled Modal States (Inalis ang native browser windows)
     const [showPreviewModal, setShowPreviewModal] = useState(false);
+    const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
 
     useEffect(() => {
         if (!db) return;
@@ -54,6 +42,10 @@ export default function PricingManager() {
             const data = snap.data();
             if (data.pricing) setPricing(data.pricing as PricingData);
             if (data.policies) setPolicies(data.policies);
+            if (data.rateCardImageUrl) {
+                setRateCardImageUrl(data.rateCardImageUrl);
+                setInputImageUrl(data.rateCardImageUrl);
+            }
         });
 
         return () => unsub();
@@ -72,7 +64,7 @@ export default function PricingManager() {
         }));
     }
 
-    function updatePolicy(stayKey: keyof typeof defaultPolicies, field: keyof PolicyMetadata, value: string | number) {
+    function updatePolicy(stayKey: keyof typeof defaultPolicies, field: keyof typeof defaultPolicies["day"], value: string | number) {
         setPolicies((prev) => ({
             ...prev,
             [stayKey]: {
@@ -88,36 +80,40 @@ export default function PricingManager() {
             return;
         }
         setSaving(true);
+        setStatusMessage("Syncing metadata registry...");
         try {
             await setDoc(doc(db, "metadata", "pricing"), {
                 pricing,
                 policies,
+                rateCardImageUrl: inputImageUrl,
                 lastUpdated: new Date().toISOString()
             }, { merge: true });
 
-            setStatusMessage("Pricing data and rules successfully updated.");
+            setRateCardImageUrl(inputImageUrl);
+            setStatusMessage("Pricing data and Rate Card Image successfully updated.");
             setTimeout(() => setStatusMessage(null), 3000);
         } catch (err: any) {
             console.error(err);
             setStatusMessage(`Failed to save: ${err.message || err}`);
+            alert(`Error saving to Firestore: ${err.message || err}. Kung local image ito, baka masyadong malaki ang file size.`);
             setTimeout(() => setStatusMessage(null), 5000);
         } finally {
             setSaving(false);
         }
     }
 
-    async function handleResetToDefault() {
-        if (!db) {
-            alert("Database connection context is not active.");
-            return;
-        }
-        if (!confirm("Reset pricing and policy text to defaults? This will overwrite everything.")) return;
+    async function executeResetToDefault() {
+        if (!db) return;
         setSaving(true);
         try {
-            await setDoc(doc(db, "metadata", "pricing"), { pricing: defaultPricing, policies: defaultPolicies }, { merge: true });
+            await setDoc(doc(db, "metadata", "pricing"), { pricing: defaultPricing, policies: defaultPolicies, rateCardImageUrl: "" }, { merge: true });
             setPricing(defaultPricing);
             setPolicies(defaultPolicies);
-            alert("Pricing matrices reset to system defaults.");
+            setRateCardImageUrl("");
+            setInputImageUrl("");
+            setShowResetConfirmModal(false);
+            setStatusMessage("Pricing matrices reset to system defaults.");
+            setTimeout(() => setStatusMessage(null), 3000);
         } catch (err) {
             console.error(err);
             alert("Failed to reset pricing matrices.");
@@ -126,22 +122,37 @@ export default function PricingManager() {
         }
     }
 
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.size > 850 * 1024) {
+                alert("Masyadong malaki ang file size ng picture! Ang Firestore ay may limit na 1MB para sa base64 upload. Paki-compress muna ang image o gumamit ng direct Image URL Link sa tabi.");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setInputImageUrl(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     return (
-        <div className="p-8 max-w-7xl font-sans text-zinc-900">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 border-b border-zinc-100 pb-4 gap-4">
+        <div className="p-8 max-w-7xl font-sans text-zinc-900 bg-zinc-50/50 min-h-screen">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 border-b border-zinc-200/60 pb-5 gap-4">
                 <div>
-                    <h2 className="text-3xl font-serif italic tracking-tight">Rates & Rules Configuration</h2>
-                    <p className="text-xs text-zinc-400 uppercase tracking-widest mt-1">Manage core cabin layouts, standard rules, and pricing modules</p>
+                    <h2 className="text-3xl font-serif italic tracking-tight text-zinc-950">Rates & Rules Configuration</h2>
+                    <p className="text-xs text-zinc-400 uppercase tracking-widest mt-1">Manage backend calculations and live modal flyer images</p>
                 </div>
                 <button
+                    type="button"
                     onClick={() => setShowPreviewModal(true)}
                     className="flex items-center gap-2 px-5 py-3 bg-zinc-950 text-white hover:bg-zinc-800 transition-colors text-xs font-black uppercase tracking-wider rounded-xl self-start sm:self-center shadow-md"
                 >
-                    <Settings size={14} className="text-[#D4AF37]" /> Edit Rate Card & Rules Modal
+                    <Settings size={14} className="text-[#D4AF37]" /> View & Edit Rate Card Flyer
                 </button>
             </div>
 
-            {/* BASE RATES CONFIGURATION CARD GRIDS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {(["ohannah", "dream"] as Array<keyof PricingData>).map((cabin) => (
                     <div key={cabin} className="bg-white p-8 rounded-[2.5rem] border border-zinc-200/60 shadow-sm">
@@ -150,31 +161,31 @@ export default function PricingManager() {
                         </h3>
                         {(["day", "evening", "full"] as Array<keyof PricingData["ohannah"]>).map((stay) => (
                             <div key={stay} className="mb-6 last:mb-0">
-                                <div className="font-bold text-[10px] uppercase tracking-[0.2em] text-zinc-400 mb-3">{stay} Stay Base Rates</div>
+                                <div className="font-bold text-[10px] uppercase tracking-[0.2em] text-zinc-400 mb-3">{stay} Stay Base Rates (System Auto-Compute)</div>
                                 <div className="grid grid-cols-4 gap-4">
                                     <div>
                                         <label className="text-[9px] font-black uppercase text-zinc-500 tracking-wider block mb-1">Weekday</label>
                                         <input type="number" value={pricing[cabin][stay].weekday}
                                             onChange={(e) => updateField(cabin, stay, 'weekday', Number(e.target.value))}
-                                            className="w-full px-4 py-3 bg-zinc-50 hover:bg-zinc-100/70 focus:bg-white rounded-xl border border-zinc-100 transition-colors outline-none text-xs font-bold" />
+                                            className="w-full px-4 py-3 bg-zinc-50 hover:bg-zinc-100/70 focus:bg-white rounded-xl border border-zinc-100 transition-colors outline-none text-xs font-bold text-zinc-950" />
                                     </div>
                                     <div>
                                         <label className="text-[9px] font-black uppercase text-zinc-500 tracking-wider block mb-1">Weekend</label>
                                         <input type="number" value={pricing[cabin][stay].weekend}
                                             onChange={(e) => updateField(cabin, stay, 'weekend', Number(e.target.value))}
-                                            className="w-full px-4 py-3 bg-zinc-50 hover:bg-zinc-100/70 focus:bg-white rounded-xl border border-zinc-100 transition-colors outline-none text-xs font-bold" />
+                                            className="w-full px-4 py-3 bg-zinc-50 hover:bg-zinc-100/70 focus:bg-white rounded-xl border border-zinc-100 transition-colors outline-none text-xs font-bold text-zinc-950" />
                                     </div>
                                     <div>
                                         <label className="text-[9px] font-black uppercase text-zinc-500 tracking-wider block mb-1">Extra Pax</label>
                                         <input type="number" value={pricing[cabin][stay].extraPax}
                                             onChange={(e) => updateField(cabin, stay, 'extraPax', Number(e.target.value))}
-                                            className="w-full px-4 py-3 bg-zinc-50 hover:bg-zinc-100/70 focus:bg-white rounded-xl border border-zinc-100 transition-colors outline-none text-xs font-bold" />
+                                            className="w-full px-4 py-3 bg-zinc-50 hover:bg-zinc-100/70 focus:bg-white rounded-xl border border-zinc-100 transition-colors outline-none text-xs font-bold text-zinc-950" />
                                     </div>
                                     <div>
                                         <label className="text-[9px] font-black uppercase text-zinc-500 tracking-wider block mb-1">Pet</label>
                                         <input type="number" value={policies[stay].petFee}
                                             onChange={(e) => updatePolicy(stay, 'petFee', Number(e.target.value))}
-                                            className="w-full px-4 py-3 bg-zinc-50 hover:bg-zinc-100/70 focus:bg-white rounded-xl border border-zinc-100 transition-colors outline-none text-xs font-bold" />
+                                            className="w-full px-4 py-3 bg-zinc-50 hover:bg-zinc-100/70 focus:bg-white rounded-xl border border-zinc-100 transition-colors outline-none text-xs font-bold text-zinc-950" />
                                     </div>
                                 </div>
                             </div>
@@ -183,13 +194,12 @@ export default function PricingManager() {
                 ))}
             </div>
 
-            <div className="mt-8 flex items-center gap-4 border-t border-zinc-100 pt-6">
-                <button onClick={handleSave} disabled={saving}
+            <div className="mt-8 flex items-center gap-4 border-t border-zinc-200/60 pt-6">
+                <button type="button" onClick={handleSave} disabled={saving}
                     className="px-8 py-4 bg-zinc-950 text-white hover:bg-zinc-800 transition-colors text-xs font-black uppercase tracking-[0.2em] rounded-xl shadow-lg disabled:opacity-40">
                     {saving ? 'Processing Sync...' : 'Commit Settings Changes'}
                 </button>
-
-                <button onClick={handleResetToDefault} disabled={saving}
+                <button type="button" onClick={() => setShowResetConfirmModal(true)} disabled={saving}
                     className="px-6 py-4 bg-zinc-100 text-zinc-600 hover:bg-rose-50 hover:text-rose-600 transition-colors text-xs font-bold uppercase tracking-wider rounded-xl">
                     Reset To System Defaults
                 </button>
@@ -199,124 +209,113 @@ export default function PricingManager() {
                 <div className="mt-4 text-xs font-bold uppercase tracking-widest text-zinc-500 animate-pulse">{statusMessage}</div>
             )}
 
-            {/* DYNAMIC, FULLY EDITABLE INTERACTIVE PREMIUM MODAL */}
+            {/* REFACTORED PREMIUM WORKSPACE MODAL (WHITE & LIGHT GREY ELEGANT THEME) */}
             {showPreviewModal && (
-                <div className="fixed inset-0 z-[500] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowPreviewModal(false)}>
-                    <div className="max-w-6xl w-full rounded-[3rem] bg-zinc-950 p-6 md:p-10 border border-white/10 shadow-2xl relative text-white my-8 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                <div className="fixed inset-0 z-[500] bg-zinc-950/40 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowPreviewModal(false)}>
+                    <div className="max-w-3xl w-full rounded-[2.5rem] bg-white p-6 md:p-8 border border-zinc-200/50 shadow-[0_50px_100px_rgba(0,0,0,0.2)] relative text-zinc-900 my-8 max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
 
-                        <button onClick={() => setShowPreviewModal(false)} className="absolute top-6 right-6 text-zinc-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 p-2.5 rounded-full z-10">
+                        <button type="button" onClick={() => setShowPreviewModal(false)} className="absolute top-6 right-6 text-zinc-400 hover:text-zinc-900 transition-colors bg-zinc-100 hover:bg-zinc-200 p-2.5 rounded-full z-10">
                             <X size={16} />
                         </button>
 
-                        <div className="text-center mb-8 border-b border-white/5 pb-6">
+                        <div className="text-center mb-6 border-b border-zinc-100 pb-4">
                             <div className="inline-flex items-center gap-2 text-[9px] uppercase tracking-[0.3em] bg-[#D4AF37]/10 text-[#D4AF37] px-3 py-1 rounded-full font-bold mb-2">
-                                <HelpCircle size={10} /> Live Modal Editor Workspace
+                                <ImageIcon size={10} /> Rate Card Media Center
                             </div>
-                            <h4 className="text-3xl font-serif italic text-[#D4AF37]">Rate Sheet & Rules Settings Matrix</h4>
-                            <p className="text-[9px] uppercase tracking-[0.4em] text-zinc-500 font-bold mt-1">Directly edit text boxes below to modify structural policy lines</p>
+                            <h4 className="text-2xl font-serif italic text-zinc-950">Live Modal Image Display</h4>
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-400 font-bold mt-1">Upload an asset or paste an online link to sync client views</p>
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            {(['ohannah', 'dream'] as const).map((cabinKey) => (
-                                <div key={cabinKey} className="border border-white/5 bg-white/[0.01] rounded-[2rem] p-6 space-y-6">
-                                    <div className="text-center border-b border-white/5 pb-4">
-                                        <h5 className="font-serif italic text-2xl tracking-wide text-white">
-                                            {cabinKey === 'ohannah' ? 'OHANNAH CABIN' : 'THE DREAM BY OHANNAH'}
-                                        </h5>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        {(['day', 'evening', 'full'] as const).map((stayKey) => {
-                                            const rates = pricing[cabinKey][stayKey];
-                                            const policy = policies[stayKey];
-
-                                            return (
-                                                <div key={stayKey} className="bg-zinc-900/60 border border-white/5 rounded-2xl p-4 flex flex-col justify-between space-y-4">
-
-                                                    {/* Stay & Schedule Header */}
-                                                    <div className="text-center border-b border-white/5 pb-2 space-y-1">
-                                                        <div className="font-black text-[10px] uppercase tracking-wider text-white">
-                                                            {stayKey === 'day' ? 'DAY LOUNGE' : stayKey === 'evening' ? 'EVENING CHILL' : 'FULL STAY'}
-                                                        </div>
-                                                        <label className="text-[7px] text-zinc-500 block uppercase font-bold tracking-widest">Schedule Time Block</label>
-                                                        <input
-                                                            type="text"
-                                                            value={policy.time}
-                                                            onChange={(e) => updatePolicy(stayKey, 'time', e.target.value)}
-                                                            className="w-full text-center bg-white/5 rounded px-1.5 py-1 text-[9px] border border-white/5 focus:outline-none focus:border-[#D4AF37] font-mono text-[#D4AF37]"
-                                                        />
-                                                    </div>
-
-                                                    {/* Core Rules & Capacities Fields */}
-                                                    <div className="space-y-2 text-[9px]">
-                                                        <div>
-                                                            <label className="text-[7px] text-zinc-500 block uppercase font-bold tracking-widest mb-0.5">Standard Capacity Inclusion</label>
-                                                            <textarea
-                                                                rows={2}
-                                                                value={policy.standardCap}
-                                                                onChange={(e) => updatePolicy(stayKey, 'standardCap', e.target.value)}
-                                                                className="w-full bg-white/5 rounded p-1.5 border border-white/5 focus:outline-none focus:border-[#D4AF37] text-zinc-300 font-medium resize-none leading-normal"
-                                                            />
-                                                        </div>
-
-                                                        <div>
-                                                            <label className="text-[7px] text-zinc-500 block uppercase font-bold tracking-widest mb-0.5">Maximum Capacity Rule</label>
-                                                            <input
-                                                                type="text"
-                                                                value={policy.maxCap}
-                                                                onChange={(e) => updatePolicy(stayKey, 'maxCap', e.target.value)}
-                                                                className="w-full bg-white/5 rounded p-1.5 border border-white/5 focus:outline-none focus:border-[#D4AF37] text-zinc-300 font-bold"
-                                                            />
-                                                        </div>
-
-                                                        {/* PET FEE PARAMETER AREA */}
-                                                        <div>
-                                                            <label className="text-[7px] text-zinc-500 block uppercase font-bold tracking-widest mb-0.5">Pet Charge (₱)</label>
-                                                            <input
-                                                                type="number"
-                                                                value={policy.petFee}
-                                                                onChange={(e) => updatePolicy(stayKey, 'petFee', Number(e.target.value))}
-                                                                className="w-full bg-white/5 rounded p-1.5 border border-white/5 focus:outline-none focus:border-[#D4AF37] text-zinc-300 font-mono"
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Rate Cards Display (Reflected live from main input fields) */}
-                                                    <div className="space-y-2 pt-2 border-t border-white/5 font-mono text-center">
-                                                        <div className="bg-white/[0.02] py-1 rounded border border-white/5">
-                                                            <div className="text-[7px] uppercase tracking-widest text-zinc-500">Weekday Base</div>
-                                                            <div className="text-xs font-bold text-white">₱{rates.weekday.toLocaleString()}</div>
-                                                        </div>
-                                                        <div className="bg-[#D4AF37]/5 py-1 rounded border border-[#D4AF37]/10">
-                                                            <div className="text-[7px] uppercase tracking-widest text-[#D4AF37]">Weekend Base</div>
-                                                            <div className="text-xs font-bold text-[#D4AF37]">₱{rates.weekend.toLocaleString()}</div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                        <div className="space-y-5 overflow-y-auto pr-1 flex-1">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="border border-dashed border-zinc-200 rounded-2xl p-5 bg-zinc-50/50 flex flex-col items-center justify-center text-center group hover:border-[#D4AF37] hover:bg-white transition-all relative cursor-pointer">
+                                    <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                    <Upload size={22} className="text-zinc-400 group-hover:text-[#D4AF37] mb-2 transition-colors" />
+                                    <span className="text-xs font-black text-zinc-800 block mb-0.5">Upload New Picture</span>
+                                    <span className="text-[9px] text-zinc-400 uppercase tracking-wider font-medium">Click or drag image file here</span>
                                 </div>
-                            ))}
+
+                                <div className="border border-zinc-100 rounded-2xl p-5 bg-zinc-50/30 flex flex-col justify-center space-y-2">
+                                    <label className="text-[9px] text-zinc-500 uppercase tracking-widest font-black flex items-center gap-1">
+                                        <Link2 size={10} className="text-[#D4AF37]" /> Image URL Link Alternative
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="https://imgur.com/your-rate-card.jpg"
+                                        value={inputImageUrl}
+                                        onChange={(e) => setInputImageUrl(e.target.value)}
+                                        className="w-full bg-white border border-zinc-200 rounded-xl px-4 py-2.5 text-xs font-mono text-zinc-800 outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] transition-all"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="border border-zinc-200/60 bg-zinc-50/50 rounded-2xl p-4 min-h-[260px] flex items-center justify-center overflow-hidden">
+                                {inputImageUrl ? (
+                                    <div className="relative w-full flex flex-col items-center">
+                                        <div className="text-[9px] uppercase tracking-widest text-zinc-400 mb-3 font-bold font-mono">--- Live Preview Monitor ---</div>
+                                        <img
+                                            src={inputImageUrl}
+                                            alt="Rate Sheet Premium Preview"
+                                            className="max-w-full max-h-[40vh] object-contain rounded-xl border border-zinc-200/80 shadow-md bg-white select-none"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="text-center space-y-1 py-10">
+                                        <p className="text-xs font-serif italic text-zinc-500">No Rate Card image uploaded yet.</p>
+                                        <p className="text-[9px] text-zinc-400 uppercase tracking-widest font-bold">Please upload a picture or input a direct URL asset link above.</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
-                        {/* Modal Action Controls */}
-                        <div className="mt-8 flex justify-center gap-4 border-t border-white/5 pt-6">
+                        <div className="mt-6 flex justify-end gap-3 border-t border-zinc-100 pt-4 shrink-0">
+                            <button type="button" onClick={() => setShowPreviewModal(false)} className="px-5 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors text-xs font-bold uppercase tracking-wider rounded-xl">
+                                Close Workspace
+                            </button>
                             <button
-                                onClick={() => {
-                                    handleSave();
+                                type="button"
+                                onClick={async () => {
+                                    await handleSave();
                                     setShowPreviewModal(false);
                                 }}
-                                className="flex items-center gap-2 px-6 py-3 bg-white text-black hover:bg-[#D4AF37] hover:text-white transition-all text-xs font-black uppercase tracking-widest rounded-xl shadow-lg"
+                                className="flex items-center gap-2 px-6 py-3 bg-zinc-950 text-white hover:bg-zinc-800 transition-all text-xs font-black uppercase tracking-widest rounded-xl shadow-md"
                             >
-                                <Save size={14} /> Save & Apply All Matrix Settings
+                                <Save size={14} className="text-[#D4AF37]" /> Deploy & Apply Image
                             </button>
-                            <button
-                                onClick={() => setShowPreviewModal(false)}
-                                className="px-5 py-3 bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors text-xs font-bold uppercase tracking-wider rounded-xl"
-                            >
-                                Close Workspace Window
-                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* CUSTOM SYSTEM REGISTRY RESET MODAL (NO LOCALHOST CONFIRM POPUP) */}
+            {showResetConfirmModal && (
+                <div className="fixed inset-0 z-[600] bg-zinc-950/40 backdrop-blur-md flex items-center justify-center p-4">
+                    <div className="max-w-md w-full rounded-3xl bg-white p-6 border border-zinc-200 shadow-2xl relative text-zinc-900 animate-in fade-in zoom-in-95 duration-150" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex flex-col items-center text-center p-2">
+                            <div className="p-3 bg-rose-50 text-rose-600 rounded-full mb-4">
+                                <AlertTriangle size={28} />
+                            </div>
+                            <h4 className="text-xl font-serif italic text-zinc-950 mb-1">Reset Pricing Matrices?</h4>
+                            <p className="text-xs text-zinc-500 leading-relaxed mb-6">
+                                This action will overwrite all live custom holiday adjustments, base room fees, and pet charges back to initial default values. This operation cannot be undone.
+                            </p>
+
+                            <div className="flex gap-3 w-full">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowResetConfirmModal(false)}
+                                    className="flex-1 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors text-xs font-bold uppercase tracking-wider rounded-xl"
+                                >
+                                    Cancel Operation
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={executeResetToDefault}
+                                    className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white transition-colors text-xs font-black uppercase tracking-widest rounded-xl shadow-sm"
+                                >
+                                    Confirm Reset
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

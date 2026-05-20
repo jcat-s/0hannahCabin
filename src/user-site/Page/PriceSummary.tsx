@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { HelpCircle, Receipt, PartyPopper, ShieldCheck, X } from "lucide-react";
+import { HelpCircle, Receipt, PartyPopper, ShieldCheck, X, Image as ImageIcon } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../shared/lib/firebase";
@@ -57,6 +57,9 @@ export function PriceSummary({
     const [discountRules, setDiscountRules] = useState<DiscountRule[]>([]);
     const [discountCode, setDiscountCode] = useState("");
 
+    // Naka-sync na string state para sa image field galing PricingManager admin settings
+    const [rateCardImageUrl, setRateCardImageUrl] = useState<string | null>(null);
+
     const currentPolicy = useMemo(() => {
         return policies[stayType] || defaultPolicies[stayType];
     }, [policies, stayType]);
@@ -76,6 +79,12 @@ export function PriceSummary({
                 const data = docSnap.data();
                 if (data.pricing) setPricingConfig(data.pricing);
                 if (data.policies) setPolicies(data.policies);
+                // Babasahin nito kung rateCardImageUrl OR rateMatrixUrl para walang ka-mismatch sa backend
+                if (data.rateCardImageUrl) {
+                    setRateCardImageUrl(data.rateCardImageUrl);
+                } else if (data.rateMatrixUrl) {
+                    setRateCardImageUrl(data.rateMatrixUrl);
+                }
             }
         }));
 
@@ -84,7 +93,6 @@ export function PriceSummary({
                 const data = docSnap.data();
                 if (Array.isArray(data.discounts)) {
                     setDiscountRules(data.discounts.map((item: any) => ({
-                        // Tinanggal ang .toUpperCase() para mapanatili ang eksaktong pagkakasulat (case-sensitive)
                         code: String(item.code || "").trim(),
                         description: String(item.description || ""),
                         type: item.type === "fixed" ? "fixed" : "percent",
@@ -117,7 +125,6 @@ export function PriceSummary({
     }, [cabin, stayType, guests, pets, checkIn, checkOut, dbHolidays, pricingConfig, currentPolicy]);
 
     const selectedDiscount = useMemo(() => {
-        // Tinanggal din dito ang .toUpperCase() para itugma sa kung ano mismo ang tinype ng user
         const normalized = discountCode.trim();
         return discountRules.find((rule) => rule.active && rule.code === normalized) || null;
     }, [discountCode, discountRules]);
@@ -155,7 +162,7 @@ export function PriceSummary({
         if (!selectedDiscount) return "Invalid or inactive promo code. Promo codes are case-sensitive.";
         if (!isUserEligibleForDiscount) return "This promo code is restricted to authorized admin/staff accounts.";
         if (durationCount < selectedDiscount.minNights) return `Requires at least ${selectedDiscount.minNights} night(s).`;
-        return `Applied ${discountLabel} discount. ${selectedDiscount.description ? `(${selectedDiscount.description})` : ''}`;
+        return `Applied ${discountLabel} pesos discount. ${selectedDiscount.description ? `(${selectedDiscount.description})` : ''}`;
     }, [discountCode, selectedDiscount, durationCount, discountLabel, isUserEligibleForDiscount]);
 
     const stayLabels = {
@@ -176,7 +183,7 @@ export function PriceSummary({
                     onClick={() => setShowModal(true)}
                     className="flex items-center gap-1.5 text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-white/5"
                 >
-                    <HelpCircle size={12} className="text-[#D4AF37]" /> View Rate Matrix
+                    <HelpCircle size={12} className="text-[#D4AF37]" /> View Rates
                 </button>
             </div>
 
@@ -263,82 +270,47 @@ export function PriceSummary({
                 </p>
             )}
 
-            {/* RATES & INCLUSIONS MODAL */}
+            {/* REFACTORED PREMIUM MINIMALIST LUXURY MODAL (BLACK & WHITE THEME) */}
             {showModal && (
-                <div className="fixed inset-0 z-[500] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowModal(false)}>
-                    <div className="max-w-6xl w-full rounded-[2rem] md:rounded-[3rem] bg-zinc-950 p-6 md:p-10 border border-white/10 shadow-2xl relative text-white my-8 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                <div className="fixed inset-0 z-[500] bg-zinc-950/40 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowModal(false)}>
+                    <div className="max-w-4xl w-full rounded-[2.5rem] bg-white p-6 md:p-10 border border-zinc-200/50 shadow-[0_50px_100px_rgba(0,0,0,0.25)] relative text-zinc-900 my-8 max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
 
-                        <button type="button" onClick={() => setShowModal(false)} className="absolute top-6 right-6 text-zinc-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 p-2.5 rounded-full z-10">
+                        {/* Elegantly Designed Dark Close Button for High Contrast */}
+                        <button type="button" onClick={() => setShowModal(false)} className="absolute top-6 right-6 text-zinc-400 hover:text-zinc-900 transition-colors bg-zinc-100 hover:bg-zinc-200 p-2.5 rounded-full z-10">
                             <X size={16} />
                         </button>
 
-                        <div className="text-center mb-10 border-b border-white/5 pb-6">
-                            <h4 className="text-2xl md:text-3xl font-serif italic text-[#D4AF37]">Rates & Inclusions Matrix</h4>
-                            <p className="text-[9px] uppercase tracking-[0.4em] text-zinc-500 font-bold mt-1">Live Management System Policies</p>
+                        {/* Top Luxury Branding Header Section */}
+                        <div className="text-center mb-8 border-b border-zinc-100 pb-5 w-full">
+                            <h4 className="text-2xl md:text-3xl font-serif italic tracking-tight text-zinc-950">Rates & Inclusions</h4>
+                            <p className="text-[10px] uppercase tracking-[0.4em] text-zinc-400 font-bold mt-1.5">Official Reference Matrix</p>
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            {(['ohannah', 'dream'] as const).map((cabinKey) => (
-                                <div key={cabinKey} className="border border-white/5 bg-white/[0.01] rounded-[2rem] p-4 md:p-6 space-y-6">
-                                    <div className="text-center border-b border-white/5 pb-4">
-                                        <h5 className="font-serif italic text-xl md:text-2xl tracking-wide text-white">
-                                            {cabinKey === 'ohannah' ? 'OHANNAH CABIN' : 'THE DREAM BY OHANNAH'}
-                                        </h5>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        {(['day', 'evening', 'full'] as const).map((stayKey) => {
-                                            const currentCabinObj = pricingConfig ? pricingConfig[cabinKey] : null;
-                                            const rates = currentCabinObj ? currentCabinObj[stayKey] : { weekday: 0, weekend: 0, extraPax: 0 };
-                                            const policy = policies[stayKey] || defaultPolicies[stayKey];
-
-                                            return (
-                                                <div key={stayKey} className="bg-zinc-900/60 border border-white/5 rounded-2xl p-4 flex flex-col justify-between space-y-4">
-                                                    <div className="text-center border-b border-white/5 pb-2">
-                                                        <div className="font-black text-[10px] uppercase tracking-wider text-white">
-                                                            {stayKey === 'day' ? 'DAY LOUNGE' : stayKey === 'evening' ? 'EVENING CHILL' : 'FULL STAY'}
-                                                        </div>
-                                                        <div className="text-[9px] text-[#D4AF37] font-mono mt-0.5">({policy?.time || ''})</div>
-                                                    </div>
-
-                                                    <ul className="text-[10px] text-zinc-400 space-y-2 list-none pl-0 font-medium leading-relaxed">
-                                                        <li className="flex items-start gap-1">
-                                                            <span className="text-[#D4AF37] mt-0.5 shrink-0">▪</span> <span>{policy?.standardCap}</span>
-                                                        </li>
-                                                        <li className="flex items-start gap-1 text-zinc-500">
-                                                            <span className="text-zinc-600 mt-0.5 shrink-0">▪</span> <span>No towels included</span>
-                                                        </li>
-                                                        <li className="flex items-start gap-1">
-                                                            <span className="text-[#D4AF37] mt-0.5 shrink-0">▪</span> <span>+₱{(rates?.extraPax || 0).toLocaleString()} per excess pax</span>
-                                                        </li>
-                                                        <li className="flex items-start gap-1">
-                                                            <span className="text-[#D4AF37] mt-0.5 shrink-0">▪</span> <span>+₱{(policy?.petFee || 250).toLocaleString()} per pet charge</span>
-                                                        </li>
-                                                        <li className="flex items-start gap-1 text-zinc-300 font-bold">
-                                                            <span className="text-zinc-500 mt-0.5 shrink-0">▪</span> <span>{policy?.maxCap}</span>
-                                                        </li>
-                                                    </ul>
-
-                                                    <div className="space-y-2 pt-2 border-t border-white/5 font-mono text-center">
-                                                        <div className="bg-white/[0.02] py-2 rounded-lg border border-white/5">
-                                                            <div className="text-[8px] uppercase tracking-widest text-zinc-500">Weekday</div>
-                                                            <div className="text-xs font-bold text-white">₱{(rates?.weekday || 0).toLocaleString()}</div>
-                                                        </div>
-                                                        <div className="bg-[#D4AF37]/5 py-2 rounded-lg border border-[#D4AF37]/10">
-                                                            <div className="text-[8px] uppercase tracking-widest text-[#D4AF37]">Weekend / Holiday</div>
-                                                            <div className="text-xs font-bold text-[#D4AF37]">₱{(rates?.weekend || 0).toLocaleString()}</div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                        {/* Premium Soft-Grey Frame Layout Container */}
+                        <div className="w-full flex justify-center items-center overflow-hidden rounded-2xl bg-zinc-50 border border-zinc-100 relative min-h-[350px] p-2">
+                            {rateCardImageUrl ? (
+                                <img
+                                    src={rateCardImageUrl}
+                                    alt="Ohannah Cabin Rate Matrix"
+                                    className="w-full h-auto object-contain max-h-[55vh] select-none rounded-xl"
+                                    loading="lazy"
+                                />
+                            ) : (
+                                <div className="flex flex-col items-center gap-3 text-zinc-400 p-8 text-center">
+                                    <ImageIcon size={36} className="stroke-[1.2] text-[#D4AF37] animate-pulse" />
+                                    <p className="text-xs tracking-widest uppercase font-black text-zinc-700">
+                                        Loading Rate Matrix Asset...
+                                    </p>
+                                    <span className="text-[10px] text-zinc-400 max-w-xs normal-case font-medium">
+                                        Make sure 'rateCardImageUrl' is properly configured inside the database.
+                                    </span>
                                 </div>
-                            ))}
+                            )}
                         </div>
 
-                        <div className="mt-8 text-[9px] text-zinc-500 text-center uppercase tracking-widest border-t border-white/5 pt-4">
-                            Rates scale automatically for Fri/Sat/Sun and holidays listed in the schedule.
+                        {/* Footer Subtext Information Row */}
+                        <div className="mt-6 text-[9px] text-zinc-400 text-center uppercase tracking-[0.2em] font-bold w-full border-t border-zinc-100 pt-4">
+                            Rates scale automatically based on selected dates and weekend blocks.
                         </div>
                     </div>
                 </div>

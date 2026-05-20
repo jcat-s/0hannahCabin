@@ -3,6 +3,7 @@ import { HelpCircle, Receipt, PartyPopper, ShieldCheck, X } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../shared/lib/firebase";
+import { useAuth } from "../../shared/context/AuthContext";
 import { CabinId, StayType, calculateTotal, PricingData } from "../../shared/lib/bookingPricing";
 
 interface PolicyMetadata {
@@ -25,8 +26,18 @@ interface PriceSummaryProps {
     durationCount: number;
     canBookCore: boolean;
     submitting: boolean;
-    onSubmit: (total: number) => void;
+    onSubmit: (total: number, discountCode?: string) => void;
 }
+
+type DiscountRule = {
+    code: string;
+    description?: string;
+    type: "fixed" | "percent";
+    value: number;
+    active: boolean;
+    minNights: number;
+    allowedRecipients: string[];
+};
 
 const defaultPolicies = {
     day: { time: "9AM to 5PM", standardCap: "Rate is good for 4 adults and 2 kids (below 3ft)", maxCap: "12 pax max capacity", petFee: 250 },
@@ -38,10 +49,13 @@ export function PriceSummary({
     cabin, stayType, fullStayOption, guests, kids, pets, checkIn, checkOut,
     specialOccasion, durationCount, canBookCore, submitting, onSubmit
 }: PriceSummaryProps) {
+    const { user } = useAuth();
     const [showModal, setShowModal] = useState(false);
     const [dbHolidays, setDbHolidays] = useState<string[]>([]);
     const [pricingConfig, setPricingConfig] = useState<PricingData | null>(null);
     const [policies, setPolicies] = useState(defaultPolicies);
+    const [discountRules, setDiscountRules] = useState<DiscountRule[]>([]);
+    const [discountCode, setDiscountCode] = useState("");
 
     const currentPolicy = policies[stayType] || defaultPolicies[stayType];
 
@@ -63,6 +77,25 @@ export function PriceSummary({
             }
         }));
 
+        unsubs.push(onSnapshot(doc(db, "metadata", "discounts"), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                if (Array.isArray(data.discounts)) {
+                    setDiscountRules(data.discounts.map((item: any) => ({
+                        code: String(item.code || "").trim().toUpperCase(),
+                        description: String(item.description || ""),
+                        type: item.type === "fixed" ? "fixed" : "percent",
+                        value: Number(item.value) || 0,
+                        active: Boolean(item.active),
+                        minNights: Number(item.minNights) || 1,
+                        allowedRecipients: Array.isArray(item.allowedRecipients)
+                            ? item.allowedRecipients.map((entry: any) => String(entry || "").trim()).filter(Boolean)
+                            : [],
+                    })));
+                }
+            }
+        }));
+
         return () => unsubs.forEach((u) => typeof u === 'function' && u());
     }, []);
 
@@ -70,6 +103,48 @@ export function PriceSummary({
         calculateTotal(cabin, stayType, guests, pets, checkIn, checkOut, dbHolidays, pricingConfig || undefined, currentPolicy.petFee),
         [cabin, stayType, guests, pets, checkIn, checkOut, dbHolidays, pricingConfig, currentPolicy.petFee]
     );
+
+    const selectedDiscount = useMemo(() => {
+        const normalized = discountCode.trim();
+        return discountRules.find((rule) => rule.active && rule.code === normalized) || null;
+    }, [discountCode, discountRules]);
+
+    const isUserEligibleForDiscount = useMemo(() => {
+        if (!selectedDiscount) return false;
+        if (!selectedDiscount.allowedRecipients?.length) return true;
+        if (!user) return false;
+
+        const userEmail = String(user.email || "").toLowerCase();
+        const userName = String(user.displayName || "").toLowerCase();
+
+        return selectedDiscount.allowedRecipients.some((recipient) => {
+            const normalizedRecipient = recipient.toLowerCase();
+            return userEmail.includes(normalizedRecipient) || userName.includes(normalizedRecipient);
+        });
+    }, [selectedDiscount, user]);
+
+    const discountAmount = useMemo(() => {
+        if (!selectedDiscount || !isUserEligibleForDiscount) return 0;
+        if (durationCount < selectedDiscount.minNights) return 0;
+
+        const subtotal = pricing.grandTotal;
+        if (selectedDiscount.type === "percent") {
+            return Math.round(subtotal * (selectedDiscount.value / 100));
+        }
+
+        return Math.min(Math.max(0, selectedDiscount.value), subtotal);
+    }, [pricing.grandTotal, selectedDiscount, durationCount]);
+
+    const discountLabel = selectedDiscount ? `${selectedDiscount.value}${selectedDiscount.type === "percent" ? "%" : ""}` : "";
+    const finalTotal = Math.max(0, pricing.grandTotal - discountAmount);
+
+    const discountMessage = useMemo(() => {
+        if (!discountCode.trim()) return "";
+        if (!selectedDiscount) return "Invalid or inactive promo code. Promo codes are case-sensitive.";
+        if (!isUserEligibleForDiscount) return "This promo is reserved for specific users.";
+        if (durationCount < selectedDiscount.minNights) return `Requires at least ${selectedDiscount.minNights} night(s).`;
+        return `Applied ${discountLabel} discount.`;
+    }, [discountCode, selectedDiscount, durationCount, discountLabel, isUserEligibleForDiscount]);
 
     const stayLabels = {
         day: { label: "Day Lounge", time: "9AM - 5PM" },
@@ -126,14 +201,31 @@ export function PriceSummary({
             </div>
 
             <div className="bg-white/5 rounded-[2.5rem] p-8 text-center border border-white/5 mb-8">
+                <label className="block text-left text-[9px] font-black uppercase tracking-[0.4em] text-zinc-500 mb-4">Promo Code</label>
+                <div className="flex gap-3 items-center justify-center mb-4">
+                    <input
+                        type="text"
+                        value={discountCode}
+                        onChange={(e) => setDiscountCode(e.target.value)}
+                        placeholder="Enter promo code (case-sensitive)"
+                        className="w-full max-w-xs px-4 py-3 rounded-2xl border border-white/10 bg-zinc-950 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
+                    />
+                    <span className={`px-3 py-2 rounded-2xl text-[10px] font-black uppercase ${discountAmount > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-900 text-zinc-400'}`}>
+                        {discountAmount > 0 ? 'Applied' : 'No code'}
+                    </span>
+                </div>
+                {discountMessage && (
+                    <p className={`text-[10px] mb-4 ${discountAmount > 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{discountMessage}</p>
+                )}
                 <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Total Amount</span>
                 <div className="text-5xl font-serif italic text-[#D4AF37] mt-2">
-                    ₱{(pricing?.grandTotal || 0).toLocaleString()}
+                    ₱{finalTotal.toLocaleString()}
                 </div>
                 <div className="mt-4 flex flex-col gap-1 text-[8px] text-zinc-500 uppercase font-bold tracking-widest">
                     <span>Base: ₱{(pricing?.basePrice || 0).toLocaleString()}</span>
                     {(pricing?.extraPaxTotal || 0) > 0 && <span>Extra Pax: +₱{pricing.extraPaxTotal.toLocaleString()}</span>}
                     {(pricing?.petTotal || 0) > 0 && <span>Pets: +₱{currentPolicy.petFee.toLocaleString()} x {pets} = ₱{pricing.petTotal.toLocaleString()}</span>}
+                    {discountAmount > 0 && <span className="text-emerald-300">Discount: -₱{discountAmount.toLocaleString()}</span>}
                 </div>
             </div>
 
@@ -146,11 +238,16 @@ export function PriceSummary({
 
             <button
                 disabled={!canBookCore || submitting}
-                onClick={() => onSubmit(pricing.grandTotal)}
+                onClick={() => onSubmit(finalTotal, discountCode.trim())}
                 className="w-full py-6 rounded-2xl bg-white text-black font-black uppercase tracking-[0.3em] text-[11px] hover:bg-[#D4AF37] hover:text-white transition-all disabled:opacity-20 active:scale-95 shadow-xl"
             >
                 {submitting ? "Processing..." : "Confirm Booking"}
             </button>
+            {!canBookCore && (
+                <p className="mt-4 text-[10px] text-rose-300 uppercase tracking-[0.3em] text-center">
+                    Select an available slot and make sure your dates are valid before booking.
+                </p>
+            )}
 
             {/* DESIGNED DYNAMIC MODAL GRID - NO MORE IMAGE */}
             {showModal && (

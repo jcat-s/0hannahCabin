@@ -77,6 +77,7 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
                 color: bookingData.color,
                 isHighRate: bookingData.isHighRate,
                 totalPrice: bookingData.totalPrice,
+                discountCode: bookingData.discountCode || "",
 
                 // Payment & Tech
                 paymentMethod: activeTab,

@@ -3,18 +3,19 @@ import { collection, query, onSnapshot, doc, getDoc, updateDoc, deleteDoc, order
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import {
   Inbox, Calendar, TrendingUp, LogOut,
-  UserCircle, AlertTriangle, Menu, X, DollarSign
+  UserCircle, AlertTriangle, Menu, X, DollarSign, Tag
 } from "lucide-react";
 import { db, auth } from "../shared/lib/firebase";
 import { Reservations } from "./Reservations";
 import { Analytics } from "./Analytics";
 import { CalendarView } from "./Calendar";
 import PricingManager from "./PricingManager"; // Imported new control component
+import DiscountManager from "./Discount";
 
 export default function AdminApp() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'bookings' | 'calendar' | 'analytics' | 'pricing'>('bookings');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'calendar' | 'analytics' | 'pricing' | 'discounts'>('bookings');
   const [adminData, setAdminData] = useState<{ name: string; email: string } | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -138,6 +139,12 @@ export default function AdminApp() {
             active={activeTab === 'pricing'}
             onClick={() => { setActiveTab('pricing'); setIsSidebarOpen(false); }}
           />
+          <NavItem
+            icon={<Tag size={18} />}
+            label="Discounts"
+            active={activeTab === 'discounts'}
+            onClick={() => { setActiveTab('discounts'); setIsSidebarOpen(false); }}
+          />
         </nav>
 
         <div className="p-6 bg-zinc-950 border-t border-white/10 shrink-0">
@@ -179,7 +186,8 @@ export default function AdminApp() {
             <h2 className="text-4xl lg:text-6xl font-serif italic font-black tracking-tighter text-zinc-900">
               {activeTab === 'bookings' ? 'Bookings' :
                 activeTab === 'calendar' ? 'Calendar' :
-                  activeTab === 'analytics' ? 'Analytics' : 'Rates'}
+                  activeTab === 'analytics' ? 'Analytics' :
+                    activeTab === 'pricing' ? 'Rates' : 'Discounts'}
             </h2>
             <p className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.4em] mt-3 italic">
               Management Terminal
@@ -208,6 +216,9 @@ export default function AdminApp() {
               )}
               {activeTab === 'pricing' && (
                 <PricingManager />
+              )}
+              {activeTab === 'discounts' && (
+                <DiscountManager />
               )}
             </div>
           )}

@@ -131,7 +131,7 @@ export function useBooking() {
     }, [checkIn, checkOut, stayType, selectedColor, filteredBookings]);
 
     // --- BOOKING HANDLER ---
-    const handleBooking = async (finalPrice: number) => {
+    const handleBooking = async (finalPrice: number, discountCode?: string) => {
         if (!user) {
             addNotification({ title: "Authentication", description: "Please sign in.", read: false });
             return false;
@@ -172,6 +172,7 @@ export function useBooking() {
                 color: selectedColor,
                 isHighRate,
                 totalPrice: finalPrice,
+                discountCode: discountCode?.trim() || undefined,
                 status: "Pending",
                 createdAt: new Date().toISOString(),
             };

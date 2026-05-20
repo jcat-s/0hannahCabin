@@ -143,14 +143,11 @@ export function Predictive({ bookings }: PredictiveProps) {
 
             {/* FORECAST COLUMN - 5 EQUAL CARDS */}
             <div className="bg-[#18181b] p-8 rounded-[2.5rem] text-white flex flex-col border border-zinc-800 shadow-xl relative overflow-hidden">
-                <div className="mb-6 text-left border-b border-zinc-800 pb-6">
-                    <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-[#D4AF37]">Prescriptive Engine</h3>
-                    <p className="text-[10px] text-zinc-500 font-bold uppercase mt-1">Predictions for {predictions.targetMonthName}</p>
-                </div>
+
 
                 <div className="space-y-3">
                     {[
-                        { id: 'forecast', label: 'Estimated Revenue', val: `₱${predictions.nextMonthForecast.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, icon: <Banknote size={18} /> },
+                        { id: 'forecast', label: `Estimated Revenue for ${predictions.targetMonthName}`, val: `₱${predictions.nextMonthForecast.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, icon: <Banknote size={18} /> },
                         { id: 'peak', label: 'Historical Peak Month', val: predictions.peakMonth.month, icon: <Star size={18} /> },
                         { id: 'inventory', label: 'Asset Focus', val: predictions.topCabin.name, icon: <Target size={18} /> },
                         { id: 'pricingStay', label: 'Pricing: Stay Type', val: `${predictions.pricingStay.type} Rate Boost`, icon: <Clock size={18} /> },

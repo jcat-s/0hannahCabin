@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { ArrowUpRight, ArrowDownRight, Calculator, X, Star, Banknote, Tag, Target, CalendarDays, Clock, ChevronRight, TrendingUp } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Calculator, X, Star, Banknote, ChevronRight } from "lucide-react";
 import { format, eachMonthOfInterval, subMonths, isSameMonth, parseISO, addMonths } from 'date-fns';
 
 interface PredictiveProps {
@@ -8,7 +8,7 @@ interface PredictiveProps {
 }
 
 export function Predictive({ bookings }: PredictiveProps) {
-    const [activeModal, setActiveModal] = useState<'growth' | 'forecast' | 'peak' | 'pricingStay' | 'pricingDay' | 'inventory' | null>(null);
+    const [activeModal, setActiveModal] = useState<'growth' | 'forecast' | 'peak' | null>(null);
 
     const predictions = useMemo(() => {
         const now = new Date();
@@ -36,44 +36,15 @@ export function Predictive({ bookings }: PredictiveProps) {
         const multiplier = 1 + growthResult;
         let nextMonthForecast = Math.max(0, lastMonthRevenue * multiplier);
 
-        const confirmed = bookings.filter(b => b.status === 'Confirmed' || b.status === 'Approved');
-
-        // 3. DYNAMIC PRICING LOGIC
-        const dayStats = confirmed.filter(b => (b.stayType || '').toLowerCase() === 'day');
-        const eveStats = confirmed.filter(b => (b.stayType || '').toLowerCase() === 'evening');
-        const stayTypeWinner = dayStats.length >= eveStats.length ? 'Day' : 'Evening';
-        const stayTypeRevenue = stayTypeWinner === 'Day'
-            ? dayStats.reduce((s, b) => s + Number(b.totalPrice || 0), 0)
-            : eveStats.reduce((s, b) => s + Number(b.totalPrice || 0), 0);
-
-        const weekendStats = confirmed.filter(b => {
-            const day = new Date(b.checkInDate || b.checkIn).getDay();
-            return day === 0 || day === 5 || day === 6;
-        });
-        const weekdayStats = confirmed.filter(b => !weekendStats.includes(b));
-        const dayTypeWinner = weekendStats.length >= weekdayStats.length ? 'Weekend' : 'Weekday';
-        const dayTypeRevenue = dayTypeWinner === 'Weekend'
-            ? weekendStats.reduce((s, b) => s + Number(b.totalPrice || 0), 0)
-            : weekdayStats.reduce((s, b) => s + Number(b.totalPrice || 0), 0);
-
-        // 4. ASSET LOGIC
-        const cabinCounts: Record<string, { count: number, revenue: number }> = {};
-        confirmed.forEach(b => {
-            const name = b.cabin || 'Standard Cabin';
-            if (!cabinCounts[name]) cabinCounts[name] = { count: 0, revenue: 0 };
-            cabinCounts[name].count += 1;
-            cabinCounts[name].revenue += Number(b.totalPrice || 0);
-        });
-        const topCabin = Object.entries(cabinCounts).sort((a, b) => b[1].revenue - a[1].revenue)[0];
-
         return {
-            targetMonthName, historicalData, lastMonthRevenue, prevMonthRevenue, nextMonthForecast,
+            targetMonthName,
+            historicalData,
+            lastMonthRevenue,
+            prevMonthRevenue,
+            nextMonthForecast,
             growthRaw: growthResult,
             multiplier,
-            peakMonth: [...historicalData].sort((a, b) => b.bookings - a.bookings)[0],
-            pricingStay: { type: stayTypeWinner, revenue: stayTypeRevenue },
-            pricingDay: { type: dayTypeWinner, revenue: dayTypeRevenue },
-            topCabin: { name: topCabin?.[0] || 'N/A', count: topCabin?.[1].count || 0, revenue: topCabin?.[1].revenue || 0 }
+            peakMonth: [...historicalData].sort((a, b) => b.bookings - a.bookings)[0] || { month: 'N/A', bookings: 0 }
         };
     }, [bookings]);
 
@@ -88,13 +59,12 @@ export function Predictive({ bookings }: PredictiveProps) {
 
                 {formula && (
                     <div className="mb-4 p-3 bg-zinc-800 rounded-xl border border-zinc-700 font-mono text-[10px] text-zinc-400">
-                        <span className="text-[#D4AF37] block mb-1 uppercase font-black">Formula:</span>
+                        <span className="text-[#D4AF37] block mb-1 uppercase font-black">Formula Structure:</span>
                         {formula}
                     </div>
                 )}
 
                 <div className="mb-6 p-4 bg-[#D4AF37]/10 border border-[#D4AF37]/20 rounded-2xl">
-                    <p className="text-[10px] font-black uppercase text-[#D4AF37] mb-1"></p>
                     <p className="text-sm font-medium italic text-zinc-200">"{strategy}"</p>
                 </div>
                 <div className="space-y-4 font-mono text-[12px] leading-relaxed">
@@ -141,32 +111,57 @@ export function Predictive({ bookings }: PredictiveProps) {
                 </div>
             </div>
 
-            {/* FORECAST COLUMN - 5 EQUAL CARDS */}
-            <div className="bg-[#18181b] p-8 rounded-[2.5rem] text-white flex flex-col border border-zinc-800 shadow-xl relative overflow-hidden">
+            {/* FORECAST COLUMN - NATURAL GAP & PERFECT BALANCE */}
+            <div className="bg-[#18181b] p-8 rounded-[2.5rem] text-white flex flex-col justify-between border border-zinc-800 shadow-xl relative overflow-hidden min-h-[500px]">
 
-
-                <div className="space-y-3">
-                    {[
-                        { id: 'forecast', label: `Estimated Revenue for ${predictions.targetMonthName}`, val: `₱${predictions.nextMonthForecast.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, icon: <Banknote size={18} /> },
-                        { id: 'peak', label: 'Historical Peak Month', val: predictions.peakMonth.month, icon: <Star size={18} /> },
-                        { id: 'inventory', label: 'Asset Focus', val: predictions.topCabin.name, icon: <Target size={18} /> },
-                        { id: 'pricingStay', label: 'Pricing: Stay Type', val: `${predictions.pricingStay.type} Rate Boost`, icon: <Clock size={18} /> },
-                        { id: 'pricingDay', label: 'Pricing: Day Type', val: `${predictions.pricingDay.type} Premium`, icon: <CalendarDays size={18} /> },
-
-                    ].map((card) => (
-                        <div key={card.id} onClick={() => setActiveModal(card.id as any)} className="bg-zinc-800/40 p-4 rounded-2xl border border-zinc-800 flex items-center justify-between cursor-pointer hover:bg-zinc-800/60 transition-all group">
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-xl bg-zinc-900 flex items-center justify-center border border-zinc-800 group-hover:border-[#D4AF37] transition-colors">
-                                    <span className="text-[#D4AF37]">{card.icon}</span>
-                                </div>
-                                <div className="text-left">
-                                    <h4 className="text-[9px] font-black uppercase text-zinc-500 tracking-widest">{card.label}</h4>
-                                    <p className="text-[13px] font-black text-white truncate max-w-[120px]">{card.val}</p>
-                                </div>
-                            </div>
-                            <ChevronRight size={14} className="text-zinc-600 group-hover:text-[#D4AF37] transform group-hover:translate-x-1 transition-all" />
+                {/* HERO STAT CARD 1: ESTIMATED REVENUE */}
+                <div
+                    onClick={() => setActiveModal('forecast')}
+                    className="bg-zinc-800/30 p-6 rounded-[2rem] border border-zinc-800/80 flex flex-col cursor-pointer hover:bg-zinc-800/50 hover:border-[#D4AF37]/50 transition-all group text-left"
+                >
+                    <div className="flex justify-between items-center w-full mb-5">
+                        <div className="w-12 h-12 rounded-2xl bg-zinc-900 flex items-center justify-center border border-zinc-800 group-hover:border-[#D4AF37] transition-colors">
+                            <span className="text-[#D4AF37]"><Banknote size={22} /></span>
                         </div>
-                    ))}
+                        <ChevronRight size={16} className="text-zinc-600 group-hover:text-[#D4AF37] transform group-hover:translate-x-1 transition-all" />
+                    </div>
+
+                    <div>
+                        <h4 className="text-[10px] font-black uppercase text-zinc-500 tracking-[0.15em] mb-1.5">
+                            Estimated Revenue · {predictions.targetMonthName}
+                        </h4>
+                        <p className="text-3xl font-black text-white tracking-tight group-hover:text-[#D4AF37] transition-colors">
+                            ₱{predictions.nextMonthForecast.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </p>
+                        <p className="text-[11px] text-zinc-400 mt-2 font-medium leading-relaxed">
+                            Based on current trajectory and historical performance momentum.
+                        </p>
+                    </div>
+                </div>
+
+                {/* HERO STAT CARD 2: HISTORICAL PEAK */}
+                <div
+                    onClick={() => setActiveModal('peak')}
+                    className="bg-zinc-800/30 p-6 rounded-[2rem] border border-zinc-800/80 flex flex-col cursor-pointer hover:bg-zinc-800/50 hover:border-[#D4AF37]/50 transition-all group text-left mt-4"
+                >
+                    <div className="flex justify-between items-center w-full mb-5">
+                        <div className="w-12 h-12 rounded-2xl bg-zinc-900 flex items-center justify-center border border-zinc-800 group-hover:border-[#D4AF37] transition-colors">
+                            <span className="text-[#D4AF37]"><Star size={22} /></span>
+                        </div>
+                        <ChevronRight size={16} className="text-zinc-600 group-hover:text-[#D4AF37] transform group-hover:translate-x-1 transition-all" />
+                    </div>
+
+                    <div>
+                        <h4 className="text-[10px] font-black uppercase text-zinc-500 tracking-[0.15em] mb-1.5">
+                            Historical Pattern Cycle
+                        </h4>
+                        <p className="text-3xl font-black text-white tracking-tight group-hover:text-[#D4AF37] transition-colors">
+                            {predictions.peakMonth.month} Peak
+                        </p>
+                        <p className="text-[11px] text-zinc-400 mt-2 font-medium leading-relaxed">
+                            Highest recorded booking volume achieved over the previous months.
+                        </p>
+                    </div>
                 </div>
 
                 {/* --- MODALS WITH FORMULAS & COMPUTATION --- */}
@@ -190,67 +185,35 @@ export function Predictive({ bookings }: PredictiveProps) {
 
                 {activeModal === 'forecast' && (
                     <MathModal
-                        title="Revenue Forecast"
+                        title="Revenue Forecast Breakdown"
                         formula="Last Month Revenue × (1 + Growth Rate)"
-                        strategy="Projection based on current momentum and historical performance."
+                        strategy="This percentage represents the speed of your business growth month-over-month."
                         onClose={() => setActiveModal(null)}
                     >
-                        <div className="space-y-2">
-                            <div className="flex justify-between"><span>Basis:</span> <span>₱{predictions.lastMonthRevenue.toLocaleString()}</span></div>
-                            <div className="flex justify-between"><span>Multiplier:</span> <span>{predictions.multiplier.toFixed(4)}x</span></div>
-                            <div className="pt-2 border-t border-zinc-800 text-[#D4AF37] font-black flex justify-between text-lg">
-                                <span>Result:</span> <span>₱{predictions.nextMonthForecast.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                        <div className="space-y-3 font-mono text-[11px]">
+                            <div className="border-b border-zinc-800 pb-2 mb-2">
+                                <span className="text-[#D4AF37] font-bold block mb-1">Step 1: Current Growth Rate</span>
+                                <div className="flex justify-between text-zinc-400">
+                                    <span>(₱{predictions.lastMonthRevenue.toLocaleString()} - ₱{predictions.prevMonthRevenue.toLocaleString()}) ÷ ₱{predictions.prevMonthRevenue.toLocaleString()} =</span>
+                                    <span className="text-white">{(predictions.growthRaw).toFixed(4)} ({(predictions.growthRaw * 100).toFixed(1)}%)</span>
+                                </div>
                             </div>
-                        </div>
-                    </MathModal>
-                )}
 
-                {activeModal === 'pricingStay' && (
-                    <MathModal
-                        title="Stay Type Pricing"
-                        formula="High Demand Revenue × 0.15 (Premium)"
-                        strategy={`Increase ${predictions.pricingStay.type} rates by 15% to capitalize on its high booking frequency.`}
-                        onClose={() => setActiveModal(null)}
-                    >
-                        <div className="space-y-2">
-                            <div className="flex justify-between"><span>Stay Type:</span> <span>{predictions.pricingStay.type}</span></div>
-                            <div className="flex justify-between"><span>Base Revenue:</span> <span>₱{predictions.pricingStay.revenue.toLocaleString()}</span></div>
-                            <div className="pt-2 border-t border-zinc-800 text-[#D4AF37] font-black flex justify-between">
-                                <span>Opt. Gain:</span> <span>+₱{(predictions.pricingStay.revenue * 0.15).toLocaleString()}</span>
+                            <div className="border-b border-zinc-800 pb-2 mb-2">
+                                <span className="text-[#D4AF37] font-bold block mb-1">Step 2: Derive Multiplier Factor</span>
+                                <div className="text-zinc-500 mb-1">Formula: Baseline Constant (1) + Growth Rate</div>
+                                <div className="flex justify-between text-zinc-400">
+                                    <span>1 + {(predictions.growthRaw).toFixed(4)} =</span>
+                                    <span className="text-white font-black">{predictions.multiplier.toFixed(4)}x</span>
+                                </div>
                             </div>
-                        </div>
-                    </MathModal>
-                )}
 
-                {activeModal === 'pricingDay' && (
-                    <MathModal
-                        title="Day Type Pricing"
-                        formula="Day Type Base × 0.15 (Weekend/Holiday Surge)"
-                        strategy={`Apply ${predictions.pricingDay.type} surcharges to manage high-density periods.`}
-                        onClose={() => setActiveModal(null)}
-                    >
-                        <div className="space-y-2">
-                            <div className="flex justify-between"><span>Period:</span> <span>{predictions.pricingDay.type}</span></div>
-                            <div className="flex justify-between"><span>Base Revenue:</span> <span>₱{predictions.pricingDay.revenue.toLocaleString()}</span></div>
-                            <div className="pt-2 border-t border-zinc-800 text-[#D4AF37] font-black flex justify-between">
-                                <span>Opt. Gain:</span> <span>+₱{(predictions.pricingDay.revenue * 0.15).toLocaleString()}</span>
-                            </div>
-                        </div>
-                    </MathModal>
-                )}
-
-                {activeModal === 'inventory' && (
-                    <MathModal
-                        title="Asset Allocation"
-                        formula="(Asset Revenue / Total Portfolio) * 100"
-                        strategy={`Focus 60% of marketing efforts on ${predictions.topCabin.name} as it is your 'Cash Cow'.`}
-                        onClose={() => setActiveModal(null)}
-                    >
-                        <div className="space-y-2">
-                            <div className="flex justify-between"><span>Top Cabin:</span> <span>{predictions.topCabin.name}</span></div>
-                            <div className="flex justify-between"><span>Contribution:</span> <span>{((predictions.topCabin.revenue / (predictions.lastMonthRevenue || 1)) * 100).toFixed(1)}%</span></div>
-                            <div className="pt-2 border-t border-zinc-800 text-[#D4AF37] font-black flex justify-between">
-                                <span>Asset Value:</span> <span>₱{predictions.topCabin.revenue.toLocaleString()}</span>
+                            <div>
+                                <span className="text-[#D4AF37] font-bold block mb-1">Step 3: Calculate Final Forecast</span>
+                                <div className="flex justify-between text-zinc-400">
+                                    <span>₱{predictions.lastMonthRevenue.toLocaleString()} × {predictions.multiplier.toFixed(4)} =</span>
+                                    <span className="text-[#D4AF37] text-sm font-black">₱{predictions.nextMonthForecast.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                                </div>
                             </div>
                         </div>
                     </MathModal>
@@ -269,6 +232,6 @@ export function Predictive({ bookings }: PredictiveProps) {
                     </MathModal>
                 )}
             </div>
-        </div>
+        </div >
     );
 }

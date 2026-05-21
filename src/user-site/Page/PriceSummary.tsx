@@ -57,7 +57,6 @@ export function PriceSummary({
     const [discountRules, setDiscountRules] = useState<DiscountRule[]>([]);
     const [discountCode, setDiscountCode] = useState("");
 
-    // Naka-sync na string state para sa image field galing PricingManager admin settings
     const [rateCardImageUrl, setRateCardImageUrl] = useState<string | null>(null);
 
     const currentPolicy = useMemo(() => {
@@ -79,7 +78,6 @@ export function PriceSummary({
                 const data = docSnap.data();
                 if (data.pricing) setPricingConfig(data.pricing);
                 if (data.policies) setPolicies(data.policies);
-                // Babasahin nito kung rateCardImageUrl OR rateMatrixUrl para walang ka-mismatch sa backend
                 if (data.rateCardImageUrl) {
                     setRateCardImageUrl(data.rateCardImageUrl);
                 } else if (data.rateMatrixUrl) {
@@ -157,12 +155,17 @@ export function PriceSummary({
     const discountLabel = selectedDiscount ? `${selectedDiscount.value}${selectedDiscount.type === "percent" ? "%" : ""}` : "";
     const finalTotal = Math.max(0, pricing.grandTotal - discountAmount);
 
+    // Ginawang structured object para mahiwalay ang styling ng description sa status text
     const discountMessage = useMemo(() => {
-        if (!discountCode.trim()) return "";
-        if (!selectedDiscount) return "Invalid or inactive promo code. Promo codes are case-sensitive.";
-        if (!isUserEligibleForDiscount) return "This promo code is restricted to authorized admin/staff accounts.";
-        if (durationCount < selectedDiscount.minNights) return `Requires at least ${selectedDiscount.minNights} night(s).`;
-        return `Applied ${discountLabel} pesos discount. ${selectedDiscount.description ? `(${selectedDiscount.description})` : ''}`;
+        if (!discountCode.trim()) return null;
+        if (!selectedDiscount) return { error: "Invalid or inactive promo code. Promo codes are case-sensitive." };
+        if (!isUserEligibleForDiscount) return { error: "This promo code is just for selected accounts." };
+        if (durationCount < selectedDiscount.minNights) return { error: `Requires at least ${selectedDiscount.minNights} night(s).` };
+
+        return {
+            description: selectedDiscount.description || "",
+            status: `Applied ${discountLabel} discount.`
+        };
     }, [discountCode, selectedDiscount, durationCount, discountLabel, isUserEligibleForDiscount]);
 
     const stayLabels = {
@@ -234,9 +237,23 @@ export function PriceSummary({
                         {discountAmount > 0 ? 'Applied' : 'No code'}
                     </span>
                 </div>
+
+                {/* REFACTORED INLINE FEEDBACK CONTAINER */}
                 {discountMessage && (
-                    <p className={`text-[11px] mb-4 font-medium ${discountAmount > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{discountMessage}</p>
+                    <div className="mb-4 text-[11px] font-medium text-center space-y-1">
+                        {discountMessage.error ? (
+                            <p className="text-rose-400">{discountMessage.error}</p>
+                        ) : (
+                            <>
+                                {discountMessage.description && (
+                                    <p className="text-pink-400 font-semibold">{discountMessage.description}</p>
+                                )}
+                                <p className="text-emerald-400">{discountMessage.status}</p>
+                            </>
+                        )}
+                    </div>
                 )}
+
                 <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500">Total Amount</span>
                 <div className="text-4xl md:text-5xl font-serif italic text-[#D4AF37] mt-2">
                     ₱{finalTotal.toLocaleString()}
@@ -270,23 +287,19 @@ export function PriceSummary({
                 </p>
             )}
 
-            {/* REFACTORED PREMIUM MINIMALIST LUXURY MODAL (BLACK & WHITE THEME) */}
             {showModal && (
                 <div className="fixed inset-0 z-[500] bg-zinc-950/40 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowModal(false)}>
                     <div className="max-w-4xl w-full rounded-[2.5rem] bg-white p-6 md:p-10 border border-zinc-200/50 shadow-[0_50px_100px_rgba(0,0,0,0.25)] relative text-zinc-900 my-8 max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
 
-                        {/* Elegantly Designed Dark Close Button for High Contrast */}
                         <button type="button" onClick={() => setShowModal(false)} className="absolute top-6 right-6 text-zinc-400 hover:text-zinc-900 transition-colors bg-zinc-100 hover:bg-zinc-200 p-2.5 rounded-full z-10">
                             <X size={16} />
                         </button>
 
-                        {/* Top Luxury Branding Header Section */}
                         <div className="text-center mb-8 border-b border-zinc-100 pb-5 w-full">
                             <h4 className="text-2xl md:text-3xl font-serif italic tracking-tight text-zinc-950">Rates & Inclusions</h4>
                             <p className="text-[10px] uppercase tracking-[0.4em] text-zinc-400 font-bold mt-1.5">Official Reference Matrix</p>
                         </div>
 
-                        {/* Premium Soft-Grey Frame Layout Container */}
                         <div className="w-full flex justify-center items-center overflow-hidden rounded-2xl bg-zinc-50 border border-zinc-100 relative min-h-[350px] p-2">
                             {rateCardImageUrl ? (
                                 <img
@@ -308,7 +321,6 @@ export function PriceSummary({
                             )}
                         </div>
 
-                        {/* Footer Subtext Information Row */}
                         <div className="mt-6 text-[9px] text-zinc-400 text-center uppercase tracking-[0.2em] font-bold w-full border-t border-zinc-100 pt-4">
                             Rates scale automatically based on selected dates and weekend blocks.
                         </div>

@@ -1,21 +1,22 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { TrendingUp, Calendar, AlertCircle, Sparkles } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths, isSameMonth, parseISO } from 'date-fns';
+import { ArrowUpRight, ArrowDownRight, Calculator, X, Star, Banknote, ChevronRight } from "lucide-react";
+import { format, eachMonthOfInterval, subMonths, isSameMonth, parseISO, addMonths } from 'date-fns';
 
 interface PredictiveProps {
     bookings: any[];
 }
 
 export function Predictive({ bookings }: PredictiveProps) {
-    const predictions = useMemo(() => {
-        // 1. PREPARE DATA FOR THE LAST 6 MONTHS
-        const now = new Date();
-        const last6Months = eachMonthOfInterval({
-            start: subMonths(now, 5),
-            end: now
-        });
+    const [activeModal, setActiveModal] = useState<'growth' | 'forecast' | 'peak' | null>(null);
 
+    const predictions = useMemo(() => {
+        const now = new Date();
+        const nextMonthDate = addMonths(now, 1);
+        const targetMonthName = format(nextMonthDate, 'MMMM');
+
+        // 1. HISTORICAL DATA
+        const last6Months = eachMonthOfInterval({ start: subMonths(now, 5), end: now });
         const historicalData = last6Months.map(month => {
             const monthBookings = bookings.filter(b => isSameMonth(parseISO(b.checkInDate || b.checkIn), month));
             return {
@@ -25,136 +26,192 @@ export function Predictive({ bookings }: PredictiveProps) {
             };
         });
 
-        // 2. SIMPLE LINEAR FORECAST (Hula para sa susunod na buwan)
-        // Kinukuha ang average growth rate ng revenue
+        // 2. MOMENTUM & REVENUE LOGIC
         const revenues = historicalData.map(d => d.revenue);
-        let totalGrowth = 0;
-        for (let i = 1; i < revenues.length; i++) {
-            if (revenues[i-1] !== 0) {
-                totalGrowth += (revenues[i] - revenues[i-1]) / revenues[i-1];
-            }
-        }
-        const avgGrowth = revenues.length > 1 ? totalGrowth / (revenues.length - 1) : 0;
-        const nextMonthForecast = revenues[revenues.length - 1] * (1 + avgGrowth);
+        const lastMonthRevenue = revenues[revenues.length - 1] || 0;
+        const prevMonthRevenue = revenues[revenues.length - 2] || 0;
 
-        // 3. IDENTIFY PEAK SEASON
-        const peakMonth = [...historicalData].sort((a, b) => b.bookings - a.bookings)[0];
+        // MOMENTUM FORMULA: ((Current - Previous) / Previous)
+        let growthResult = prevMonthRevenue > 0 ? (lastMonthRevenue - prevMonthRevenue) / prevMonthRevenue : 0;
+        const multiplier = 1 + growthResult;
+        let nextMonthForecast = Math.max(0, lastMonthRevenue * multiplier);
 
         return {
+            targetMonthName,
             historicalData,
-            nextMonthForecast: nextMonthForecast > 0 ? nextMonthForecast : revenues[revenues.length - 1],
-            avgGrowth: avgGrowth * 100,
-            peakMonth
+            lastMonthRevenue,
+            prevMonthRevenue,
+            nextMonthForecast,
+            growthRaw: growthResult,
+            multiplier,
+            peakMonth: [...historicalData].sort((a, b) => b.bookings - a.bookings)[0] || { month: 'N/A', bookings: 0 }
         };
     }, [bookings]);
 
+    const MathModal = ({ title, formula, strategy, children, onClose }: { title: string, formula?: string, strategy: string, children: React.ReactNode, onClose: () => void }) => (
+        <div className="absolute inset-0 z-[100] bg-zinc-900/98 backdrop-blur-xl text-white p-8 flex flex-col justify-center animate-in fade-in zoom-in-95 duration-300">
+            <button onClick={onClose} className="absolute top-8 right-8 text-zinc-500 hover:text-white transition-colors"><X size={24} /></button>
+            <div className="max-w-md w-full mx-auto text-left">
+                <div className="flex items-center gap-3 mb-4 border-b border-zinc-800 pb-4">
+                    <Calculator className="text-[#D4AF37]" size={20} />
+                    <h4 className="text-xs font-black uppercase tracking-[0.2em]">{title}</h4>
+                </div>
+
+                {formula && (
+                    <div className="mb-4 p-3 bg-zinc-800 rounded-xl border border-zinc-700 font-mono text-[10px] text-zinc-400">
+                        <span className="text-[#D4AF37] block mb-1 uppercase font-black">Formula:</span>
+                        {formula}
+                    </div>
+                )}
+
+                <div className="mb-6 p-4 bg-[#D4AF37]/10 border border-[#D4AF37]/20 rounded-2xl">
+                    <p className="text-sm font-medium italic text-zinc-200">"{strategy}"</p>
+                </div>
+                <div className="space-y-4 font-mono text-[12px] leading-relaxed">
+                    {children}
+                </div>
+            </div>
+        </div>
+    );
+
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-            {/* HEADER */}
-            <div className="flex items-center gap-3 border-l-4 border-zinc-900 pl-4 mb-6">
-                <TrendingUp className="text-zinc-900" size={24} />
-                <h2 className="text-2xl font-black uppercase tracking-tighter text-zinc-900">
-                    Predictive <span className="text-zinc-400 font-light">Analytics</span>
-                </h2>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative">
+            {/* CHART SECTION */}
+            <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] border border-zinc-100 shadow-sm flex flex-col min-h-[500px] relative z-10">
+                <div className="flex justify-between items-start mb-8 text-left">
+                    <div>
+                        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-1">Monthly Revenue Trend</h3>
+                        <p className="text-sm text-zinc-500 font-medium">Last 6 months performance</p>
+                    </div>
+                    <button onClick={() => setActiveModal('growth')} className={`px-4 py-2 rounded-xl flex items-center gap-2 ${predictions.growthRaw >= 0 ? 'bg-zinc-900 text-white' : 'bg-zinc-100'}`}>
+                        {predictions.growthRaw >= 0 ? <ArrowUpRight size={14} className="text-[#D4AF37]" /> : <ArrowDownRight size={14} className="text-red-500" />}
+                        <span className="text-[10px] font-black uppercase tracking-widest">{Math.abs(predictions.growthRaw * 100).toFixed(1)}% Momentum</span>
+                    </button>
+                </div>
+                <div className="flex-1 w-full relative">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={predictions.historicalData}>
+                            <defs>
+                                <linearGradient id="colorGold" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
+                            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#a1a1aa' }} dy={10} />
+                            <YAxis hide />
+                            <Tooltip
+                                cursor={{ stroke: '#D4AF37', strokeWidth: 2 }}
+                                contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', fontSize: '11px', fontWeight: 'bold' }}
+                                formatter={(value: any) => [`₱${value.toLocaleString()}`, 'Revenue']}
+                            />
+                            <Area type="monotone" dataKey="revenue" stroke="#D4AF37" strokeWidth={4} fill="url(#colorGold)" />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                {/* 1. REVENUE TREND CHART */}
-                <div className="lg:col-span-2 bg-white p-8 rounded-[2rem] border border-zinc-100 shadow-sm min-h-[400px] flex flex-col">
-                    <div className="flex justify-between items-start mb-8">
-                        <div>
-                            <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-1">Revenue Momentum</h3>
-                            <p className="text-sm text-zinc-500 font-medium">Monthly performance tracking & trend projection</p>
+            {/* FORECAST COLUMN - NATURAL GAP & PERFECT BALANCE */}
+            <div className="bg-[#18181b] p-8 rounded-[2.5rem] text-white flex flex-col justify-between border border-zinc-800 shadow-xl relative overflow-hidden min-h-[500px]">
+
+                {/* HERO STAT CARD 1: ESTIMATED REVENUE */}
+                <div
+                    onClick={() => setActiveModal('forecast')}
+                    className="bg-zinc-800/30 p-6 rounded-[2rem] border border-zinc-800/80 flex flex-col cursor-pointer hover:bg-zinc-800/50 hover:border-[#D4AF37]/50 transition-all group text-left"
+                >
+                    <div className="flex justify-between items-center w-full mb-5">
+                        <div className="w-12 h-12 rounded-2xl bg-zinc-900 flex items-center justify-center border border-zinc-800 group-hover:border-[#D4AF37] transition-colors">
+                            <span className="text-[#D4AF37]"><Banknote size={22} /></span>
                         </div>
-                        <div className="bg-emerald-50 px-3 py-1 rounded-full flex items-center gap-1">
-                            <TrendingUp size={12} className="text-emerald-600" />
-                            <span className="text-[10px] font-black text-emerald-600">+{predictions.avgGrowth.toFixed(1)}% GROWTH</span>
-                        </div>
+                        <ChevronRight size={16} className="text-zinc-600 group-hover:text-[#D4AF37] transform group-hover:translate-x-1 transition-all" />
                     </div>
 
-                    <div className="flex-1 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={predictions.historicalData}>
-                                <defs>
-                                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3}/>
-                                        <stop offset="95%" stopColor="#D4AF37" stopOpacity={0}/>
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                                <XAxis 
-                                    dataKey="month" 
-                                    axisLine={false} 
-                                    tickLine={false} 
-                                    tick={{fontSize: 10, fontWeight: 700, fill: '#a1a1aa'}}
-                                    dy={10}
-                                />
-                                <YAxis hide />
-                                <Tooltip 
-                                    contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 15px rgba(0,0,0,0.05)', fontSize: '11px', fontWeight: 'bold' }}
-                                    formatter={(val: number) => [`₱${val.toLocaleString()}`, 'Revenue']}
-                                />
-                                <Area 
-                                    type="monotone" 
-                                    dataKey="revenue" 
-                                    stroke="#D4AF37" 
-                                    strokeWidth={4}
-                                    fillOpacity={1} 
-                                    fill="url(#colorRev)" 
-                                />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-
-                {/* 2. FORECAST CARDS */}
-                <div className="space-y-6">
-                    {/* NEXT MONTH ESTIMATE */}
-                    <div className="bg-[#18181b] p-8 rounded-[2rem] text-white relative overflow-hidden group">
-                        <Sparkles className="absolute top-4 right-4 text-zinc-700 group-hover:text-[#D4AF37] transition-colors" size={20} />
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-4">Forecasted Income</h3>
-                        <p className="text-3xl font-black tracking-tighter mb-2">
+                    <div>
+                        <h4 className="text-[10px] font-black uppercase text-zinc-500 tracking-[0.15em] mb-1.5">
+                            Estimated Revenue · {predictions.targetMonthName}
+                        </h4>
+                        <p className="text-3xl font-black text-white tracking-tight group-hover:text-[#D4AF37] transition-colors">
                             ₱{predictions.nextMonthForecast.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         </p>
-                        <p className="text-[11px] text-zinc-400 leading-relaxed">
-                            Estimated revenue for next month based on current growth momentum and booking patterns.
+                        <p className="text-[11px] text-zinc-400 mt-2 font-medium leading-relaxed">
+                            Based on current trajectory and historical performance momentum.
                         </p>
-                    </div>
-
-                    {/* PEAK PERFORMANCE */}
-                    <div className="bg-white p-8 rounded-[2rem] border border-zinc-100 shadow-sm">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center">
-                                <Calendar className="text-[#D4AF37]" size={20} />
-                            </div>
-                            <div>
-                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Peak Season</h3>
-                                <p className="text-sm font-black text-zinc-900">{predictions.peakMonth?.month || 'N/A'}</p>
-                            </div>
-                        </div>
-                        <p className="text-[11px] text-zinc-500 leading-relaxed">
-                            Highest occupancy recorded in <span className="font-bold text-zinc-900">{predictions.peakMonth?.month}</span> with 
-                            <span className="font-bold text-zinc-900"> {predictions.peakMonth?.bookings} confirmed bookings</span>.
-                        </p>
-                    </div>
-
-                    {/* AI INSIGHT */}
-                    <div className="bg-emerald-50 p-6 rounded-[2rem] border border-emerald-100">
-                        <div className="flex gap-3">
-                            <AlertCircle className="text-emerald-600 shrink-0" size={18} />
-                            <div>
-                                <h4 className="text-[11px] font-black uppercase text-emerald-700 mb-1">Market Insight</h4>
-                                <p className="text-[11px] text-emerald-800 leading-snug">
-                                    {predictions.avgGrowth > 0 
-                                        ? "Positive trend detected. Consider opening more slots for weekend 'Evening Chill' stays."
-                                        : "Booking pace is steady. Try offering mid-week promos to boost weekday occupancy."}
-                                </p>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
+                {/* HERO STAT CARD 2: HISTORICAL PEAK (SAME DESIGN AND SPACING) */}
+                <div
+                    onClick={() => setActiveModal('peak')}
+                    className="bg-zinc-800/30 p-6 rounded-[2rem] border border-zinc-800/80 flex flex-col cursor-pointer hover:bg-zinc-800/50 hover:border-[#D4AF37]/50 transition-all group text-left mt-4"
+                >
+                    <div className="flex justify-between items-center w-full mb-5">
+                        <div className="w-12 h-12 rounded-2xl bg-zinc-900 flex items-center justify-center border border-zinc-800 group-hover:border-[#D4AF37] transition-colors">
+                            <span className="text-[#D4AF37]"><Star size={22} /></span>
+                        </div>
+                        <ChevronRight size={16} className="text-zinc-600 group-hover:text-[#D4AF37] transform group-hover:translate-x-1 transition-all" />
+                    </div>
+
+                    <div>
+                        <h4 className="text-[10px] font-black uppercase text-zinc-500 tracking-[0.15em] mb-1.5">
+                            Historical Pattern Cycle
+                        </h4>
+                        <p className="text-3xl font-black text-white tracking-tight group-hover:text-[#D4AF37] transition-colors">
+                            {predictions.peakMonth.month} Peak
+                        </p>
+                        <p className="text-[11px] text-zinc-400 mt-2 font-medium leading-relaxed">
+                            Highest recorded booking volume achieved over the previous months.
+                        </p>
+                    </div>
+                </div>
+
+                {/* --- MODALS WITH FORMULAS & COMPUTATION --- */}
+
+                {activeModal === 'growth' && (
+                    <MathModal
+                        title="Momentum Computation"
+                        formula="((Current - Previous) / Previous) * 100"
+                        strategy="This percentage represents the speed of your business growth month-over-month."
+                        onClose={() => setActiveModal(null)}
+                    >
+                        <div className="space-y-2">
+                            <div className="flex justify-between"><span>Current:</span> <span>₱{predictions.lastMonthRevenue.toLocaleString()}</span></div>
+                            <div className="flex justify-between"><span>Previous:</span> <span>₱{predictions.prevMonthRevenue.toLocaleString()}</span></div>
+                            <div className="pt-2 border-t border-zinc-800 text-[#D4AF37] font-black flex justify-between">
+                                <span>Momentum:</span> <span>{(predictions.growthRaw * 100).toFixed(2)}%</span>
+                            </div>
+                        </div>
+                    </MathModal>
+                )}
+
+                {activeModal === 'forecast' && (
+                    <MathModal
+                        title="Revenue Forecast"
+                        formula="Last Month Revenue × (1 + Growth Rate)"
+                        strategy="Projection based on current momentum and historical performance."
+                        onClose={() => setActiveModal(null)}
+                    >
+                        <div className="space-y-2">
+                            <div className="flex justify-between"><span>Basis:</span> <span>₱{predictions.lastMonthRevenue.toLocaleString()}</span></div>
+                            <div className="flex justify-between"><span>Multiplier:</span> <span>{predictions.multiplier.toFixed(4)}x</span></div>
+                            <div className="pt-2 border-t border-zinc-800 text-[#D4AF37] font-black flex justify-between text-lg">
+                                <span>Result:</span> <span>₱{predictions.nextMonthForecast.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                            </div>
+                        </div>
+                    </MathModal>
+                )}
+
+                {activeModal === 'peak' && (
+                    <MathModal
+                        title="Historical Pattern"
+                        strategy={`Prepare operational capacity based on ${predictions.peakMonth.month} trends.`}
+                        onClose={() => setActiveModal(null)}
+                    >
+                        <div className="space-y-2">
+                            <div className="flex justify-between"><span>Highest Month:</span> <span>{predictions.peakMonth.month}</span></div>
+                            <div className="flex justify-between"><span>Booking Volume:</span> <span>{predictions.peakMonth.bookings} stays</span></div>
+                        </div>
+                    </MathModal>
+                )}
             </div>
         </div>
     );

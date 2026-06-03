@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Users, Baby, Dog, LucideProps, XCircle, Calendar, X } from "lucide-react";
+import { Users, Baby, Dog, LucideProps, XCircle, Calendar, X, Tag, MessageSquare } from "lucide-react";
 import {
     format,
     parseISO,
@@ -18,6 +18,7 @@ import {
 
 // Import separated components
 import { Descriptive } from './Analytics/Descriptive';
+import { calculateTotal } from '../shared/lib/bookingPricing';
 import { Predictive } from './Analytics/Predictive';
 
 
@@ -183,7 +184,51 @@ export function Analytics({ bookings }: { bookings: any[] }) {
             dayTypeStats,
             stayTypeStats,
             statusData,
-            growthRate
+            growthRate,
+            // Discount analytics: compute by recalculating expected grand total and comparing
+            totalDiscounts: confirmedList.reduce((sum, b) => {
+                try {
+                    const calc = calculateTotal(
+                        (b.cabin || 'ohannah').toLowerCase() === 'the dream' ? 'dream' : 'ohannah',
+                        (b.stayType || 'full') as any,
+                        Number(b.guests || 0),
+                        Number(b.pets || 0),
+                        b.checkIn,
+                        b.checkOut
+                    );
+                    const original = Number(calc.grandTotal || 0);
+                    const given = Number(b.totalPrice || 0);
+                    const diff = Math.max(0, original - given);
+                    return sum + diff;
+                } catch (err) {
+                    return sum;
+                }
+            }, 0),
+            discountList: confirmedList.filter(b => b.discountCode).map(b => {
+                try {
+                    const calc = calculateTotal(
+                        (b.cabin || 'ohannah').toLowerCase() === 'the dream' ? 'dream' : 'ohannah',
+                        (b.stayType || 'full') as any,
+                        Number(b.guests || 0),
+                        Number(b.pets || 0),
+                        b.checkIn,
+                        b.checkOut
+                    );
+                    const original = Number(calc.grandTotal || 0);
+                    const given = Number(b.totalPrice || 0);
+                    const amount = Math.max(0, original - given);
+                    return {
+                        bookingId: b.id || b.bookingId || '',
+                        guestName: b.customerName || b.userEmail || 'Guest',
+                        cabinName: b.cabin || 'Unknown',
+                        amount,
+                        remarks: b.discountCode || '',
+                        date: format(parseISO(b.checkInDate || b.checkIn), 'yyyy-MM-dd')
+                    };
+                } catch (err) {
+                    return null;
+                }
+            }).filter(Boolean) as any[]
         };
     }, [bookings, startDate, endDate]);
 
@@ -248,6 +293,73 @@ export function Analytics({ bookings }: { bookings: any[] }) {
                 <section><Descriptive analysis={analysis} /></section>
                 <section className="pt-8"><Predictive bookings={analysis.confirmedList} /></section>
 
+                {/* Discounts & Deductions Tracker (moved here from Descriptive) */}
+                <section className="pt-8">
+                    <div className="bg-white p-8 rounded-[2rem] border border-zinc-100 shadow-sm">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-4 mb-6">
+                            <div>
+                                <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-1">
+                                    Discounts & Deductions Tracker
+                                </h3>
+                                <p className="text-xs text-zinc-500">Audit trail of deductions applied to approved bookings.</p>
+                            </div>
+                            <div className="bg-zinc-900 text-white px-5 py-2.5 rounded-xl flex items-center gap-3 shadow-sm">
+                                <Tag className="w-4 h-4 text-zinc-400" />
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 leading-none">Total Given Discounts</span>
+                                    <span className="text-sm font-black mt-0.5">₱{analysis.totalDiscounts?.toLocaleString() || '0'}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {(analysis.discountList || []).length === 0 ? (
+                            <div className="py-12 text-center flex flex-col items-center justify-center border border-dashed border-zinc-100 rounded-2xl bg-zinc-50/50">
+                                <Tag className="w-8 h-8 text-zinc-300 mb-2 stroke-[1.5]" />
+                                <p className="text-xs font-black text-zinc-400 uppercase tracking-wider">No discounts recorded for this period</p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-zinc-100">
+                                            <th className="text-[9px] font-black uppercase tracking-widest text-zinc-400 pb-3 pl-2">Date / ID</th>
+                                            <th className="text-[9px] font-black uppercase tracking-widest text-zinc-400 pb-3">Guest / Cabin</th>
+                                            <th className="text-[9px] font-black uppercase tracking-widest text-zinc-400 pb-3">Amount Saved</th>
+                                            <th className="text-[9px] font-black uppercase tracking-widest text-zinc-400 pb-3 pr-2">Deduction Reason / Remarks</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-zinc-50">
+                                        {analysis.discountList!.map((item: any, idx: number) => (
+                                            <tr key={idx} className="hover:bg-zinc-50/80 transition-colors group">
+                                                <td className="py-4 pl-2">
+                                                    <p className="text-xs font-bold text-zinc-900">{item.date}</p>
+                                                    <p className="text-[10px] font-mono text-zinc-400">#{item.bookingId}</p>
+                                                </td>
+                                                <td className="py-4">
+                                                    <p className="text-xs font-black text-zinc-800">{item.guestName}</p>
+                                                    <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">{item.cabinName}</p>
+                                                </td>
+                                                <td className="py-4">
+                                                    <span className="text-xs font-black text-rose-600 bg-rose-50 px-2.5 py-1 rounded-md inline-block">
+                                                        -₱{item.amount.toLocaleString()}
+                                                    </span>
+                                                </td>
+                                                <td className="py-4 pr-2 max-w-xs sm:max-w-md">
+                                                    <div className="flex items-start gap-2 text-zinc-600">
+                                                        <MessageSquare className="w-3.5 h-3.5 text-zinc-300 mt-0.5 flex-shrink-0" />
+                                                        <p className="text-xs italic leading-relaxed text-zinc-600">
+                                                            {item.remarks || "No remarks provided."}
+                                                        </p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </section>
             </div>
         </div>
     );

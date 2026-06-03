@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import { auth, db } from "../../shared/lib/firebase";
 import { doc, getDoc, collection, query, where, onSnapshot, updateDoc } from "firebase/firestore";
 import { useAuth } from "../../shared/context/AuthContext";
-import { ChevronLeft, User, Users, Phone, MapPin, Calendar, Clock, CreditCard, LogOut, PartyPopper, Baby, Dog } from "lucide-react";
+import { ChevronLeft, User, Users, Phone, MapPin, Calendar, Clock, CreditCard, LogOut, PartyPopper, Baby, Dog, Tag } from "lucide-react";
 import { format } from "date-fns";
+import { calculateTotal } from "../../shared/lib/bookingPricing";
 
 // Ito ang hiningi mong interface
 interface ProfilePageProps {
@@ -223,6 +224,33 @@ export function ProfilePage({ onBookClick }: ProfilePageProps) {
                                                     <div className="flex items-center gap-1 text-[10px] text-zinc-500 font-medium mt-1">
                                                         <PartyPopper size={12} /> {booking.specialOccasion}
                                                     </div>
+                                                )}
+                                                {booking.discountCode && (
+                                                    (() => {
+                                                        try {
+                                                            const calc = calculateTotal(
+                                                                (booking.cabin || 'ohannah').toLowerCase() === 'the dream' ? 'dream' : 'ohannah',
+                                                                (booking.stayType || 'full') as any,
+                                                                Number(booking.guests || 0),
+                                                                Number(booking.pets || 0),
+                                                                booking.checkIn,
+                                                                booking.checkOut
+                                                            );
+                                                            const original = Number(calc.grandTotal || 0);
+                                                            const given = Number(booking.totalPrice || 0);
+                                                            const discountAmount = Math.max(0, original - given);
+                                                            return (
+                                                                <div className="flex items-center gap-2 mt-2">
+                                                                    <div className="text-[10px] font-bold text-rose-600 flex items-center gap-2 bg-rose-50 px-3 py-1 rounded-full">
+                                                                        <Tag size={12} /> <span className="uppercase">{booking.discountCode}</span>
+                                                                    </div>
+                                                                    <div className="text-[10px] font-bold text-rose-600">-₱{discountAmount.toLocaleString()}</div>
+                                                                </div>
+                                                            );
+                                                        } catch (err) {
+                                                            return null;
+                                                        }
+                                                    })()
                                                 )}
                                                 {booking.statusMessage && (
                                                     <div className="mt-3 p-3 bg-zinc-50 rounded-xl border border-zinc-100">

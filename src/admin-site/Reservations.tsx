@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from "react";
 import {
     Phone, ChevronRight, ImageIcon, Trash2,
-    X, CreditCard, User, MapPin, PartyPopper, Users, Calendar,
+    X, CreditCard, User, MapPin, PartyPopper, Users, Calendar, Tag,
     MessageSquare, Clock, Dog, Baby, Search, Filter, Send,
     CheckSquare, Square, Mail, Wallet, AlertCircle, ChevronDown
 } from "lucide-react";
 import { getSlotBg } from "../shared/lib/constants";
+import { calculateTotal } from "../shared/lib/bookingPricing";
 
 interface ReservationsProps {
     bookings: any[];
@@ -31,6 +32,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
     const [filterStatus, setFilterStatus] = useState("All");
     const [filterStayType, setFilterStayType] = useState("All");
     const [filterPayment, setFilterPayment] = useState("All");
+    const [filterDiscount, setFilterDiscount] = useState("All");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -61,9 +63,12 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
             if (fromDate && toDate) matchesDate = bookingDate >= fromDate && bookingDate <= toDate;
             if (!fromDate && toDate) matchesDate = bookingDate <= toDate;
 
-            return matchesSearch && matchesStatus && matchesDate && matchesStayType && matchesPayment;
+            // DISCOUNT FILTER
+            const matchesDiscount = filterDiscount === "All" || (filterDiscount === "With" ? Boolean(booking.discountCode) : !Boolean(booking.discountCode));
+
+            return matchesSearch && matchesStatus && matchesDate && matchesStayType && matchesPayment && matchesDiscount;
         });
-    }, [bookings, searchQuery, filterStatus, fromDate, toDate, filterStayType, filterPayment]);
+    }, [bookings, searchQuery, filterStatus, fromDate, toDate, filterStayType, filterPayment, filterDiscount]);
 
     const toggleSelectAll = () => {
         if (selectedIds.length === filteredBookings.length) {
@@ -165,6 +170,19 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                             </select>
                             <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
                         </div>
+
+                        <div className="relative">
+                            <select
+                                value={filterDiscount}
+                                onChange={(e) => setFilterDiscount(e.target.value)}
+                                className="appearance-none bg-white border border-zinc-100 rounded-xl px-5 py-2.5 pr-10 text-[11px] font-bold text-zinc-500 outline-none shadow-sm hover:border-[#D4AF37] transition-all cursor-pointer"
+                            >
+                                <option value="All">DISCOUNT: ALL</option>
+                                <option value="With">WITH DISCOUNT</option>
+                                <option value="Without">NO DISCOUNT</option>
+                            </select>
+                            <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -188,6 +206,26 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                         const activeColor = booking.color || booking.selectedColor || booking.slot || null;
                         const isSelected = selectedIds.includes(booking.id);
                         const stayInfo = stayLabels[booking.stayType as string] || { label: booking.stayType || "Standard Stay", time: "" };
+
+                        // compute discount amount if discount code present
+                        let discountAmount = 0;
+                        try {
+                            if (booking.discountCode) {
+                                const calc = calculateTotal(
+                                    (booking.cabin || 'ohannah').toLowerCase() === 'the dream' ? 'dream' : 'ohannah',
+                                    (booking.stayType || 'full') as any,
+                                    Number(booking.guests || 0),
+                                    Number(booking.pets || 0),
+                                    booking.checkIn,
+                                    booking.checkOut
+                                );
+                                const original = Number(calc.grandTotal || 0);
+                                const given = Number(booking.totalPrice || 0);
+                                discountAmount = Math.max(0, original - given);
+                            }
+                        } catch (err) {
+                            discountAmount = 0;
+                        }
 
                         return (
                             <div key={booking.id} className={`bg-white rounded-[2.5rem] p-7 border-2 transition-all flex flex-col lg:flex-row lg:items-center relative ${isSelected ? 'border-[#D4AF37] bg-[#D4AF37]/5' : 'border-zinc-50 shadow-sm'}`}>
@@ -240,6 +278,12 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                                                     <PartyPopper size={12} /> {booking.specialOccasion}
                                                 </div>
                                             )}
+                                            {booking.discountCode && (
+                                                <div className="text-[11px] font-bold text-rose-600 flex items-center gap-2 bg-rose-50 px-3 py-1 rounded-full w-fit">
+                                                    <Tag size={12} /> <span className="uppercase">{booking.discountCode}</span>
+
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
@@ -249,7 +293,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                                             <span className="text-2xl font-black text-zinc-900">₱{booking.totalPrice?.toLocaleString()}</span>
                                         </div>
                                         <button
-                                            onClick={() => { setSelectedBooking(booking); setPendingStatus(null); setApprovalMessage(""); }}
+                                            onClick={() => { setSelectedBooking({ ...booking, discountAmount }); setPendingStatus(null); setApprovalMessage(""); }}
                                             className="h-14 w-14 bg-zinc-900 text-[#D4AF37] rounded-[1.25rem] flex items-center justify-center hover:scale-105 transition-all shadow-lg"
                                         >
                                             <ImageIcon size={24} />
@@ -307,6 +351,8 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                                 <DetailItem icon={<PartyPopper size={14} />} label="Occasion" value={selectedBooking.specialOccasion || 'None'} />
                                 <DetailItem icon={<Wallet size={14} />} label="Payment Channel" value={selectedBooking.paymentMethod} />
                                 <DetailItem icon={<CreditCard size={14} />} label="Total Price" value={`₱${selectedBooking.totalPrice?.toLocaleString()}`} />
+                                <DetailItem icon={<Tag size={14} />} label="Discount Code" value={selectedBooking.discountCode || 'None'} />
+                                <DetailItem icon={<Tag size={14} />} label="Discount Amount" value={selectedBooking.discountAmount ? `-₱${Number(selectedBooking.discountAmount).toLocaleString()}` : '-₱0'} />
                             </div>
 
                             {selectedBooking.status === "Pending" ? (

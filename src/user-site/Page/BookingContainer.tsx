@@ -10,18 +10,6 @@ import { parseISO, isSameDay, startOfDay } from "date-fns";
 export function BookingContainer({ onBack, onRequireAuth }: { onBack: () => void; onRequireAuth?: () => void }) {
     const booking = useBooking();
 
-    // Show confirmation if booking submitted
-    if (booking.showConfirmation && booking.lastBookingData) {
-        return (
-            <div className="min-h-screen bg-zinc-50 flex items-center justify-center py-10 px-6">
-                <BookingConfirmation
-                    bookingData={booking.lastBookingData}
-                    onBack={() => booking.setShowConfirmation(false)}
-                />
-            </div>
-        );
-    }
-
     // BYPASS VALIDATION LOGIC WITH MANDATORY COLOR SELECTION:
     const isFormReadyToBook = useMemo(() => {
         if (!booking.checkIn) return false;
@@ -87,6 +75,18 @@ export function BookingContainer({ onBack, onRequireAuth }: { onBack: () => void
         booking.filteredBookings,
         booking.selectedColor // Kasama na sa dependency tracker para mag-update ang form kapag pinindot ang kulay
     ]);
+
+    // Show confirmation if booking submitted
+    if (booking.showConfirmation && booking.lastBookingData) {
+        return (
+            <div className="min-h-screen bg-zinc-50 flex items-center justify-center py-10 px-6">
+                <BookingConfirmation
+                    bookingData={booking.lastBookingData}
+                    onBack={() => booking.setShowConfirmation(false)}
+                />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-[#FDFCFB] pb-24 text-zinc-900">

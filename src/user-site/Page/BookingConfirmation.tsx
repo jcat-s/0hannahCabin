@@ -4,8 +4,9 @@ import { db } from "../../shared/lib/firebase";
 import {
     User, Smartphone, MapPin, X, Upload,
     Check, Clock, ChevronLeft, CalendarDays, Users2,
-    PartyPopper, Baby, Dog, Moon
+    PartyPopper, Baby, Dog, Moon, Tag
 } from "lucide-react";
+import { calculateTotal } from "../../shared/lib/bookingPricing";
 
 interface ConfirmationProps {
     bookingData: any;
@@ -43,13 +44,10 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
 
     // --- ACTUAL FIREBASE SAVING ---
     const handleFinalConfirm = async () => {
-        if (!receipt) return;
-
         setIsSaving(true);
         try {
-            const base64Image = await convertToBase64(receipt);
+            const base64Image = receipt ? await convertToBase64(receipt) : "";
 
-            // Sinigurado na lahat ng info ay kasama rito
             await addDoc(collection(db!, "bookings"), {
                 // Customer Info
                 customerName: bookingData.customerName,
@@ -76,12 +74,12 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
                 // Color & Pricing
                 color: bookingData.color,
                 isHighRate: bookingData.isHighRate,
-                totalPrice: bookingData.totalPrice,
+                totalPrice: bookingData.totalPrice || 0,
                 discountCode: bookingData.discountCode || "",
 
                 // Payment & Tech
                 paymentMethod: activeTab,
-                receiptUrl: base64Image,
+                receiptUrl: base64Image || "",
                 status: "Pending",
                 createdAt: serverTimestamp(),
             });
@@ -178,7 +176,7 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
                                 <div className="flex flex-col items-center gap-2">
                                     <div className="w-14 h-14 bg-white rounded-3xl flex items-center justify-center text-zinc-400 border border-zinc-100 shadow-sm"><Upload size={24} /></div>
                                     <p className="text-[10px] font-black uppercase text-zinc-900 tracking-widest">Click to upload proof</p>
-                                    <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-tighter italic">Max 1MB (Screenshots preferred)</p>
+                                    <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-tighter italic">Optional — Max 1MB (Screenshots preferred)</p>
                                 </div>
                             )}
                         </div>
@@ -189,14 +187,38 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
                 <div className="mt-12 pt-10 border-t border-zinc-100 flex flex-col md:flex-row gap-8 items-center justify-between">
                     <div>
                         <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Total Amount</p>
+                        {bookingData.discountCode && (
+                            <div className="flex items-center gap-3">
+                                <p className="text-[10px] font-bold text-zinc-500 uppercase">Discount Code: {bookingData.discountCode}</p>
+                                <div className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-lg">{
+                                    (() => {
+                                        try {
+                                            const calc = calculateTotal(
+                                                (bookingData.cabin || 'ohannah').toLowerCase() === 'the dream' ? 'dream' : 'ohannah',
+                                                (bookingData.stayType || 'full') as any,
+                                                Number(bookingData.guests || 0),
+                                                Number(bookingData.pets || 0),
+                                                bookingData.checkIn,
+                                                bookingData.checkOut
+                                            );
+                                            const original = Number(calc.grandTotal || 0);
+                                            const given = Number(bookingData.totalPrice || 0);
+                                            const discount = Math.max(0, original - given);
+                                            return `-₱${discount.toLocaleString()}`;
+                                        } catch (err) {
+                                            return '-₱0';
+                                        }
+                                    })()
+                                }</div>
+                            </div>
+                        )}
                         <span className="text-4xl font-serif italic text-zinc-900 font-black tracking-tight">₱{bookingData.totalPrice?.toLocaleString()}</span>
                     </div>
-
                     <button
                         onClick={handleFinalConfirm}
-                        disabled={!receipt || isSaving}
+                        disabled={isSaving}
                         className={`w-full md:w-auto px-20 py-6 rounded-full font-black uppercase tracking-[0.2em] text-[11px] transition-all
-                            ${receipt && !isSaving ? "bg-zinc-950 text-white shadow-2xl hover:scale-105 active:scale-95" : "bg-zinc-100 text-zinc-300 cursor-not-allowed"}`}
+                            ${!isSaving ? "bg-zinc-950 text-white shadow-2xl hover:scale-105 active:scale-95" : "bg-zinc-100 text-zinc-300 cursor-not-allowed"}`}
                     >
                         {isSaving ? "Sending Booking..." : "Confirm Booking"}
                     </button>

@@ -156,7 +156,7 @@ export function Predictive({ bookings }: PredictiveProps) {
                             Historical Pattern Cycle
                         </h4>
                         <p className="text-3xl font-black text-white tracking-tight group-hover:text-[#D4AF37] transition-colors">
-                            {predictions.peakMonth.month} Peak
+                            {predictions.peakMonth.month}
                         </p>
                         <p className="text-[11px] text-zinc-400 mt-2 font-medium leading-relaxed">
                             Highest recorded booking volume achieved over the previous months.

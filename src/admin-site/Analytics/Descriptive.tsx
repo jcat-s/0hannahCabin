@@ -1,6 +1,15 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { Map } from "lucide-react";
+import { Tag, MessageSquare } from "lucide-react";
+
+interface DiscountItem {
+    bookingId: string;
+    guestName: string;
+    cabinName: string;
+    amount: number;
+    remarks: string;
+    date: string;
+}
 
 interface DescriptiveProps {
     analysis: {
@@ -9,141 +18,230 @@ interface DescriptiveProps {
         cabinRevenue: any[];   // Galing sa cabinRevenue ng Analytics
         stayTypeStats: any[];  // Binago para mag-match sa Analytics.tsx mo
         dayTypeStats: any[];   // Binago para mag-match sa Analytics.tsx mo
+        totalDiscounts?: number;
+        discountList?: DiscountItem[];
     };
 }
 
 export function Descriptive({ analysis }: DescriptiveProps) {
     const totalRequests = analysis.statusData.reduce((a: any, b: any) => a + b.value, 0);
 
+    // Fallback values para maiwasan ang crash kung walang data na ipinasa
+    const totalDiscountsAmount = analysis.totalDiscounts || 0;
+    const discountList = analysis.discountList || [];
+
     return (
+        <div className="space-y-6">
 
+            {/* 1. TOP ROW: CHARTS SECTION */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
+                {/* BOOKING STATUS */}
+                <div className="bg-white p-8 rounded-[2rem] border border-zinc-100 shadow-sm flex flex-col min-h-[480px]">
+                    <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-6 border-b pb-3">
+                        Booking Status Distribution
+                    </h3>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-            {/* 1. BOOKING STATUS */}
-            <div className="bg-white p-8 rounded-[2rem] border border-zinc-100 shadow-sm flex flex-col min-h-[480px]">
-                <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-6 border-b pb-3">Booking Status Distribution</h3>
-
-                <div className="flex-1 relative">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie
-                                data={analysis.statusData}
-                                innerRadius={75}
-                                outerRadius={100}
-                                paddingAngle={5}
-                                dataKey="value"
-                            >
-                                {analysis.statusData.map((entry, index) => (
-                                    <Cell key={index} fill={entry.color} stroke="none" />
-                                ))}
-                            </Pie>
-                            <Tooltip
-                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px rgba(0,0,0,0.1)', fontSize: '10px', fontWeight: '900' }}
-                            />
-                        </PieChart>
-                    </ResponsiveContainer>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="text-4xl font-black text-zinc-900 leading-none">{totalRequests}</span>
-                        <span className="text-[9px] font-black uppercase text-zinc-400 tracking-widest mt-1">Total Requests</span>
-                    </div>
-                </div>
-
-                <div className="flex justify-center gap-6 mt-8">
-                    {analysis.statusData.map((status, i) => (
-                        <div key={i} className="flex flex-col items-center">
-                            <div className="flex items-center gap-1.5 mb-1">
-                                <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: status.color }} />
-                                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">{status.name}</span>
-                            </div>
-                            <span className="text-sm font-black text-zinc-900">{status.value}</span>
+                    <div className="flex-1 relative">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={analysis.statusData}
+                                    innerRadius={75}
+                                    outerRadius={100}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                >
+                                    {analysis.statusData.map((entry, index) => (
+                                        <Cell key={index} fill={entry.color} stroke="none" />
+                                    ))}
+                                </Pie>
+                                <Tooltip
+                                    contentStyle={{
+                                        borderRadius: '12px',
+                                        border: 'none',
+                                        boxShadow: '0 10px 15px rgba(0,0,0,0.05)',
+                                        fontSize: '11px',
+                                        fontWeight: '700',
+                                        padding: '10px 14px'
+                                    }}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span className="text-4xl font-black text-zinc-900 leading-none">{totalRequests}</span>
+                            <span className="text-[9px] font-black uppercase text-zinc-400 tracking-widest mt-1">Total Requests</span>
                         </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* 2. REVENUE PER CABIN (PIE) */}
-            <div className="bg-white p-8 rounded-[2rem] border border-zinc-100 shadow-sm flex flex-col min-h-[480px]">
-                <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-6 border-b pb-3">Revenue per Cabin</h3>
-
-                <div className="flex-1 relative">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie
-                                data={analysis.cabinRevenue}
-                                innerRadius={75}
-                                outerRadius={100}
-                                paddingAngle={5}
-                                dataKey="value"
-                            >
-                                {analysis.cabinRevenue.map((entry, index) => (
-                                    <Cell
-                                        key={index}
-                                        fill={entry.name.toLowerCase().includes('ohannah') ? '#18181b' : '#D4AF37'}
-                                        stroke="none"
-                                    />
-                                ))}
-                            </Pie>
-                            <Tooltip
-                                formatter={(value: number) => `₱${value.toLocaleString()}`}
-                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px rgba(0,0,0,0.1)', fontSize: '10px', fontWeight: '900' }}
-                            />
-                        </PieChart>
-                    </ResponsiveContainer>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-4">
-                        <span className="text-xl font-black text-zinc-900 leading-none">₱{analysis.totalRevenue.toLocaleString()}</span>
-                        <span className="text-[9px] font-black uppercase text-zinc-400 tracking-widest mt-1">Total Income</span>
                     </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-3 mt-6">
-                    {analysis.cabinRevenue.map((cabin, i) => (
-                        <div key={i} className="bg-zinc-50 p-4 rounded-2xl border border-zinc-50 hover:shadow-md transition-all">
-                            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">{cabin.name}</p>
-                            <p className="text-xs font-black text-zinc-900">{cabin.count} Books</p>
-                            <p className="text-[11px] font-black text-[#D4AF37]">₱{cabin.value.toLocaleString()}</p>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* 3. STAY TYPE & DAY TYPE BREAKDOWN */}
-            <div className="bg-white p-8 rounded-[2rem] border border-zinc-100 shadow-sm flex flex-col min-h-[480px] space-y-12">
-                {/* Stay Type Breakdown */}
-                <div>
-                    <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-6 border-b pb-3">Stay Type Breakdown</h3>
-                    <div className="space-y-5">
-                        {analysis.stayTypeStats.map((s, i) => (
-                            <div key={i} className="flex justify-between items-center group">
-                                <span className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">{s.name}</span>
-                                <div className="text-right">
-                                    <p className="text-[11px] font-black text-zinc-900 uppercase">{s.count} stays</p>
-                                    <p className="text-[11px] font-black text-[#D4AF37]">₱{s.revenue.toLocaleString()}</p>
+                    <div className="flex justify-center gap-6 mt-8">
+                        {analysis.statusData.map((status, i) => (
+                            <div key={i} className="flex flex-col items-center">
+                                <div className="flex items-center gap-1.5 mb-1">
+                                    <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: status.color }} />
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">{status.name}</span>
                                 </div>
+                                <span className="text-sm font-black text-zinc-900">{status.value}</span>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                {/* Day Type Breakdown */}
-                <div>
-                    <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-6 border-b pb-3">Day Type Stats</h3>
-                    <div className="space-y-5">
-                        {analysis.dayTypeStats.map((d, i) => (
-                            <div key={i} className="flex justify-between items-center border-b border-zinc-50 pb-2 last:border-0">
-                                <span className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">{d.name}</span>
-                                <div className="text-right">
-                                    <p className="text-[10px] font-black text-zinc-900 uppercase">{d.count} bookings</p>
-                                    <p className="text-[11px] font-black text-emerald-600">₱{d.revenue.toLocaleString()}</p>
-                                </div>
+                {/* REVENUE PER CABIN */}
+                <div className="bg-white p-8 rounded-[2rem] border border-zinc-100 shadow-sm flex flex-col min-h-[480px]">
+                    <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-6 border-b pb-3">
+                        Revenue per Cabin
+                    </h3>
+
+                    <div className="flex-1 relative">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={analysis.cabinRevenue}
+                                    innerRadius={75}
+                                    outerRadius={100}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                >
+                                    {analysis.cabinRevenue.map((entry, index) => (
+                                        <Cell
+                                            key={index}
+                                            fill={entry.name.toLowerCase().includes('ohannah') ? '#18181b' : '#D4AF37'}
+                                            stroke="none"
+                                        />
+                                    ))}
+                                </Pie>
+                                <Tooltip
+                                    formatter={(value: number) => `₱${value.toLocaleString()}`}
+                                    contentStyle={{
+                                        borderRadius: '12px',
+                                        border: 'none',
+                                        boxShadow: '0 10px 15px rgba(0,0,0,0.05)',
+                                        fontSize: '11px',
+                                        fontWeight: '700',
+                                        padding: '10px 14px'
+                                    }}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-4">
+                            <span className="text-xl font-black text-zinc-900 leading-none">₱{analysis.totalRevenue.toLocaleString()}</span>
+                            <span className="text-[9px] font-black uppercase text-zinc-400 tracking-widest mt-1">Total Income</span>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 mt-6">
+                        {analysis.cabinRevenue.map((cabin, i) => (
+                            <div key={i} className="bg-zinc-50 p-4 rounded-2xl border border-zinc-50 hover:shadow-md transition-all">
+                                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">{cabin.name}</p>
+                                <p className="text-xs font-black text-zinc-900">{cabin.count} Books</p>
+                                <p className="text-[11px] font-black text-[#D4AF37]">₱{cabin.value.toLocaleString()}</p>
                             </div>
                         ))}
                     </div>
                 </div>
+
+                {/* STAY TYPE & DAY TYPE BREAKDOWN */}
+                <div className="bg-white p-8 rounded-[2rem] border border-zinc-100 shadow-sm flex flex-col min-h-[480px] space-y-12">
+                    {/* Stay Type */}
+                    <div>
+                        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-6 border-b pb-3">Stay Type Breakdown</h3>
+                        <div className="space-y-5">
+                            {analysis.stayTypeStats.map((s, i) => (
+                                <div key={i} className="flex justify-between items-center group">
+                                    <span className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">{s.name}</span>
+                                    <div className="text-right">
+                                        <p className="text-[11px] font-black text-zinc-900 uppercase">{s.count} stays</p>
+                                        <p className="text-[11px] font-black text-[#D4AF37]">₱{s.revenue.toLocaleString()}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Day Type */}
+                    <div>
+                        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-6 border-b pb-3">Day Type Stats</h3>
+                        <div className="space-y-5">
+                            {analysis.dayTypeStats.map((d, i) => (
+                                <div key={i} className="flex justify-between items-center border-b border-zinc-50 pb-2 last:border-0">
+                                    <span className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">{d.name}</span>
+                                    <div className="text-right">
+                                        <p className="text-[10px] font-black text-zinc-900 uppercase">{d.count} bookings</p>
+                                        <p className="text-[11px] font-black text-emerald-600">₱{d.revenue.toLocaleString()}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             </div>
 
+            {/* 2. BOTTOM ROW: DISCOUNT & REMARKS ANALYTICS SECTION */}
+            <div className="bg-white p-8 rounded-[2rem] border border-zinc-100 shadow-sm">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-4 mb-6">
+                    <div>
+                        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-1">
+                            Discounts & Deductions Tracker
+                        </h3>
+                        <p className="text-xs text-zinc-500">Audit trail of deductions applied to property bookings.</p>
+                    </div>
+                    <div className="bg-zinc-900 text-white px-5 py-2.5 rounded-xl flex items-center gap-3 shadow-sm">
+                        <Tag className="w-4 h-4 text-zinc-400" />
+                        <div className="flex flex-col">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 leading-none">Total Given Discounts</span>
+                            <span className="text-sm font-black mt-0.5">₱{totalDiscountsAmount.toLocaleString()}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {discountList.length === 0 ? (
+                    <div className="py-12 text-center flex flex-col items-center justify-center border border-dashed border-zinc-100 rounded-2xl bg-zinc-50/50">
+                        <Tag className="w-8 h-8 text-zinc-300 mb-2 stroke-[1.5]" />
+                        <p className="text-xs font-black text-zinc-400 uppercase tracking-wider">No discounts recorded for this period</p>
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-zinc-100">
+                                    <th className="text-[9px] font-black uppercase tracking-widest text-zinc-400 pb-3 pl-2">Date / ID</th>
+                                    <th className="text-[9px] font-black uppercase tracking-widest text-zinc-400 pb-3">Guest / Cabin</th>
+                                    <th className="text-[9px] font-black uppercase tracking-widest text-zinc-400 pb-3">Amount Saved</th>
+                                    <th className="text-[9px] font-black uppercase tracking-widest text-zinc-400 pb-3 pr-2">Deduction Reason / Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-zinc-50">
+                                {discountList.map((item, idx) => (
+                                    <tr key={idx} className="hover:bg-zinc-50/80 transition-colors group">
+                                        <td className="py-4 pl-2">
+                                            <p className="text-xs font-bold text-zinc-900">{item.date}</p>
+                                            <p className="text-[10px] font-mono text-zinc-400">#{item.bookingId}</p>
+                                        </td>
+                                        <td className="py-4">
+                                            <p className="text-xs font-black text-zinc-800">{item.guestName}</p>
+                                            <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">{item.cabinName}</p>
+                                        </td>
+                                        <td className="py-4">
+                                            <span className="text-xs font-black text-rose-600 bg-rose-50 px-2.5 py-1 rounded-md inline-block">
+                                                -₱{item.amount.toLocaleString()}
+                                            </span>
+                                        </td>
+                                        <td className="py-4 pr-2 max-w-xs sm:max-w-md">
+                                            <div className="flex items-start gap-2 text-zinc-600">
+                                                <MessageSquare className="w-3.5 h-3.5 text-zinc-300 mt-0.5 flex-shrink-0" />
+                                                <p className="text-xs italic leading-relaxed text-zinc-600">
+                                                    {item.remarks || "No remarks provided."}
+                                                </p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
         </div>
-
     );
 }

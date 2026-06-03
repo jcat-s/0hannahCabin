@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { ChevronLeft } from "lucide-react";
 import { useBooking } from "../hooks/useBooking";
 import { PriceSummary } from "./PriceSummary";
 import { CalendarBooked } from "./CalendarBooked";
 import { BookingCategory, StayCategorySection } from "./BookingCategory";
 import { BookingConfirmation } from "./BookingConfirmation";
+import { parseISO, isSameDay, startOfDay } from "date-fns";
 
 export function BookingContainer({ onBack, onRequireAuth }: { onBack: () => void; onRequireAuth?: () => void }) {
     const booking = useBooking();
@@ -20,6 +21,72 @@ export function BookingContainer({ onBack, onRequireAuth }: { onBack: () => void
             </div>
         );
     }
+
+    // BYPASS VALIDATION LOGIC WITH MANDATORY COLOR SELECTION:
+    const isFormReadyToBook = useMemo(() => {
+        if (!booking.checkIn) return false;
+
+        // CRITICAL RULE: Siguraduhin na may napiling kulay ang admin o user bago magpatuloy
+        if (!booking.selectedColor || booking.selectedColor.trim() === "") {
+            return false;
+        }
+
+        // 1. Alamin kung may kaparehong booking range conflict sa gitna
+        const confirmedBookings = (booking.filteredBookings || []).filter(
+            (b: any) => String(b.status).toLowerCase() === "confirmed"
+        );
+
+        let hasOverlapConflict = false;
+        const targetCheckIn = startOfDay(parseISO(booking.checkIn));
+        const targetCheckOut = booking.checkOut ? startOfDay(parseISO(booking.checkOut)) : targetCheckIn;
+
+        for (const b of confirmedBookings) {
+            const bStart = startOfDay(parseISO(b.checkInDate || b.checkIn));
+            const bEnd = startOfDay(parseISO(b.checkOutDate || b.checkOut));
+            const bType = String(b.stayType || '').toLowerCase();
+            const slotStr = String(b.fullStayOption || b.timeSlot || b.stayCategory || '').toUpperCase();
+
+            // Hanapin kung ang booking ay 9AM-7AM checkout transition block ngayon
+            const is7AMCheckout = slotStr.includes("9AM-7AM") || slotStr.includes("9AM TO 7AM") || bType === 'evening';
+
+            if (booking.stayType === 'full') {
+                // Kung magkatugma ang Check-in mo sa Checkout ng iba na aalis ng 7AM, WALANG CONFLICT.
+                if (isSameDay(targetCheckIn, bEnd) && is7AMCheckout) {
+                    continue;
+                }
+
+                // Normal overlap protection para sa ibang gitnang araw
+                if (targetCheckIn < bEnd && targetCheckOut > bStart) {
+                    hasOverlapConflict = true;
+                    break;
+                }
+            } else {
+                // Para sa Day Lounge o Evening Chill bookings
+                if (isSameDay(targetCheckIn, bStart) || isSameDay(targetCheckIn, bEnd)) {
+                    if (isSameDay(targetCheckIn, bEnd) && is7AMCheckout) {
+                        // Ligtas ka dito dahil umaga pa lang (7AM) umalis na ang lumang booking
+                        continue;
+                    }
+                    hasOverlapConflict = true;
+                    break;
+                }
+            }
+        }
+
+        if (hasOverlapConflict) return false;
+
+        // 2. Patunayan kung tama ang bilang ng gabi/araw (Duration count logic bypass)
+        const isDurationValid = booking.stayType === "full" ? booking.durationCount > 0 : booking.durationCount >= 0;
+
+        return isDurationValid;
+    }, [
+        booking.checkIn,
+        booking.checkOut,
+        booking.stayType,
+        booking.durationCount,
+        booking.filteredBookings,
+        booking.selectedColor // Kasama na sa dependency tracker para mag-update ang form kapag pinindot ang kulay
+    ]);
 
     return (
         <div className="min-h-screen bg-[#FDFCFB] pb-24 text-zinc-900">
@@ -87,11 +154,11 @@ export function BookingContainer({ onBack, onRequireAuth }: { onBack: () => void
                             checkOut={booking.checkOut}
                             setCheckOut={booking.setCheckOut}
                             stayType={booking.stayType}
+                            fullStayOption={booking.fullStayOption}
                         />
                     </div>
 
                     <div className="space-y-6">
-
                         <BookingCategory
                             cabin={booking.cabin}
                             stayType={booking.stayType}
@@ -135,7 +202,8 @@ export function BookingContainer({ onBack, onRequireAuth }: { onBack: () => void
                         specialOccasion={booking.specialOccasion}
                         durationCount={booking.durationCount}
 
-                        canBookCore={booking.isDateRangeValid && booking.selectedColor !== "" && booking.durationCount > 0}
+                        // Gumagana na ang matalinong transition slot para sa date 7, pero protektado pa rin ng color checker!
+                        canBookCore={isFormReadyToBook}
                         submitting={booking.submitting}
                         onSubmit={booking.handleBooking}
                     />

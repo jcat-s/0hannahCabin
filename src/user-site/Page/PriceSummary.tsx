@@ -13,10 +13,12 @@ interface PolicyMetadata {
     petFee: number;
 }
 
+
+
 interface PriceSummaryProps {
     cabin: CabinId;
     stayType: StayType;
-    fullStayOption?: "9AM-7AM" | "8PM-5PM";
+    fullStayOption?: "9AM-7AM" | "8PM-5PM" | "3PM-12NN";
     guests: number;
     kids: number;
     pets: number;

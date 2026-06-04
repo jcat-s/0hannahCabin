@@ -77,12 +77,13 @@ export function useBooking() {
     // FIX: Dito titingnan kung VALID ang date (walang sumasapaw na booking kahit anong kulay)
     const isDateRangeValid = useMemo(() => {
         const ourStart = parseISO(checkIn);
-        const ourEnd = stayType === 'full' ? addDays(parseISO(checkOut), 1) : addDays(ourStart, 1);
+        // checkOut is stored as the checkout date (not an extra offset), so use it directly as the exclusive end
+        const ourEnd = stayType === 'full' ? parseISO(checkOut) : addDays(ourStart, 1);
 
         return !filteredBookings.some(b => {
             const bType = String(b.stayType).toLowerCase();
             const bStart = parseISO(b.checkInDate || b.checkIn);
-            const bEnd = bType === 'full' ? addDays(parseISO(b.checkOutDate || b.checkOut), 1) : addDays(bStart, 1);
+            const bEnd = bType === 'full' ? parseISO(b.checkOutDate || b.checkOut) : addDays(bStart, 1);
 
             // If either is a full stay, use range overlap (multi-day blocking)
             if (stayType === 'full' || bType === 'full') {

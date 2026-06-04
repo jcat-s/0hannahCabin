@@ -185,25 +185,27 @@ export function Analytics({ bookings }: { bookings: any[] }) {
             stayTypeStats,
             statusData,
             growthRate,
-            // Discount analytics: compute by recalculating expected grand total and comparing
-            totalDiscounts: confirmedList.reduce((sum, b) => {
-                try {
-                    const calc = calculateTotal(
-                        (b.cabin || 'ohannah').toLowerCase() === 'the dream' ? 'dream' : 'ohannah',
-                        (b.stayType || 'full') as any,
-                        Number(b.guests || 0),
-                        Number(b.pets || 0),
-                        b.checkIn,
-                        b.checkOut
-                    );
-                    const original = Number(calc.grandTotal || 0);
-                    const given = Number(b.totalPrice || 0);
-                    const diff = Math.max(0, original - given);
-                    return sum + diff;
-                } catch (err) {
-                    return sum;
-                }
-            }, 0),
+            // Discount analytics: compute only bookings with discount codes
+            totalDiscounts: confirmedList
+                .filter(b => b.discountCode)
+                .reduce((sum, b) => {
+                    try {
+                        const calc = calculateTotal(
+                            (b.cabin || 'ohannah').toLowerCase() === 'the dream' ? 'dream' : 'ohannah',
+                            (b.stayType || 'full') as any,
+                            Number(b.guests || 0),
+                            Number(b.pets || 0),
+                            b.checkIn,
+                            b.checkOut
+                        );
+                        const original = Number(calc.grandTotal || 0);
+                        const given = Number(b.totalPrice || 0);
+                        const diff = Math.max(0, original - given);
+                        return sum + diff;
+                    } catch (err) {
+                        return sum;
+                    }
+                }, 0),
             discountList: confirmedList.filter(b => b.discountCode).map(b => {
                 try {
                     const calc = calculateTotal(

@@ -1,218 +1,476 @@
-import React, { useMemo, useState } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { ArrowUpRight, ArrowDownRight, Calculator, X, Star, Banknote, ChevronRight } from "lucide-react";
-import { format, eachMonthOfInterval, subMonths, isSameMonth, parseISO, addMonths } from 'date-fns';
+import React, { useMemo, useState } from "react";
+import {
+    format, startOfMonth, endOfMonth, eachDayOfInterval,
+    parseISO, subMonths, addMonths, isSameDay, getDaysInMonth,
+    setMonth, setYear, getYear, addDays
+} from "date-fns";
+import { ChevronLeft, ChevronRight, Printer, X, Calendar as CalendarIcon, PartyPopper, Users, Baby, Dog, Clock, CalendarDays, Percent } from "lucide-react";
 
-interface PredictiveProps {
-    bookings: any[];
-}
+// --- SUB-COMPONENT: PRINT BOOKING ITEM ---
+const PRINT_COLORS: Record<string, string> = {
+    pink: "bg-pink-200",
+    red: "bg-red-200",
+    orange: "bg-orange-200",
+    yellow: "bg-yellow-200",
+    green: "bg-green-200",
+    blue: "bg-blue-200",
+    indigo: "bg-indigo-200",
+    violet: "bg-violet-200",
+};
 
-export function Predictive({ bookings }: PredictiveProps) {
-    const [activeModal, setActiveModal] = useState<'growth' | 'forecast' | 'peak' | null>(null);
+export const PrintBookingItem = ({
+    booking,
+    hideDateRange = false,
+    renderMode = "full"
+}: {
+    booking: any;
+    hideDateRange?: boolean;
+    renderMode?: "full" | "header" | "details";
+}) => {
+    const isIsolatedDayOrEve = booking.stayType === "day" || booking.stayType === "evening";
 
-    const predictions = useMemo(() => {
-        const now = new Date();
-        const nextMonthDate = addMonths(now, 1);
-        const targetMonthName = format(nextMonthDate, 'MMMM');
+    const stayLabels: Record<string, { label: string; time: string }> = {
+        day: { label: "Day Lounge", time: "9AM-5PM" },
+        evening: { label: "Evening Chill", time: "8PM-7AM" },
+        full: { label: "Full Stay", time: "" },
+        "9AM-7AM": { label: "Full Stay", time: "9AM-7AM" },
+        "8PM-5PM": { label: "Full Stay", time: "8PM-5PM" },
+        "3PM-12NN": { label: "Full Stay", time: "3PM-12NN" }
+    };
 
-        // 1. HISTORICAL DATA
-        const last6Months = eachMonthOfInterval({ start: subMonths(now, 5), end: now });
-        const historicalData = last6Months.map(month => {
-            const monthBookings = bookings.filter(b => isSameMonth(parseISO(b.checkInDate || b.checkIn), month));
-            return {
-                month: format(month, 'MMM'),
-                revenue: monthBookings.reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0),
-                bookings: monthBookings.length
-            };
-        });
+    const getStayDisplay = () => {
+        const base = stayLabels[booking.stayType];
+        if (booking.stayType === 'full' && booking.fullStayOption) {
+            const option = stayLabels[booking.fullStayOption];
+            return { label: "Full Stay", time: option?.time || booking.fullStayOption };
+        }
+        return { label: base?.label || booking.stayType, time: base?.time || "" };
+    };
 
-        // 2. MOMENTUM & REVENUE LOGIC
-        const revenues = historicalData.map(d => d.revenue);
-        const lastMonthRevenue = revenues[revenues.length - 1] || 0;
-        const prevMonthRevenue = revenues[revenues.length - 2] || 0;
+    const display = getStayDisplay();
+    const stayRange = `${format(parseISO(booking.checkIn), "MMM d")} - ${format(parseISO(booking.checkOut), "d")}`;
 
-        // MOMENTUM FORMULA: ((Current - Previous) / Previous)
-        let growthResult = prevMonthRevenue > 0 ? (lastMonthRevenue - prevMonthRevenue) / prevMonthRevenue : 0;
-        const multiplier = 1 + growthResult;
-        let nextMonthForecast = Math.max(0, lastMonthRevenue * multiplier);
-
-        return {
-            targetMonthName,
-            historicalData,
-            lastMonthRevenue,
-            prevMonthRevenue,
-            nextMonthForecast,
-            growthRaw: growthResult,
-            multiplier,
-            peakMonth: [...historicalData].sort((a, b) => b.bookings - a.bookings)[0] || { month: 'N/A', bookings: 0 }
-        };
-    }, [bookings]);
-
-    const MathModal = ({ title, formula, strategy, children, onClose }: { title: string, formula?: string, strategy: string, children: React.ReactNode, onClose: () => void }) => (
-        <div className="absolute inset-0 z-[100] bg-zinc-900/98 backdrop-blur-xl text-white p-8 flex flex-col justify-center animate-in fade-in zoom-in-95 duration-300">
-            <button onClick={onClose} className="absolute top-8 right-8 text-zinc-500 hover:text-white transition-colors"><X size={24} /></button>
-            <div className="max-w-md w-full mx-auto text-left">
-                <div className="flex items-center gap-3 mb-4 border-b border-zinc-800 pb-4">
-                    <Calculator className="text-[#D4AF37]" size={20} />
-                    <h4 className="text-xs font-black uppercase tracking-[0.2em]">{title}</h4>
-                </div>
-
-                {formula && (
-                    <div className="mb-4 p-3 bg-zinc-800 rounded-xl border border-zinc-700 font-mono text-[10px] text-zinc-400">
-                        <span className="text-[#D4AF37] block mb-1 uppercase font-black">Formula:</span>
-                        {formula}
-                    </div>
-                )}
-
-                <div className="mb-6 p-4 bg-[#D4AF37]/10 border border-[#D4AF37]/20 rounded-2xl">
-                    <p className="text-sm font-medium italic text-zinc-200">"{strategy}"</p>
-                </div>
-                <div className="space-y-4 font-mono text-[12px] leading-relaxed">
-                    {children}
-                </div>
-            </div>
-        </div>
-    );
+    const nameTextSize = isIsolatedDayOrEve ? "text-[8.5px]" : "text-[10px]";
+    const metaTextSize = isIsolatedDayOrEve ? "text-[7.5px]" : "text-[8px]";
+    const iconSize = isIsolatedDayOrEve ? 8 : 9;
+    const footerTextSize = isIsolatedDayOrEve ? "text-[8px]" : "text-[8.5px]";
+    const footerIconSize = isIsolatedDayOrEve ? 9 : 10;
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative">
-            {/* CHART SECTION */}
-            <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] border border-zinc-100 shadow-sm flex flex-col min-h-[500px] relative z-10">
-                <div className="flex justify-between items-start mb-8 text-left">
-                    <div>
-                        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-1">Monthly Revenue Trend</h3>
-                        <p className="text-sm text-zinc-500 font-medium">Last 6 months performance</p>
+        <div className={`h-full w-full p-1 flex flex-col justify-between overflow-hidden ${PRINT_COLORS[booking.color] || 'bg-zinc-200'} border-l-4 border-black/20`}>
+            <div className="flex flex-col gap-0.5 relative z-10 min-w-0 w-full">
+                {(renderMode === "full" || renderMode === "header") && (
+                    <>
+                        <span className={`font-black text-black uppercase leading-tight truncate whitespace-nowrap block w-full ${nameTextSize}`}>
+                            {booking.customerName}
+                        </span>
+
+                        {!isIsolatedDayOrEve && (
+                            <div className="flex items-center gap-1 text-black min-w-0 w-full">
+                                <Clock size={iconSize} strokeWidth={3} className="flex-shrink-0" />
+                                <span className={`font-black uppercase italic truncate block ${metaTextSize}`}>
+                                    {display.label} {display.time && `(${display.time})`}
+                                </span>
+                            </div>
+                        )}
+
+                        {!hideDateRange && (
+                            <div className="flex items-center gap-1 text-black min-w-0 w-full">
+                                <CalendarDays size={iconSize} strokeWidth={3} className="flex-shrink-0" />
+                                <span className={`font-black uppercase truncate block ${metaTextSize}`}>
+                                    {stayRange}
+                                </span>
+                            </div>
+                        )}
+                    </>
+                )}
+
+                {(renderMode === "full" || renderMode === "details") && (
+                    <>
+                        {booking.specialOccasion && (
+                            <div className="flex items-center gap-1 text-blue-900 min-w-0 w-full">
+                                <PartyPopper size={iconSize} strokeWidth={3} className="flex-shrink-0" />
+                                <span className={`font-black uppercase italic truncate block ${metaTextSize}`}>
+                                    {booking.specialOccasion}
+                                </span>
+                            </div>
+                        )}
+                        {booking.discount && (
+                            <div className="flex items-center gap-1 text-emerald-900 min-w-0 w-full">
+                                <Percent size={iconSize} strokeWidth={3} className="flex-shrink-0" />
+                                <span className={`font-black uppercase truncate block ${metaTextSize}`}>
+                                    {booking.discount}
+                                </span>
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
+
+            {(renderMode === "full" || renderMode === "details") && (
+                <div className={`border-t border-black/20 pt-0.5 flex flex-wrap gap-x-1.5 mt-auto relative z-10 w-full ${footerTextSize}`}>
+                    <div className="flex items-center gap-0.5 text-black flex-shrink-0">
+                        <Users size={footerIconSize} strokeWidth={3} />
+                        <span className="font-black">{booking.guests || booking.pax}</span>
                     </div>
-                    <button onClick={() => setActiveModal('growth')} className={`px-4 py-2 rounded-xl flex items-center gap-2 ${predictions.growthRaw >= 0 ? 'bg-zinc-900 text-white' : 'bg-zinc-100'}`}>
-                        {predictions.growthRaw >= 0 ? <ArrowUpRight size={14} className="text-[#D4AF37]" /> : <ArrowDownRight size={14} className="text-red-500" />}
-                        <span className="text-[10px] font-black uppercase tracking-widest">{Math.abs(predictions.growthRaw * 100).toFixed(1)}% Momentum</span>
+                    {booking.kids > 0 && (
+                        <div className="flex items-center gap-0.5 text-black flex-shrink-0">
+                            <Baby size={footerIconSize} strokeWidth={3} />
+                            <span className="font-black">{booking.kids}K</span>
+                        </div>
+                    )}
+                    {booking.pets > 0 && (
+                        <div className="flex items-center gap-0.5 text-black flex-shrink-0">
+                            <Dog size={footerIconSize} strokeWidth={3} />
+                            <span className="font-black">{booking.pets}P</span>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// --- MAIN COMPONENT: CALENDAR VIEW ---
+export function CalendarView({ bookings }: { bookings: any[] }) {
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [selectedCabin, setSelectedCabin] = useState<"ohannah" | "dream">("ohannah");
+    const [showPicker, setShowPicker] = useState(false);
+
+    const filteredBookings = useMemo(() => {
+        return bookings.filter(b =>
+            b.status === "Confirmed" &&
+            b.cabin?.toLowerCase().includes(selectedCabin)
+        );
+    }, [bookings, selectedCabin]);
+
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const years = useMemo(() => {
+        const currentYear = getYear(new Date());
+        return Array.from({ length: 10 }, (_, i) => currentYear - 2 + i);
+    }, []);
+
+    const handleMonthChange = (monthIdx: number) => setCurrentDate(setMonth(currentDate, monthIdx));
+    const handleYearChange = (year: number) => setCurrentDate(setYear(currentDate, year));
+
+    const getSlotMarkers = (b: any) => {
+        const type = String(b.stayType || '').toLowerCase();
+        const slotStr = String(b.fullStayOption || b.timeSlot || b.stayCategory || '').toUpperCase();
+
+        if (type === 'day' || slotStr.includes('9AM-5PM') || slotStr.includes('9AM TO 5PM')) {
+            return { inTime: "9AM", outTime: "5PM" };
+        }
+        if (type === 'evening' || slotStr.includes('8PM-7AM') || slotStr.includes('8PM TO 7AM')) {
+            return { inTime: "8PM", outTime: "7AM" };
+        }
+        if (slotStr.includes('9AM-7AM') || slotStr.includes('9AM TO 7AM')) {
+            return { inTime: "9AM", outTime: "7AM" };
+        }
+        if (slotStr.includes('8PM-5PM') || slotStr.includes('8PM TO 5PM')) {
+            return { inTime: "8PM", outTime: "5PM" };
+        }
+        return { inTime: "3PM", outTime: "12NN" };
+    };
+
+    function renderPrintGrid(month: Date, bookings: any[]) {
+        const start = startOfMonth(month);
+        const startDay = start.getDay();
+        const daysInMonth = getDaysInMonth(month);
+
+        // Strict computation to lock layouts matching image_329d3a.png bounds
+        const totalSlots = (startDay + daysInMonth) > 35 ? 42 : 35;
+        const rowPercent = totalSlots === 42 ? "h-[16.666%]" : "h-[20%]";
+
+        const gridData = Array(totalSlots).fill(null);
+        const actualDays = eachDayOfInterval({ start, end: endOfMonth(month) });
+        actualDays.forEach((day, i) => { gridData[startDay + i] = day; });
+
+        const rows = [];
+        for (let i = 0; i < gridData.length; i += 7) rows.push(gridData.slice(i, i + 7));
+
+        return rows.map((week, wIdx) => (
+            <div
+                key={wIdx}
+                className={`calendar-row border-b-2 border-black last:border-b-0 flex w-full min-h-0 ${rowPercent}`}
+            >
+                {week.map((day, dIdx) => {
+                    if (!day) {
+                        return <div key={dIdx} className="day-box overflow-hidden bg-zinc-50 h-full w-[14.285%] max-w-[14.285%] min-w-[14.285%] flex-shrink-0" />;
+                    }
+
+                    const bookingsForDay = bookings.filter(b => {
+                        const bStart = parseISO(b.checkIn);
+                        const bEnd = parseISO(b.checkOut);
+                        const type = String(b.stayType).toLowerCase();
+
+                        if (type === 'day' || type === 'evening') {
+                            return isSameDay(bStart, day);
+                        }
+                        return day >= bStart && day <= bEnd;
+                    });
+
+                    const dayBooking = bookingsForDay.find(b => String(b.stayType).toLowerCase() === 'day');
+                    const eveningBooking = bookingsForDay.find(b => String(b.stayType).toLowerCase() === 'evening');
+
+                    let fullBookingTop: any = null;
+                    let fullBookingBottom: any = null;
+
+                    let isTopBlankReserved = false;
+                    let isBottomBlankReserved = false;
+
+                    bookingsForDay.forEach(b => {
+                        const type = String(b.stayType).toLowerCase();
+                        if (type === 'day' || type === 'evening') return;
+
+                        const { inTime, outTime } = getSlotMarkers(b);
+                        const bStart = parseISO(b.checkIn);
+                        const bEnd = parseISO(b.checkOut);
+
+                        if (inTime === "9AM") {
+                            if (day >= bStart && day < bEnd) {
+                                if (isSameDay(day, bStart)) {
+                                    fullBookingTop = { booking: b, mode: "header" };
+                                } else if (isSameDay(day, addDays(bStart, 1))) {
+                                    fullBookingTop = { booking: b, mode: "details" };
+                                } else {
+                                    isTopBlankReserved = true;
+                                }
+                            }
+                        } else if (inTime === "3PM" || inTime === "8PM") {
+                            if (day > bStart && day <= bEnd) {
+                                if (isSameDay(day, addDays(bStart, 1))) {
+                                    fullBookingTop = { booking: b, mode: "details" };
+                                } else if (!isSameDay(day, bStart)) {
+                                    isTopBlankReserved = true;
+                                }
+                            }
+                        }
+
+                        if (outTime === "7AM" || outTime === "5PM" || outTime === "12NN") {
+                            if (day >= bStart && day < bEnd) {
+                                if (isSameDay(day, bStart)) {
+                                    fullBookingBottom = { booking: b, mode: "header" };
+                                } else if (isSameDay(day, addDays(bStart, 1)) && inTime === "9AM") {
+                                    isBottomBlankReserved = true;
+                                } else {
+                                    isBottomBlankReserved = true;
+                                }
+                            }
+                        }
+                    });
+
+                    const isUnifiedFullStay = fullBookingTop && fullBookingBottom && (fullBookingTop.booking.id === fullBookingBottom.booking.id) && (fullBookingTop.mode === "header" && fullBookingBottom.mode === "header");
+
+                    return (
+                        <div key={dIdx} className="day-box overflow-hidden bg-white relative h-full w-[14.285%] max-w-[14.285%] min-w-[14.285%] flex-shrink-0">
+                            <span className="absolute top-1 left-2 font-bold text-base text-zinc-300 z-0 select-none opacity-50">
+                                {format(day, "d")}
+                            </span>
+
+                            <div className="absolute top-0 left-0 right-0 bottom-0 z-10 flex flex-col h-full overflow-hidden w-full">
+                                {isUnifiedFullStay ? (
+                                    <div className="w-full h-full p-0.5 overflow-hidden">
+                                        <PrintBookingItem booking={fullBookingTop.booking} hideDateRange={false} renderMode="full" />
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* Top Grid Slot Layer */}
+                                        <div className="h-1/2 max-h-[50%] border-b border-dashed border-black/10 overflow-hidden relative w-full">
+                                            {dayBooking ? (
+                                                <PrintBookingItem booking={dayBooking} hideDateRange={true} renderMode="full" />
+                                            ) : fullBookingTop ? (
+                                                <PrintBookingItem booking={fullBookingTop.booking} hideDateRange={false} renderMode={fullBookingTop.mode} />
+                                            ) : isTopBlankReserved ? (
+                                                <div className="w-full h-full bg-zinc-100/30" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center bg-zinc-50/10">
+                                                    <span className="text-[7px] font-black tracking-wider text-zinc-300 uppercase select-none">Day Vacant</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Bottom Grid Slot Layer */}
+                                        <div className="h-1/2 max-h-[50%] overflow-hidden relative w-full">
+                                            {eveningBooking ? (
+                                                <PrintBookingItem booking={eveningBooking} hideDateRange={true} renderMode="full" />
+                                            ) : fullBookingBottom ? (
+                                                <PrintBookingItem booking={fullBookingBottom.booking} hideDateRange={false} renderMode={fullBookingBottom.mode} />
+                                            ) : isBottomBlankReserved ? (
+                                                <div className="w-full h-full bg-zinc-100/30" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center bg-zinc-50/10">
+                                                    <span className="text-[7px] font-black tracking-wider text-zinc-300 uppercase select-none">Eve Vacant</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        ));
+    }
+
+    return (
+        <div className="min-h-screen bg-zinc-100 print:bg-white font-sans overflow-x-auto selection-wrapper">
+            {/* CONTROLS */}
+            <div className="p-4 bg-zinc-950 flex items-center justify-between print:hidden sticky top-0 z-[100] min-w-[1120px] w-full">
+                <div className="flex gap-2">
+                    {["ohannah", "dream"].map((c) => (
+                        <button key={c} onClick={() => setSelectedCabin(c as any)}
+                            className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${selectedCabin === c ? "bg-white text-black scale-105" : "text-zinc-500 hover:text-white"}`}>
+                            {c === "ohannah" ? "Ohannah Cabin" : "The Dream"}
+                        </button>
+                    ))}
+                </div>
+                <div className="flex items-center gap-6 text-white">
+                    <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="hover:scale-125 transition-transform"><ChevronLeft size={24} /></button>
+                    <button onClick={() => setShowPicker(true)} className="group flex flex-col items-center px-4 py-1 hover:bg-white/10 rounded-xl transition-all">
+                        <h3 className="text-lg font-black uppercase tracking-widest min-w-[200px] text-center group-hover:text-[#D4AF37]">{format(currentDate, "MMMM yyyy")}</h3>
+                        <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-[0.3em]">Click to Change</span>
                     </button>
+                    <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="hover:scale-125 transition-transform"><ChevronRight size={24} /></button>
                 </div>
-                <div className="flex-1 w-full relative">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={predictions.historicalData}>
-                            <defs>
-                                <linearGradient id="colorGold" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
-                            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#a1a1aa' }} dy={10} />
-                            <YAxis hide />
-                            <Tooltip
-                                cursor={{ stroke: '#D4AF37', strokeWidth: 2 }}
-                                contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', fontSize: '11px', fontWeight: 'bold' }}
-                                formatter={(value: any) => [`₱${value.toLocaleString()}`, 'Revenue']}
-                            />
-                            <Area type="monotone" dataKey="revenue" stroke="#D4AF37" strokeWidth={4} fill="url(#colorGold)" />
-                        </AreaChart>
-                    </ResponsiveContainer>
+                <button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-2 rounded-lg font-black text-[12px] flex items-center gap-2 transition-colors">
+                    <Printer size={16} /> PRINT CALENDAR
+                </button>
+            </div>
+
+            {/* QUICK PICKER MODAL */}
+            {showPicker && (
+                <div className="fixed inset-0 z-[200] bg-zinc-950/80 backdrop-blur-md flex items-center justify-center p-6 print:hidden">
+                    <div className="bg-white rounded-[2.5rem] w-full max-w-2xl p-8 shadow-2xl relative animate-in fade-in zoom-in duration-300">
+                        <button onClick={() => setShowPicker(false)} className="absolute top-6 right-6 p-2 hover:bg-zinc-100 rounded-full transition-colors"><X size={24} /></button>
+                        <div className="flex items-center gap-3 mb-8 border-b border-zinc-100 pb-6">
+                            <div className="w-12 h-12 bg-zinc-900 rounded-2xl flex items-center justify-center text-[#D4AF37]"><CalendarIcon size={24} /></div>
+                            <div>
+                                <h4 className="text-xl font-black uppercase tracking-tighter">Jump to Date</h4>
+                                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Select month and year to view</p>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                            <div>
+                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Select Month</p>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {months.map((m, idx) => (
+                                        <button key={m} onClick={() => handleMonthChange(idx)}
+                                            className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${currentDate.getMonth() === idx ? "bg-zinc-900 text-white" : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100"}`}>{m.substring(0, 3)}</button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Select Year</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {years.map((y) => (
+                                        <button key={y} onClick={() => handleYearChange(y)}
+                                            className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${getYear(currentDate) === y ? "bg-zinc-900 text-white" : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100"}`}>{y}</button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        <button onClick={() => setShowPicker(false)} className="w-full mt-10 py-5 bg-[#D4AF37] text-white rounded-2xl font-black uppercase tracking-[0.2em] text-sm hover:brightness-110 transition-all shadow-lg shadow-[#D4AF37]/20">Apply Selection</button>
+                    </div>
+                </div>
+            )}
+
+            {/* CANVAS DISPLAY */}
+            <div className="fixed-canvas-container py-12 print:p-0">
+                <div id="print-content" className="print-canvas bg-white p-8 print:p-0 flex flex-col shadow-2xl print:shadow-none mx-auto">
+                    <div className="flex justify-between items-start mb-4 flex-shrink-0 w-full">
+                        <div>
+                            <div className="flex items-baseline gap-2 leading-none">
+                                <h1 className="text-6xl font-serif font-black uppercase tracking-tighter text-zinc-800">{format(currentDate, "MMMM")}</h1>
+                                <span className="text-xl font-serif font-bold text-zinc-400 tracking-widest uppercase ml-2">Bookings</span>
+                            </div>
+                            <h2 className="text-4xl font-serif font-light text-zinc-300 mt-1">{format(currentDate, "yyyy")}</h2>
+                        </div>
+                        <div className="text-right">
+                            <img src={selectedCabin === 'dream' ? "/section/dream.png" : "/section/logo.png"} alt="Logo" className="h-14 object-contain grayscale opacity-80" />
+                        </div>
+                    </div>
+
+                    <div className="flex-1 flex flex-col relative min-h-0 w-full">
+                        {/* Day names layout tracking hard width constraints */}
+                        <div className="flex border-t-2 border-zinc-300 flex-shrink-0 w-full">
+                            {['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'].map(d => (
+                                <div key={d} className="py-1 text-center font-bold text-[8px] tracking-[0.15em] text-zinc-500 basis-[14.285%] w-[14.285%] max-w-[14.285%] min-w-[14.285%] flex-shrink-0">{d}</div>
+                            ))}
+                        </div>
+                        <div className="flex-1 flex flex-col border-2 border-black relative overflow-hidden min-h-0 bg-white w-full">
+                            {renderPrintGrid(currentDate, filteredBookings)}
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* FORECAST COLUMN - NATURAL GAP & PERFECT BALANCE */}
-            <div className="bg-[#18181b] p-8 rounded-[2.5rem] text-white flex flex-col justify-between border border-zinc-800 shadow-xl relative overflow-hidden min-h-[500px]">
+            <style>{`
+                /* Hard block resizing rules on any device view port dimensions */
+                .selection-wrapper {
+                    min-width: 1120px !important;
+                }
+                .fixed-canvas-container {
+                    min-width: 1120px !important;
+                    display: flex;
+                    justify-content: center;
+                }
+                .print-canvas {
+                    width: 1056px !important;
+                    height: 744px !important;
+                    min-width: 1056px !important;
+                    min-height: 744px !important;
+                    max-width: 1056px !important;
+                    max-height: 744px !important;
+                    box-sizing: border-box !important;
+                    background-color: #ffffff !important;
+                }
+                .day-box {
+                    border-right: 2px solid black;
+                    position: relative;
+                }
+                .day-box:last-child {
+                    border-right: none;
+                }
 
-                {/* HERO STAT CARD 1: ESTIMATED REVENUE */}
-                <div
-                    onClick={() => setActiveModal('forecast')}
-                    className="bg-zinc-800/30 p-6 rounded-[2rem] border border-zinc-800/80 flex flex-col cursor-pointer hover:bg-zinc-800/50 hover:border-[#D4AF37]/50 transition-all group text-left"
-                >
-                    <div className="flex justify-between items-center w-full mb-5">
-                        <div className="w-12 h-12 rounded-2xl bg-zinc-900 flex items-center justify-center border border-zinc-800 group-hover:border-[#D4AF37] transition-colors">
-                            <span className="text-[#D4AF37]"><Banknote size={22} /></span>
-                        </div>
-                        <ChevronRight size={16} className="text-zinc-600 group-hover:text-[#D4AF37] transform group-hover:translate-x-1 transition-all" />
-                    </div>
-
-                    <div>
-                        <h4 className="text-[10px] font-black uppercase text-zinc-500 tracking-[0.15em] mb-1.5">
-                            Estimated Revenue · {predictions.targetMonthName}
-                        </h4>
-                        <p className="text-3xl font-black text-white tracking-tight group-hover:text-[#D4AF37] transition-colors">
-                            ₱{predictions.nextMonthForecast.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                        </p>
-                        <p className="text-[11px] text-zinc-400 mt-2 font-medium leading-relaxed">
-                            Based on current trajectory and historical performance momentum.
-                        </p>
-                    </div>
-                </div>
-
-                {/* HERO STAT CARD 2: HISTORICAL PEAK (SAME DESIGN AND SPACING) */}
-                <div
-                    onClick={() => setActiveModal('peak')}
-                    className="bg-zinc-800/30 p-6 rounded-[2rem] border border-zinc-800/80 flex flex-col cursor-pointer hover:bg-zinc-800/50 hover:border-[#D4AF37]/50 transition-all group text-left mt-4"
-                >
-                    <div className="flex justify-between items-center w-full mb-5">
-                        <div className="w-12 h-12 rounded-2xl bg-zinc-900 flex items-center justify-center border border-zinc-800 group-hover:border-[#D4AF37] transition-colors">
-                            <span className="text-[#D4AF37]"><Star size={22} /></span>
-                        </div>
-                        <ChevronRight size={16} className="text-zinc-600 group-hover:text-[#D4AF37] transform group-hover:translate-x-1 transition-all" />
-                    </div>
-
-                    <div>
-                        <h4 className="text-[10px] font-black uppercase text-zinc-500 tracking-[0.15em] mb-1.5">
-                            Historical Pattern Cycle
-                        </h4>
-                        <p className="text-3xl font-black text-white tracking-tight group-hover:text-[#D4AF37] transition-colors">
-                            {predictions.peakMonth.month} Peak
-                        </p>
-                        <p className="text-[11px] text-zinc-400 mt-2 font-medium leading-relaxed">
-                            Highest recorded booking volume achieved over the previous months.
-                        </p>
-                    </div>
-                </div>
-
-                {/* --- MODALS WITH FORMULAS & COMPUTATION --- */}
-
-                {activeModal === 'growth' && (
-                    <MathModal
-                        title="Momentum Computation"
-                        formula="((Current - Previous) / Previous) * 100"
-                        strategy="This percentage represents the speed of your business growth month-over-month."
-                        onClose={() => setActiveModal(null)}
-                    >
-                        <div className="space-y-2">
-                            <div className="flex justify-between"><span>Current:</span> <span>₱{predictions.lastMonthRevenue.toLocaleString()}</span></div>
-                            <div className="flex justify-between"><span>Previous:</span> <span>₱{predictions.prevMonthRevenue.toLocaleString()}</span></div>
-                            <div className="pt-2 border-t border-zinc-800 text-[#D4AF37] font-black flex justify-between">
-                                <span>Momentum:</span> <span>{(predictions.growthRaw * 100).toFixed(2)}%</span>
-                            </div>
-                        </div>
-                    </MathModal>
-                )}
-
-                {activeModal === 'forecast' && (
-                    <MathModal
-                        title="Revenue Forecast"
-                        formula="Last Month Revenue × (1 + Growth Rate)"
-                        strategy="Projection based on current momentum and historical performance."
-                        onClose={() => setActiveModal(null)}
-                    >
-                        <div className="space-y-2">
-                            <div className="flex justify-between"><span>Basis:</span> <span>₱{predictions.lastMonthRevenue.toLocaleString()}</span></div>
-                            <div className="flex justify-between"><span>Multiplier:</span> <span>{predictions.multiplier.toFixed(4)}x</span></div>
-                            <div className="pt-2 border-t border-zinc-800 text-[#D4AF37] font-black flex justify-between text-lg">
-                                <span>Result:</span> <span>₱{predictions.nextMonthForecast.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                            </div>
-                        </div>
-                    </MathModal>
-                )}
-
-                {activeModal === 'peak' && (
-                    <MathModal
-                        title="Historical Pattern"
-                        strategy={`Prepare operational capacity based on ${predictions.peakMonth.month} trends.`}
-                        onClose={() => setActiveModal(null)}
-                    >
-                        <div className="space-y-2">
-                            <div className="flex justify-between"><span>Highest Month:</span> <span>{predictions.peakMonth.month}</span></div>
-                            <div className="flex justify-between"><span>Booking Volume:</span> <span>{predictions.peakMonth.bookings} stays</span></div>
-                        </div>
-                    </MathModal>
-                )}
-            </div>
+                @media print {
+                    @page { 
+                        size: A4 landscape !important; 
+                        margin: 0 !important; 
+                    }
+                    html, body {
+                        width: 297mm !important;
+                        height: 210mm !important;
+                        overflow: hidden !important;
+                        background: #ffffff !important;
+                    }
+                    body * { 
+                        visibility: hidden !important; 
+                        -webkit-print-color-adjust: exact !important; 
+                        print-color-adjust: exact !important; 
+                    }
+                    #print-content, #print-content * { 
+                        visibility: visible !important; 
+                    }
+                    #print-content { 
+                        position: absolute !important; 
+                        top: 0 !important; 
+                        left: 0 !important; 
+                        width: 297mm !important; 
+                        height: 210mm !important; 
+                        max-width: 297mm !important;
+                        max-height: 210mm !important;
+                        margin: 0 !important; 
+                        padding: 12mm !important; 
+                        background: #ffffff !important; 
+                        z-index: 99999 !important;
+                        display: flex !important;
+                        flex-direction: column !important;
+                        box-sizing: border-box !important;
+                    }
+                    .print\:hidden { display: none !important; }
+                }
+            `}</style>
         </div>
     );
 }

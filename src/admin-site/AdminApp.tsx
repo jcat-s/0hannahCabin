@@ -67,7 +67,6 @@ export default function AdminApp() {
   };
 
   const deleteBooking = async (id: string | string[]) => {
-    if (!window.confirm("Are you sure you want to delete this record?")) return;
 
     try {
       if (Array.isArray(id)) {

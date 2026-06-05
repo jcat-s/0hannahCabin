@@ -280,7 +280,7 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                                             )}
                                             {booking.discountCode && (
                                                 <div className="text-[11px] font-bold text-rose-600 flex items-center gap-2 bg-rose-50 px-3 py-1 rounded-full w-fit">
-                                                    <Tag size={12} /> <span className="uppercase">{booking.discountCode}</span>
+                                                    <Tag size={12} /> <span className="text-rose-600">{booking.discountCode}</span>
 
                                                 </div>
                                             )}
@@ -309,139 +309,143 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                         <h3 className="text-lg font-bold text-zinc-400 uppercase tracking-widest">No matching reservations</h3>
                     </div>
                 )}
-            </div>
+            </div >
 
             {/* Full Details Modal */}
-            {selectedBooking && (
-                <div className="fixed inset-0 z-[999] bg-zinc-950/90 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setSelectedBooking(null)}>
-                    <div className="bg-white rounded-[3rem] w-full max-w-6xl h-[90vh] overflow-hidden flex flex-col lg:flex-row shadow-2xl animate-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
-                        <div className="flex-[1.3] p-8 md:p-12 overflow-y-auto order-2 lg:order-1 space-y-10">
-                            <div className="flex justify-between items-start">
-                                <div className="flex items-center gap-6">
-                                    <div className="w-24 h-24 rounded-[2rem] overflow-hidden bg-zinc-50 border-4 border-white shadow-xl">
-                                        {selectedBooking.userPhotoURL ? <img src={selectedBooking.userPhotoURL} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-zinc-300"><User size={40} /></div>}
-                                    </div>
-                                    <div>
-                                        <p className="text-[11px] font-bold text-[#D4AF37] uppercase tracking-[0.2em] mb-1">{selectedBooking.cabin}</p>
-                                        <h2 className="text-4xl font-bold text-zinc-900 leading-none">{selectedBooking.customerName}</h2>
-                                        <div className="flex gap-2 mt-4">
-                                            <span className="px-3 py-1 bg-zinc-100 rounded-lg text-[10px] font-bold text-zinc-500 uppercase">{selectedBooking.stayType}</span>
-                                            <span className="px-3 py-1 bg-[#D4AF37]/20 rounded-lg text-[10px] font-bold text-[#D4AF37] uppercase">
-                                                {stayLabels[selectedBooking.stayType]?.time || selectedBooking.stayType}
-                                                {selectedBooking.stayType === 'full' && selectedBooking.fullStayOption ? ` (${stayLabels[selectedBooking.fullStayOption]?.time})` : ''}
-                                            </span>
+            {
+                selectedBooking && (
+                    <div className="fixed inset-0 z-[999] bg-zinc-950/90 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setSelectedBooking(null)}>
+                        <div className="bg-white rounded-[3rem] w-full max-w-6xl h-[90vh] overflow-hidden flex flex-col lg:flex-row shadow-2xl animate-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
+                            <div className="flex-[1.3] p-8 md:p-12 overflow-y-auto order-2 lg:order-1 space-y-10">
+                                <div className="flex justify-between items-start">
+                                    <div className="flex items-center gap-6">
+                                        <div className="w-24 h-24 rounded-[2rem] overflow-hidden bg-zinc-50 border-4 border-white shadow-xl">
+                                            {selectedBooking.userPhotoURL ? <img src={selectedBooking.userPhotoURL} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-zinc-300"><User size={40} /></div>}
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] font-bold text-[#D4AF37] uppercase tracking-[0.2em] mb-1">{selectedBooking.cabin}</p>
+                                            <h2 className="text-4xl font-bold text-zinc-900 leading-none">{selectedBooking.customerName}</h2>
+                                            <div className="flex gap-2 mt-4">
+                                                <span className="px-3 py-1 bg-zinc-100 rounded-lg text-[10px] font-bold text-zinc-500 uppercase">{selectedBooking.stayType}</span>
+                                                <span className="px-3 py-1 bg-[#D4AF37]/20 rounded-lg text-[10px] font-bold text-[#D4AF37] uppercase">
+                                                    {stayLabels[selectedBooking.stayType]?.time || selectedBooking.stayType}
+                                                    {selectedBooking.stayType === 'full' && selectedBooking.fullStayOption ? ` (${stayLabels[selectedBooking.fullStayOption]?.time})` : ''}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
+                                    <button onClick={() => setSelectedBooking(null)} className="p-3 hover:bg-zinc-100 rounded-full transition-colors"><X size={28} /></button>
                                 </div>
-                                <button onClick={() => setSelectedBooking(null)} className="p-3 hover:bg-zinc-100 rounded-full transition-colors"><X size={28} /></button>
-                            </div>
 
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-y-8 gap-x-6 border-y border-zinc-100 py-10">
-                                <DetailItem icon={<Phone size={14} />} label="Phone Number" value={selectedBooking.mobile} />
-                                <DetailItem icon={<Mail size={14} />} label="Email Address" value={selectedBooking.userEmail} />
-                                <DetailItem icon={<MapPin size={14} />} label="Home Address" value={selectedBooking.address || 'Not Provided'} />
-                                <DetailItem icon={<Calendar size={14} />} label="Check-In" value={selectedBooking.checkIn} />
-                                <DetailItem icon={<Calendar size={14} />} label="Check-Out" value={selectedBooking.checkOut} />
-                                <DetailItem icon={<Clock size={14} />} label="Total Duration"
-                                    value={`${selectedBooking.duration} ${stayLabels[selectedBooking.stayOption as string]?.label || 'Stay'}${selectedBooking.stayOption === 'full' && selectedBooking.fullStayOption ? ` (${selectedBooking.fullStayOption})` : ''}`}
-                                />
-                                <DetailItem icon={<Users size={14} />} label="Adult Guests" value={selectedBooking.guests} />
-                                <DetailItem icon={<Baby size={14} />} label="Children" value={selectedBooking.kids} />
-                                <DetailItem icon={<Dog size={14} />} label="Pets" value={selectedBooking.pets} />
-                                <DetailItem icon={<PartyPopper size={14} />} label="Occasion" value={selectedBooking.specialOccasion || 'None'} />
-                                <DetailItem icon={<Wallet size={14} />} label="Payment Channel" value={selectedBooking.paymentMethod} />
-                                <DetailItem icon={<CreditCard size={14} />} label="Total Price" value={`₱${selectedBooking.totalPrice?.toLocaleString()}`} />
-                                <DetailItem icon={<Tag size={14} />} label="Discount Code" value={selectedBooking.discountCode || 'None'} />
-                                <DetailItem icon={<Tag size={14} />} label="Discount Amount" value={selectedBooking.discountAmount ? `-₱${Number(selectedBooking.discountAmount).toLocaleString()}` : '-₱0'} />
-                            </div>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-y-8 gap-x-6 border-y border-zinc-100 py-10">
+                                    <DetailItem icon={<Phone size={14} />} label="Phone Number" value={selectedBooking.mobile} />
+                                    <DetailItem icon={<Mail size={14} />} label="Email Address" value={selectedBooking.userEmail} />
+                                    <DetailItem icon={<MapPin size={14} />} label="Home Address" value={selectedBooking.address || 'Not Provided'} />
+                                    <DetailItem icon={<Calendar size={14} />} label="Check-In" value={selectedBooking.checkIn} />
+                                    <DetailItem icon={<Calendar size={14} />} label="Check-Out" value={selectedBooking.checkOut} />
+                                    <DetailItem icon={<Clock size={14} />} label="Total Duration"
+                                        value={`${selectedBooking.duration} ${stayLabels[selectedBooking.stayOption as string]?.label || 'Stay'}${selectedBooking.stayOption === 'full' && selectedBooking.fullStayOption ? ` (${selectedBooking.fullStayOption})` : ''}`}
+                                    />
+                                    <DetailItem icon={<Users size={14} />} label="Adult Guests" value={selectedBooking.guests} />
+                                    <DetailItem icon={<Baby size={14} />} label="Children" value={selectedBooking.kids} />
+                                    <DetailItem icon={<Dog size={14} />} label="Pets" value={selectedBooking.pets} />
+                                    <DetailItem icon={<PartyPopper size={14} />} label="Occasion" value={selectedBooking.specialOccasion || 'None'} />
+                                    <DetailItem icon={<Wallet size={14} />} label="Payment Channel" value={selectedBooking.paymentMethod} />
+                                    <DetailItem icon={<CreditCard size={14} />} label="Total Price" value={`₱${selectedBooking.totalPrice?.toLocaleString()}`} />
+                                    <DetailItem icon={<Tag size={14} />} label="Discount Code" value={selectedBooking.discountCode || 'None'} />
+                                    <DetailItem icon={<Tag size={14} />} label="Discount Amount" value={selectedBooking.discountAmount ? `-₱${Number(selectedBooking.discountAmount).toLocaleString()}` : '-₱0'} />
+                                </div>
 
-                            {selectedBooking.status === "Pending" ? (
-                                <div className="space-y-6">
-                                    <div className="flex gap-4">
-                                        <button
-                                            onClick={() => { setPendingStatus("Confirmed"); setApprovalMessage("Booking Confirmed! See you soon!"); }}
-                                            className={`flex-1 py-4 rounded-2xl font-bold uppercase text-xs transition-all ${pendingStatus === 'Confirmed' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-zinc-50 text-zinc-400'}`}
-                                        >
-                                            Approve Stay
-                                        </button>
-                                        <button
-                                            onClick={() => { setPendingStatus("Rejected"); setApprovalMessage("Hi, we are unable to confirm your booking because..."); }}
-                                            className={`flex-1 py-4 rounded-2xl font-bold uppercase text-xs transition-all ${pendingStatus === 'Rejected' ? 'bg-red-600 text-white shadow-lg' : 'bg-zinc-50 text-zinc-400'}`}
-                                        >
-                                            Reject Stay
-                                        </button>
-                                    </div>
-
-                                    {pendingStatus && (
-                                        <div className={`p-8 rounded-[2.5rem] border-2 animate-in slide-in-from-top-4 ${pendingStatus === 'Confirmed' ? 'bg-emerald-50/50 border-emerald-500/10' : 'bg-red-50/50 border-red-500/10'}`}>
-                                            <p className={`text-[10px] font-bold uppercase tracking-widest mb-4 ${pendingStatus === 'Confirmed' ? 'text-emerald-700' : 'text-red-700'}`}>Edit Message for Guest</p>
-                                            <textarea
-                                                value={approvalMessage}
-                                                onChange={(e) => setApprovalMessage(e.target.value)}
-                                                className="w-full p-5 bg-white rounded-2xl border-none outline-none text-sm font-semibold shadow-sm min-h-[100px] focus:ring-2 ring-zinc-100"
-                                            />
+                                {selectedBooking.status === "Pending" ? (
+                                    <div className="space-y-6">
+                                        <div className="flex gap-4">
                                             <button
-                                                onClick={handleConfirmAction}
-                                                className={`w-full mt-5 py-4 rounded-2xl text-white font-bold uppercase text-xs flex items-center justify-center gap-2 shadow-xl ${pendingStatus === 'Confirmed' ? 'bg-emerald-600' : 'bg-red-600'}`}
+                                                onClick={() => { setPendingStatus("Confirmed"); setApprovalMessage("Booking Confirmed! See you soon!"); }}
+                                                className={`flex-1 py-4 rounded-2xl font-bold uppercase text-xs transition-all ${pendingStatus === 'Confirmed' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-zinc-50 text-zinc-400'}`}
                                             >
-                                                <Send size={16} /> Confirm & Notify Guest
+                                                Approve Stay
+                                            </button>
+                                            <button
+                                                onClick={() => { setPendingStatus("Rejected"); setApprovalMessage("Hi, we are unable to confirm your booking because..."); }}
+                                                className={`flex-1 py-4 rounded-2xl font-bold uppercase text-xs transition-all ${pendingStatus === 'Rejected' ? 'bg-red-600 text-white shadow-lg' : 'bg-zinc-50 text-zinc-400'}`}
+                                            >
+                                                Reject Stay
                                             </button>
                                         </div>
-                                    )}
-                                </div>
-                            ) : (
-                                <div className="p-8 bg-zinc-50 rounded-[2.5rem]">
-                                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Management Message</p>
-                                    <p className="text-sm font-bold text-zinc-800 italic">"{selectedBooking.statusMessage || 'No message provided.'}"</p>
-                                </div>
-                            )}
-                        </div>
 
-                        <div className="flex-1 bg-zinc-950 flex items-center justify-center p-8 order-1 lg:order-2 h-[400px] lg:h-full relative">
-                            <div className="absolute top-10 left-10">
-                                <span className="bg-white/10 backdrop-blur-md text-white text-[10px] font-bold uppercase px-5 py-2.5 rounded-full border border-white/10 tracking-widest">Payment Proof</span>
+                                        {pendingStatus && (
+                                            <div className={`p-8 rounded-[2.5rem] border-2 animate-in slide-in-from-top-4 ${pendingStatus === 'Confirmed' ? 'bg-emerald-50/50 border-emerald-500/10' : 'bg-red-50/50 border-red-500/10'}`}>
+                                                <p className={`text-[10px] font-bold uppercase tracking-widest mb-4 ${pendingStatus === 'Confirmed' ? 'text-emerald-700' : 'text-red-700'}`}>Edit Message for Guest</p>
+                                                <textarea
+                                                    value={approvalMessage}
+                                                    onChange={(e) => setApprovalMessage(e.target.value)}
+                                                    className="w-full p-5 bg-white rounded-2xl border-none outline-none text-sm font-semibold shadow-sm min-h-[100px] focus:ring-2 ring-zinc-100"
+                                                />
+                                                <button
+                                                    onClick={handleConfirmAction}
+                                                    className={`w-full mt-5 py-4 rounded-2xl text-white font-bold uppercase text-xs flex items-center justify-center gap-2 shadow-xl ${pendingStatus === 'Confirmed' ? 'bg-emerald-600' : 'bg-red-600'}`}
+                                                >
+                                                    <Send size={16} /> Confirm & Notify Guest
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="p-8 bg-zinc-50 rounded-[2.5rem]">
+                                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Management Message</p>
+                                        <p className="text-sm font-bold text-zinc-800 italic">"{selectedBooking.statusMessage || 'No message provided.'}"</p>
+                                    </div>
+                                )}
                             </div>
-                            {selectedBooking.receiptUrl ? (
-                                <img src={selectedBooking.receiptUrl} alt="Receipt" className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl" />
-                            ) : (
-                                <div className="text-center">
-                                    <ImageIcon size={64} className="mx-auto text-white/10 mb-4" />
-                                    <p className="text-white/20 text-xs font-bold uppercase tracking-widest">No Receipt Image</p>
+
+                            <div className="flex-1 bg-zinc-950 flex items-center justify-center p-8 order-1 lg:order-2 h-[400px] lg:h-full relative">
+                                <div className="absolute top-10 left-10">
+                                    <span className="bg-white/10 backdrop-blur-md text-white text-[10px] font-bold uppercase px-5 py-2.5 rounded-full border border-white/10 tracking-widest">Payment Proof</span>
                                 </div>
-                            )}
+                                {selectedBooking.receiptUrl ? (
+                                    <img src={selectedBooking.receiptUrl} alt="Receipt" className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl" />
+                                ) : (
+                                    <div className="text-center">
+                                        <ImageIcon size={64} className="mx-auto text-white/10 mb-4" />
+                                        <p className="text-white/20 text-xs font-bold uppercase tracking-widest">No Receipt Image</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Custom Delete Confirmation Modal */}
-            {showDeleteModal && (
-                <div className="fixed inset-0 z-[1000] bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full text-center shadow-2xl animate-in fade-in zoom-in duration-200">
-                        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <AlertCircle size={32} />
-                        </div>
-                        <h3 className="text-xl font-bold text-zinc-900 mb-2">Confirm Delete</h3>
-                        <p className="text-zinc-500 text-sm mb-8">
-                            Are you sure you want to delete {idsToDelete.length} {idsToDelete.length === 1 ? 'record' : 'records'}? This action cannot be undone.
-                        </p>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setShowDeleteModal(false)}
-                                className="flex-1 py-3 rounded-xl text-xs font-bold text-zinc-500 bg-zinc-100 hover:bg-zinc-200 transition-colors uppercase"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={confirmDelete}
-                                className="flex-1 py-3 rounded-xl text-xs font-bold text-white bg-red-500 hover:bg-red-600 transition-colors uppercase shadow-lg shadow-red-200"
-                            >
-                                Yes, Delete
-                            </button>
+            {
+                showDeleteModal && (
+                    <div className="fixed inset-0 z-[1000] bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+                        <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full text-center shadow-2xl animate-in fade-in zoom-in duration-200">
+                            <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <AlertCircle size={32} />
+                            </div>
+                            <h3 className="text-xl font-bold text-zinc-900 mb-2">Confirm Delete</h3>
+                            <p className="text-zinc-500 text-sm mb-8">
+                                Are you sure you want to delete {idsToDelete.length} {idsToDelete.length === 1 ? 'record' : 'records'}? This action cannot be undone.
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowDeleteModal(false)}
+                                    className="flex-1 py-3 rounded-xl text-xs font-bold text-zinc-500 bg-zinc-100 hover:bg-zinc-200 transition-colors uppercase"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={confirmDelete}
+                                    className="flex-1 py-3 rounded-xl text-xs font-bold text-white bg-red-500 hover:bg-red-600 transition-colors uppercase shadow-lg shadow-red-200"
+                                >
+                                    Yes, Delete
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
         </>
     );
 }

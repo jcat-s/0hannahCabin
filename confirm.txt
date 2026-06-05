@@ -2,7 +2,11 @@ Build the project:
 
 Bash
 npm run build
+
+npx vite build --mode admin
 (Siguraduhin na ang build command mo sa Vite ay nilalabas ang parehong index.html at admin.html sa loob ng dist folder).
+npx vite build --mode admin
+
 
 Deploy both sites:
 

@@ -4,7 +4,7 @@ import {
     parseISO, subMonths, addMonths, isSameDay, getDaysInMonth,
     setMonth, setYear, getYear, subDays
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Printer, X, Calendar as CalendarIcon, PartyPopper, Users, Baby, Dog, Clock, CalendarDays, Percent } from "lucide-react";
+import { ChevronLeft, ChevronRight, Printer, X, Calendar as CalendarIcon, PartyPopper, Users, Baby, Dog, Clock, CalendarDays, Tag } from "lucide-react";
 
 // --- SUB-COMPONENT: PRINT BOOKING ITEM ---
 const PRINT_COLORS: Record<string, string> = {
@@ -55,21 +55,30 @@ export const PrintBookingItem = ({
         <div className={`h-full w-full p-1.5 flex flex-col justify-between overflow-hidden ${PRINT_COLORS[booking.color] || 'bg-zinc-200'} border-l-4 border-black/20`}>
             <div className="flex flex-col gap-0.5 relative z-10">
 
-                {/* PANGALAN */}
+                {/* PANGALAN (Hindi na naka-All Caps) */}
                 {(renderMode === "full" || renderMode === "header") && (
-                    <span className={`${isCompact ? 'text-[8px]' : 'text-[10px]'} font-black text-black uppercase leading-tight break-words line-clamp-2`}>
+                    <span className={`${isCompact ? 'text-[8px]' : 'text-[10px]'} font-black text-black leading-tight break-words line-clamp-2`}>
                         {booking.customerName}
                     </span>
                 )}
 
-                {/* TIMING & DATE RANGE */}
+                {/* TIMING, DATE RANGE, & DISCOUNT TAG */}
                 {isSingleDayType ? (
                     !hideDateRange && (
-                        <div className="flex items-center gap-1 text-black">
-                            <CalendarDays size={isCompact ? 7 : 9} strokeWidth={3} />
-                            <span className={`${isCompact ? 'text-[7px]' : 'text-[8px]'} font-black uppercase truncate`}>
-                                {stayRange}
-                            </span>
+                        <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 text-black">
+                            <div className="flex items-center gap-1">
+                                <CalendarDays size={isCompact ? 7 : 9} strokeWidth={3} />
+                                <span className={`${isCompact ? 'text-[7px]' : 'text-[8px]'} font-black uppercase truncate`}>
+                                    {stayRange}
+                                </span>
+                            </div>
+                            {/* Discount Tag sa Tabi ng Date Range */}
+                            {(booking.discount || booking.discountCode) && (
+                                <div className="flex items-center gap-0.5 text-rose-900 font-black tracking-tight">
+                                    <Tag size={isCompact ? 7 : 8} strokeWidth={3} className="text-rose-700" />
+                                    <span className="text-[6.5px] uppercase">{booking.discount || booking.discountCode}</span>
+                                </div>
+                            )}
                         </div>
                     )
                 ) : (
@@ -82,35 +91,32 @@ export const PrintBookingItem = ({
                                 </span>
                             </div>
                         )}
-                        <div className="flex items-center gap-1 text-black">
-                            <CalendarDays size={isCompact ? 7 : 9} strokeWidth={3} />
-                            <span className={`${isCompact ? 'text-[7px]' : 'text-[8px]'} font-black uppercase truncate`}>
-                                {stayRange}
-                            </span>
+                        <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 text-black">
+                            <div className="flex items-center gap-1">
+                                <CalendarDays size={isCompact ? 7 : 9} strokeWidth={3} />
+                                <span className={`${isCompact ? 'text-[7px]' : 'text-[8px]'} font-black uppercase truncate`}>
+                                    {stayRange}
+                                </span>
+                            </div>
+                            {/* Discount Tag sa Tabi ng Date Range */}
+                            {(booking.discount || booking.discountCode) && (
+                                <div className="flex items-center gap-0.5 text-rose-900 font-black tracking-tight">
+                                    <Tag size={isCompact ? 7 : 8} strokeWidth={3} className="text-rose-700" />
+                                    <span className="text-[6.5px] uppercase">{booking.discount || booking.discountCode}</span>
+                                </div>
+                            )}
                         </div>
                     </>
                 )}
 
-                {/* OCCASION & DISCOUNT */}
-                {(renderMode === "full" || renderMode === "details") && (
-                    <>
-                        {booking.specialOccasion && (
-                            <div className="flex items-center gap-1 text-blue-900 mt-0.5">
-                                <PartyPopper size={isCompact ? 7 : 9} strokeWidth={3} />
-                                <span className={`${isCompact ? 'text-[7px]' : 'text-[8px]'} font-black uppercase italic truncate`}>
-                                    {booking.specialOccasion}
-                                </span>
-                            </div>
-                        )}
-                        {booking.discount && (
-                            <div className="flex items-center gap-1 text-emerald-900">
-                                <Percent size={isCompact ? 7 : 9} strokeWidth={3} />
-                                <span className={`${isCompact ? 'text-[7px]' : 'text-[8px]'} font-black uppercase truncate`}>
-                                    {booking.discount}
-                                </span>
-                            </div>
-                        )}
-                    </>
+                {/* OCCASION ONLY (Hindi na naka-All Caps at walang Discount Code sa ilalim) */}
+                {(renderMode === "full" || renderMode === "details") && booking.specialOccasion && (
+                    <div className="flex items-center gap-1 text-blue-900 mt-0.5">
+                        <PartyPopper size={isCompact ? 7 : 9} strokeWidth={3} />
+                        <span className={`${isCompact ? 'text-[7px]' : 'text-[8px]'} font-black italic truncate`}>
+                            {booking.specialOccasion}
+                        </span>
+                    </div>
                 )}
             </div>
 
@@ -262,11 +268,9 @@ export function CalendarView({ bookings }: { bookings: any[] }) {
                         }
 
                         if (outTime === "7AM") {
-                            // Ang actual last night ng stay ay bago ang checkout day (e.g., checkout is June 14, last night is June 13)
                             const targetEveDay = subDays(bEnd, 1);
 
                             if (isSameDay(day, targetEveDay)) {
-                                // TAMA! Dito papatak sa eve slot ng araw bago mag-checkout ang OUT/details card ng 9AM-7AM
                                 fullBookingBottom = { booking: b, mode: "details" };
                             } else if (day >= bStart && day < targetEveDay) {
                                 if (isSameDay(day, bStart) && inTime !== "9AM") {
@@ -380,6 +384,7 @@ export function CalendarView({ bookings }: { bookings: any[] }) {
                 </div>
             )}
 
+            {/* CANVAS DISPLAY */}
             {/* CANVAS DISPLAY */}
             <div className="fixed-canvas-container py-12 print:p-0">
                 <div id="print-content" className="print-canvas bg-white p-8 print:p-0 flex flex-col shadow-2xl print:shadow-none mx-auto">

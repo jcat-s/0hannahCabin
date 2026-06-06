@@ -207,18 +207,24 @@ export function BookingCategory({
                                 className="w-full p-5 rounded-2xl bg-zinc-50 border-none text-[13px] font-black outline-none"
                             />
                         </div>
-
                         <div className="space-y-4">
                             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
                                 <PartyPopper size={14} className="text-[#D4AF37]" /> Occasion
                             </label>
-                            <input
-                                type="text"
-                                value={specialOccasion}
-                                onChange={(e) => setSpecialOccasion(e.target.value)}
-                                placeholder="Birthday, etc."
-                                className="w-full p-5 rounded-2xl bg-zinc-50 border-none text-[11px] font-bold outline-none placeholder:text-zinc-300"
-                            />
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    value={specialOccasion}
+                                    onChange={(e) => setSpecialOccasion(e.target.value)}
+                                    maxLength={30} // Strict limit para hindi masira ang layout
+                                    placeholder="Birthday, Anniversary, etc."
+                                    className="w-full p-5 pr-14 rounded-2xl bg-zinc-50 border-none text-[11px] font-bold outline-none placeholder:text-zinc-300"
+                                />
+                                {/* Subtle character counter sa gilid para alam ng guest ang limit */}
+                                <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[9px] font-black text-zinc-300 uppercase tracking-wider select-none">
+                                    {specialOccasion.length}/30
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>

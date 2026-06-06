@@ -13,8 +13,6 @@ interface PolicyMetadata {
     petFee: number;
 }
 
-
-
 interface PriceSummaryProps {
     cabin: CabinId;
     stayType: StayType;
@@ -29,6 +27,7 @@ interface PriceSummaryProps {
     canBookCore: boolean;
     submitting: boolean;
     onSubmit: (total: number, discountCode?: string) => void;
+    onBookClick: () => void;
 }
 
 type DiscountRule = {
@@ -49,7 +48,7 @@ const defaultPolicies: Record<StayType, PolicyMetadata> = {
 
 export function PriceSummary({
     cabin, stayType, fullStayOption, guests, kids, pets, checkIn, checkOut,
-    specialOccasion, durationCount, canBookCore, submitting, onSubmit
+    specialOccasion, durationCount, canBookCore, submitting, onSubmit, onBookClick
 }: PriceSummaryProps) {
     const { user } = useAuth();
     const [showModal, setShowModal] = useState(false);
@@ -58,7 +57,6 @@ export function PriceSummary({
     const [policies, setPolicies] = useState<Record<StayType, PolicyMetadata>>(defaultPolicies);
     const [discountRules, setDiscountRules] = useState<DiscountRule[]>([]);
     const [discountCode, setDiscountCode] = useState("");
-
     const [rateCardImageUrl, setRateCardImageUrl] = useState<string | null>(null);
 
     const currentPolicy = useMemo(() => {
@@ -112,15 +110,8 @@ export function PriceSummary({
 
     const pricing = useMemo(() => {
         return calculateTotal(
-            cabin,
-            stayType,
-            guests,
-            pets,
-            checkIn,
-            checkOut,
-            dbHolidays,
-            pricingConfig || undefined,
-            currentPolicy?.petFee || 250
+            cabin, stayType, guests, pets, checkIn, checkOut, dbHolidays,
+            pricingConfig || undefined, currentPolicy?.petFee || 250
         );
     }, [cabin, stayType, guests, pets, checkIn, checkOut, dbHolidays, pricingConfig, currentPolicy]);
 
@@ -129,16 +120,22 @@ export function PriceSummary({
         return discountRules.find((rule) => rule.active && rule.code === normalized) || null;
     }, [discountCode, discountRules]);
 
+    // FIXED LOGIC FOR PUBLIC vs PRIVATE COUPONS
     const isUserEligibleForDiscount = useMemo(() => {
         if (!selectedDiscount) return false;
-        if (!selectedDiscount.allowedRecipients || selectedDiscount.allowedRecipients.length === 0) return true;
         if (!user) return false;
+
+        // Kung walang nakalistang restricted users, ibig sabihin PUBLIC ito. Eligible ang lahat!
+        if (!selectedDiscount.allowedRecipients || selectedDiscount.allowedRecipients.length === 0) {
+            return true;
+        }
 
         const userEmail = String(user.email || "").trim().toLowerCase();
         const userName = String(user.displayName || "").trim().toLowerCase();
 
         return selectedDiscount.allowedRecipients.some((recipient) => {
-            return userEmail === recipient || userName.includes(recipient) || recipient.includes(userEmail);
+            const normalizedRecipient = String(recipient || "").trim().toLowerCase();
+            return userEmail === normalizedRecipient || userName.includes(normalizedRecipient) || normalizedRecipient.includes(userEmail);
         });
     }, [selectedDiscount, user]);
 
@@ -150,14 +147,12 @@ export function PriceSummary({
         if (selectedDiscount.type === "percent") {
             return Math.round(subtotal * (selectedDiscount.value / 100));
         }
-
         return Math.min(Math.max(0, selectedDiscount.value), subtotal);
     }, [pricing.grandTotal, selectedDiscount, durationCount, isUserEligibleForDiscount]);
 
     const discountLabel = selectedDiscount ? `${selectedDiscount.value}${selectedDiscount.type === "percent" ? "%" : ""}` : "";
     const finalTotal = Math.max(0, pricing.grandTotal - discountAmount);
 
-    // Ginawang structured object para mahiwalay ang styling ng description sa status text
     const discountMessage = useMemo(() => {
         if (!discountCode.trim()) return null;
         if (!selectedDiscount) return { error: "Invalid or inactive promo code. Promo codes are case-sensitive." };
@@ -169,6 +164,14 @@ export function PriceSummary({
             status: `Applied ${discountLabel} discount.`
         };
     }, [discountCode, selectedDiscount, durationCount, discountLabel, isUserEligibleForDiscount]);
+
+    const isDiscountInvalid = useMemo(() => {
+        if (!discountCode.trim()) return false;
+        if (!selectedDiscount || !isUserEligibleForDiscount || durationCount < selectedDiscount.minNights) {
+            return true;
+        }
+        return false;
+    }, [discountCode, selectedDiscount, isUserEligibleForDiscount, durationCount]);
 
     const stayLabels = {
         day: { label: "Day Lounge", time: "9AM - 5PM" },
@@ -235,21 +238,18 @@ export function PriceSummary({
                         placeholder="Enter promo code"
                         className="w-full max-w-xs px-4 py-3 rounded-2xl border border-white/10 bg-zinc-950 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#D4AF37] text-sm tracking-wider"
                     />
-                    <span className={`px-3 py-2.5 rounded-2xl text-[10px] font-black uppercase whitespace-nowrap ${discountAmount > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-900 text-zinc-400'}`}>
-                        {discountAmount > 0 ? 'Applied' : 'No code'}
+                    <span className={`px-3 py-2.5 rounded-2xl text-[10px] font-black uppercase whitespace-nowrap ${discountAmount > 0 ? 'bg-emerald-100 text-emerald-700' : isDiscountInvalid ? 'bg-rose-950/50 text-rose-400 border border-rose-900' : 'bg-zinc-900 text-zinc-400'}`}>
+                        {discountAmount > 0 ? 'Applied' : isDiscountInvalid ? 'Invalid' : 'No code'}
                     </span>
                 </div>
 
-                {/* REFACTORED INLINE FEEDBACK CONTAINER */}
                 {discountMessage && (
                     <div className="mb-4 text-[11px] font-medium text-center space-y-1">
                         {discountMessage.error ? (
                             <p className="text-rose-400">{discountMessage.error}</p>
                         ) : (
                             <>
-                                {discountMessage.description && (
-                                    <p className="text-pink-400 font-semibold">{discountMessage.description}</p>
-                                )}
+                                {discountMessage.description && <p className="text-pink-400 font-semibold">{discountMessage.description}</p>}
                                 <p className="text-emerald-400">{discountMessage.status}</p>
                             </>
                         )}
@@ -277,52 +277,51 @@ export function PriceSummary({
 
             <button
                 type="button"
-                disabled={!canBookCore || submitting}
-                onClick={() => onSubmit(finalTotal, discountCode.trim())}
+                disabled={submitting || isDiscountInvalid || (user !== null && !canBookCore)}
+                onClick={() => {
+                    if (!user) {
+                        onBookClick();
+                        return;
+                    }
+                    onSubmit(finalTotal, discountCode.trim());
+                }}
                 className="w-full py-5 rounded-2xl bg-white text-black font-black uppercase tracking-[0.3em] text-[11px] hover:bg-[#D4AF37] hover:text-white transition-all disabled:opacity-20 active:scale-95 shadow-xl"
             >
-                {submitting ? "Processing..." : "Confirm Booking"}
+                {submitting ? "Processing..." : !user ? "Sign In to Book" : isDiscountInvalid ? "Fix Promo Code Error" : "Confirm Booking"}
             </button>
-            {!canBookCore && (
+
+            {user && !canBookCore && !isDiscountInvalid && (
                 <p className="mt-4 text-[10px] text-rose-300 uppercase tracking-[0.2em] text-center leading-relaxed">
                     Select an available slot and make sure your dates are valid before booking.
+                </p>
+            )}
+
+            {isDiscountInvalid && (
+                <p className="mt-4 text-[10px] text-rose-400 uppercase tracking-[0.2em] text-center font-bold leading-relaxed animate-pulse">
+                    Please correct or clear the invalid promo code to proceed.
                 </p>
             )}
 
             {showModal && (
                 <div className="fixed inset-0 z-[500] bg-zinc-950/40 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowModal(false)}>
                     <div className="max-w-4xl w-full rounded-[2.5rem] bg-white p-6 md:p-10 border border-zinc-200/50 shadow-[0_50px_100px_rgba(0,0,0,0.25)] relative text-zinc-900 my-8 max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
-
                         <button type="button" onClick={() => setShowModal(false)} className="absolute top-6 right-6 text-zinc-400 hover:text-zinc-900 transition-colors bg-zinc-100 hover:bg-zinc-200 p-2.5 rounded-full z-10">
                             <X size={16} />
                         </button>
-
                         <div className="text-center mb-8 border-b border-zinc-100 pb-5 w-full">
                             <h4 className="text-2xl md:text-3xl font-serif italic tracking-tight text-zinc-950">Rates & Inclusions</h4>
                             <p className="text-[10px] uppercase tracking-[0.4em] text-zinc-400 font-bold mt-1.5">Official Reference Matrix</p>
                         </div>
-
                         <div className="w-full flex justify-center items-center overflow-hidden rounded-2xl bg-zinc-50 border border-zinc-100 relative min-h-[350px] p-2">
                             {rateCardImageUrl ? (
-                                <img
-                                    src={rateCardImageUrl}
-                                    alt="Ohannah Cabin Rate Matrix"
-                                    className="w-full h-auto object-contain max-h-[55vh] select-none rounded-xl"
-                                    loading="lazy"
-                                />
+                                <img src={rateCardImageUrl} alt="Rate Matrix" className="w-full h-auto object-contain max-h-[55vh] select-none rounded-xl" loading="lazy" />
                             ) : (
                                 <div className="flex flex-col items-center gap-3 text-zinc-400 p-8 text-center">
                                     <ImageIcon size={36} className="stroke-[1.2] text-[#D4AF37] animate-pulse" />
-                                    <p className="text-xs tracking-widest uppercase font-black text-zinc-700">
-                                        Loading Rate Matrix Asset...
-                                    </p>
-                                    <span className="text-[10px] text-zinc-400 max-w-xs normal-case font-medium">
-                                        Make sure 'rateCardImageUrl' is properly configured inside the database.
-                                    </span>
+                                    <p className="text-xs tracking-widest uppercase font-black text-zinc-700">Loading Rate Matrix Asset...</p>
                                 </div>
                             )}
                         </div>
-
                         <div className="mt-6 text-[9px] text-zinc-400 text-center uppercase tracking-[0.2em] font-bold w-full border-t border-zinc-100 pt-4">
                             Rates scale automatically based on selected dates and weekend blocks.
                         </div>

@@ -176,7 +176,7 @@ export default function DiscountManager() {
     function addDiscount() {
         const nextPromo: DiscountRule = {
             id: `discount-${Date.now()}`,
-            code: "New Promo", // Binago para hindi na sumisigaw na all caps lock
+            code: "New Promo",
             description: "New promotion description",
             type: "percent",
             value: 10,
@@ -272,7 +272,6 @@ export default function DiscountManager() {
                                     <input
                                         type="text"
                                         value={discount.code}
-                                        /* Tinanggal ang .toUpperCase().trim() para kung anong tinype mo ang masusunod */
                                         onChange={(e) => updateDiscountField(discount.id, "code", e.target.value)}
                                         className="w-full px-4 py-3 bg-zinc-50 rounded-xl border border-zinc-100 focus:border-[#D4AF37] outline-none text-xs font-bold"
                                     />

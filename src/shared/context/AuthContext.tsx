@@ -22,6 +22,7 @@ interface AuthContextValue {
   signupWithEmail: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
+  goBackToApp: () => void; // Idinagdag para sa Back Button functionality
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -32,7 +33,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!auth) {
-      // Firebase not configured; treat as logged out but don't break the UI
       setLoading(false);
       return;
     }
@@ -41,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(firebaseUser);
       setLoading(false);
     });
+
     return unsubscribe;
   }, []);
 
@@ -62,7 +63,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth) {
       throw new Error("Authentication is not configured.");
     }
-    await signInWithPopup(auth, googleProvider);
+
+    // SOLUSYON SA TS ERROR: Sinisiguro natin sa TS na nageexist ang googleProvider bago gamitin
+    if (!googleProvider) {
+      throw new Error("Google Authentication Provider is not properly initialized.");
+    }
+
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      console.log("Successfully logged in via Google Popup:", result.user);
+    } catch (error: any) {
+      if (error.code === "auth/popup-blocked") {
+        console.error("Popup was blocked by the browser. Please enable popups for this site.");
+        alert("Paki-allow ang pop-ups sa iyong browser para makapag-login gamit ang Google.");
+      } else if (error.code === "auth/popup-closed-by-user") {
+        console.warn("User closed the popup before finishing login.");
+      } else {
+        console.error("Google Auth Error:", error);
+        throw error;
+      }
+    }
   };
 
   const logout = async () => {
@@ -72,6 +92,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOut(auth);
   };
 
+  // BAGONG IMPLEMENTASYON: Back button handler para bumalik sa booking form o landing page
+  const goBackToApp = () => {
+    // Kung gumagamit ka ng react-router-dom, pwede mong palitan ito ng navigate(-1) o navigate("/")
+    window.location.href = "/";
+  };
+
   const value: AuthContextValue = {
     user,
     loading,
@@ -79,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signupWithEmail,
     loginWithGoogle,
     logout,
+    goBackToApp,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -91,4 +118,3 @@ export function useAuth() {
   }
   return ctx;
 }
-

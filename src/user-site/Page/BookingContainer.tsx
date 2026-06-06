@@ -7,19 +7,19 @@ import { BookingCategory, StayCategorySection } from "./BookingCategory";
 import { BookingConfirmation } from "./BookingConfirmation";
 import { parseISO, isSameDay, startOfDay } from "date-fns";
 
-export function BookingContainer({ onBack, onRequireAuth }: { onBack: () => void; onRequireAuth?: () => void }) {
+export function BookingContainer({
+    onBack,
+    onRequireAuth = () => { }
+}: {
+    onBack: () => void;
+    onRequireAuth?: () => void
+}) {
     const booking = useBooking();
 
-    // BYPASS VALIDATION LOGIC WITH MANDATORY COLOR SELECTION:
     const isFormReadyToBook = useMemo(() => {
         if (!booking.checkIn) return false;
+        if (!booking.selectedColor || booking.selectedColor.trim() === "") return false;
 
-        // CRITICAL RULE: Siguraduhin na may napiling kulay ang admin o user bago magpatuloy
-        if (!booking.selectedColor || booking.selectedColor.trim() === "") {
-            return false;
-        }
-
-        // 1. Alamin kung may kaparehong booking range conflict sa gitna
         const confirmedBookings = (booking.filteredBookings || []).filter(
             (b: any) => String(b.status).toLowerCase() === "confirmed"
         );
@@ -34,27 +34,17 @@ export function BookingContainer({ onBack, onRequireAuth }: { onBack: () => void
             const bType = String(b.stayType || '').toLowerCase();
             const slotStr = String(b.fullStayOption || b.timeSlot || b.stayCategory || '').toUpperCase();
 
-            // Hanapin kung ang booking ay 9AM-7AM checkout transition block ngayon
             const is7AMCheckout = slotStr.includes("9AM-7AM") || slotStr.includes("9AM TO 7AM") || bType === 'evening';
 
             if (booking.stayType === 'full') {
-                // Kung magkatugma ang Check-in mo sa Checkout ng iba na aalis ng 7AM, WALANG CONFLICT.
-                if (isSameDay(targetCheckIn, bEnd) && is7AMCheckout) {
-                    continue;
-                }
-
-                // Normal overlap protection para sa ibang gitnang araw
+                if (isSameDay(targetCheckIn, bEnd) && is7AMCheckout) continue;
                 if (targetCheckIn < bEnd && targetCheckOut > bStart) {
                     hasOverlapConflict = true;
                     break;
                 }
             } else {
-                // Para sa Day Lounge o Evening Chill bookings
                 if (isSameDay(targetCheckIn, bStart) || isSameDay(targetCheckIn, bEnd)) {
-                    if (isSameDay(targetCheckIn, bEnd) && is7AMCheckout) {
-                        // Ligtas ka dito dahil umaga pa lang (7AM) umalis na ang lumang booking
-                        continue;
-                    }
+                    if (isSameDay(targetCheckIn, bEnd) && is7AMCheckout) continue;
                     hasOverlapConflict = true;
                     break;
                 }
@@ -62,28 +52,13 @@ export function BookingContainer({ onBack, onRequireAuth }: { onBack: () => void
         }
 
         if (hasOverlapConflict) return false;
+        return booking.stayType === "full" ? booking.durationCount > 0 : booking.durationCount >= 0;
+    }, [booking.checkIn, booking.checkOut, booking.stayType, booking.durationCount, booking.filteredBookings, booking.selectedColor]);
 
-        // 2. Patunayan kung tama ang bilang ng gabi/araw (Duration count logic bypass)
-        const isDurationValid = booking.stayType === "full" ? booking.durationCount > 0 : booking.durationCount >= 0;
-
-        return isDurationValid;
-    }, [
-        booking.checkIn,
-        booking.checkOut,
-        booking.stayType,
-        booking.durationCount,
-        booking.filteredBookings,
-        booking.selectedColor // Kasama na sa dependency tracker para mag-update ang form kapag pinindot ang kulay
-    ]);
-
-    // Show confirmation if booking submitted
     if (booking.showConfirmation && booking.lastBookingData) {
         return (
             <div className="min-h-screen bg-zinc-50 flex items-center justify-center py-10 px-6">
-                <BookingConfirmation
-                    bookingData={booking.lastBookingData}
-                    onBack={() => booking.setShowConfirmation(false)}
-                />
+                <BookingConfirmation bookingData={booking.lastBookingData} onBack={() => booking.setShowConfirmation(false)} />
             </div>
         );
     }
@@ -107,10 +82,7 @@ export function BookingContainer({ onBack, onRequireAuth }: { onBack: () => void
                         </div>
                         <StayCategorySection
                             stayType={booking.stayType}
-                            setStayType={(t) => {
-                                booking.setStayType(t);
-                                booking.handleDateLogic(booking.checkIn, t);
-                            }}
+                            setStayType={(t) => { booking.setStayType(t); booking.handleDateLogic(booking.checkIn, t); }}
                             fullStayOption={booking.fullStayOption}
                             setFullStayOption={booking.setFullStayOption}
                             checkIn={booking.checkIn}
@@ -127,12 +99,8 @@ export function BookingContainer({ onBack, onRequireAuth }: { onBack: () => void
                             {(["ohannah", "dream"] as const).map(c => (
                                 <button
                                     key={c}
-                                    onClick={() => {
-                                        booking.setCabin(c);
-                                        booking.setSelectedColor("");
-                                    }}
-                                    className={`flex-1 py-4 rounded-[1.6rem] text-[10px] font-bold uppercase tracking-[0.3em] transition-all ${booking.cabin === c ? 'bg-white text-zinc-950 shadow-lg' : 'text-zinc-500 hover:text-white'
-                                        }`}
+                                    onClick={() => { booking.setCabin(c); booking.setSelectedColor(""); }}
+                                    className={`flex-1 py-4 rounded-[1.6rem] text-[10px] font-bold uppercase tracking-[0.3em] transition-all ${booking.cabin === c ? 'bg-white text-zinc-950 shadow-lg' : 'text-zinc-500 hover:text-white'}`}
                                 >
                                     {c === 'ohannah' ? 'Ohannah Cabin' : 'The Dream'}
                                 </button>
@@ -162,10 +130,7 @@ export function BookingContainer({ onBack, onRequireAuth }: { onBack: () => void
                         <BookingCategory
                             cabin={booking.cabin}
                             stayType={booking.stayType}
-                            setStayType={(t) => {
-                                booking.setStayType(t);
-                                booking.handleDateLogic(booking.checkIn, t);
-                            }}
+                            setStayType={(t) => { booking.setStayType(t); booking.handleDateLogic(booking.checkIn, t); }}
                             checkIn={booking.checkIn}
                             setCheckIn={(d) => booking.handleDateLogic(d, booking.stayType)}
                             checkOut={booking.checkOut}
@@ -188,7 +153,6 @@ export function BookingContainer({ onBack, onRequireAuth }: { onBack: () => void
                     </div>
                 </div>
 
-                {/* Price Summary Sidebar */}
                 <div className="lg:col-span-4 h-fit sticky top-32">
                     <PriceSummary
                         cabin={booking.cabin}
@@ -201,11 +165,10 @@ export function BookingContainer({ onBack, onRequireAuth }: { onBack: () => void
                         checkOut={booking.checkOut}
                         specialOccasion={booking.specialOccasion}
                         durationCount={booking.durationCount}
-
-                        // Gumagana na ang matalinong transition slot para sa date 7, pero protektado pa rin ng color checker!
                         canBookCore={isFormReadyToBook}
                         submitting={booking.submitting}
                         onSubmit={booking.handleBooking}
+                        onBookClick={onRequireAuth}
                     />
                     <p className="text-center text-[9px] text-zinc-400 mt-6 uppercase tracking-widest leading-relaxed">
                         Review your request and dates <br /> before proceeding to final confirmation.

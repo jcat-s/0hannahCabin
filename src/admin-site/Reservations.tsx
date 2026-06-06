@@ -269,6 +269,8 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                                             {booking.kids > 0 && <div className="flex items-center gap-1.5"><Baby size={16} className="text-zinc-400" /> {booking.kids}</div>}
                                             {booking.pets > 0 && <div className="flex items-center gap-1.5"><Dog size={16} className="text-zinc-400" /> {booking.pets}</div>}
                                         </div>
+
+                                        {/* Row para sa Payment Method at Occasion lamang */}
                                         <div className="flex items-center gap-2">
                                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${booking.paymentMethod === 'GCash' ? 'bg-blue-50 text-blue-600' : 'bg-pink-50 text-pink-600'}`}>
                                                 {booking.paymentMethod}
@@ -278,13 +280,17 @@ export const Reservations: React.FC<ReservationsProps> = ({ bookings, onStatusUp
                                                     <PartyPopper size={12} /> {booking.specialOccasion}
                                                 </div>
                                             )}
-                                            {booking.discountCode && (
+                                        </div>
+
+                                        {/* Row para sa Discount (Ibinaba para malinis at hindi masira ang alignment) */}
+                                        {booking.discountCode && (
+                                            <div className="pt-0.5">
                                                 <div className="text-[11px] font-bold text-rose-600 flex items-center gap-2 bg-rose-50 px-3 py-1 rounded-full w-fit">
                                                     <Tag size={12} /> <span className="text-rose-600">{booking.discountCode}</span>
-
                                                 </div>
-                                            )}
-                                        </div>
+                                            </div>
+                                        )}
+
                                     </div>
 
                                     <div className="flex items-center justify-between lg:justify-end gap-6">

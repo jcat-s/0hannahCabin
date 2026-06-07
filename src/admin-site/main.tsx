@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom'; // 1. Import BrowserRouter
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '../shared/lib/firebase';
+import { auth, db } from '../shared/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import AdminApp from './AdminApp';
 import { AdminLogin } from './AdminAuth';
 import '../styles/index.css';
@@ -10,13 +11,28 @@ import '../styles/index.css';
 function Root() {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isAdmin, setIsAdmin] = useState(false);
 
     useEffect(() => {
         if (!auth) return;
 
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             console.log("Auth State Changed:", currentUser ? "User Logged In" : "User Logged Out");
             setUser(currentUser);
+
+            if (currentUser && db) {
+                try {
+                    const adminDoc = await getDoc(doc(db, "admins", currentUser.uid));
+                    const isAdminUser = adminDoc.exists() && adminDoc.data().role === "admin";
+                    setIsAdmin(!!isAdminUser);
+                } catch (e) {
+                    console.error("Error checking admin registry:", e);
+                    setIsAdmin(false);
+                }
+            } else {
+                setIsAdmin(false);
+            }
+
             setLoading(false);
         });
 
@@ -33,9 +49,9 @@ function Root() {
         );
     }
 
-    // 2. Ang User login status ay magdedetermine kung anong UI ang lalabas,
-    // pero dapat pareho silang nasa loob ng Router context.
-    return user ? <AdminApp /> : <AdminLogin />;
+    // 2. Ang User login status at admin registry ay magdedetermine kung anong UI ang lalabas.
+    // Only allow access to AdminApp when the authenticated user is also registered as an admin.
+    return user && isAdmin ? <AdminApp /> : <AdminLogin />;
 }
 
 const rootElement = document.getElementById('root');

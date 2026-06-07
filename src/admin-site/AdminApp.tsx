@@ -25,13 +25,28 @@ export default function AdminApp() {
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const adminDoc = await getDoc(doc(db as Firestore, "admins", user.uid));
-        if (adminDoc.exists()) {
-          setAdminData({
-            name: adminDoc.data().name || "Administrator",
-            email: user.email || adminDoc.data().email
-          });
+        try {
+          const adminDoc = await getDoc(doc(db as Firestore, "admins", user.uid));
+          if (adminDoc.exists()) {
+            setAdminData({
+              name: adminDoc.data().name || "Administrator",
+              email: user.email || adminDoc.data().email
+            });
+          } else {
+            console.warn("Unauthorized access to admin UI detected; signing out.");
+            setAdminData(null);
+            try {
+              await signOut(auth!);
+            } catch (e) {
+              console.error("Error signing out unauthorized user:", e);
+            }
+          }
+        } catch (e) {
+          console.error("Error validating admin doc:", e);
+          setAdminData(null);
         }
+      } else {
+        setAdminData(null);
       }
     });
 

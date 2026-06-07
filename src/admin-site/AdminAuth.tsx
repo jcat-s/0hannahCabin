@@ -65,7 +65,7 @@ export function AdminLogin() {
         } catch (err: any) {
             let msg = "Access Denied: Invalid Credentials.";
             if (err.message === "unauthorized_role") msg = "RESTRICTED: You are not in the Admin Registry.";
-            if (err.code === 'auth/invalid-credential') msg = "Mali ang email o password.";
+            if (err.code === 'auth/invalid-credential') msg = "Wrong email or password.";
 
             setStatus({ type: "error", message: msg });
             setLoading(false);
@@ -74,7 +74,7 @@ export function AdminLogin() {
 
     const handleForgotPassword = async () => {
         if (!email) {
-            setStatus({ type: "error", message: "Pakilagay muna ang iyong email address." });
+            setStatus({ type: "error", message: "Please enter your email address." });
             return;
         }
         setLoading(true);

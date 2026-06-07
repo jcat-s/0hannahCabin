@@ -49,7 +49,7 @@ function Root() {
         );
     }
 
-    // 2. Ang User login status at admin registry ay magdedetermine kung anong UI ang lalabas.
+    // The user's authentication status and admin registry determine which UI to show.
     // Only allow access to AdminApp when the authenticated user is also registered as an admin.
     return user && isAdmin ? <AdminApp /> : <AdminLogin />;
 }
@@ -58,7 +58,7 @@ const rootElement = document.getElementById('root');
 if (rootElement) {
     ReactDOM.createRoot(rootElement).render(
         <React.StrictMode>
-            {/* 3. I-wrap ang buong Root sa BrowserRouter */}
+            {/* Wrap the Root component in BrowserRouter */}
             <BrowserRouter>
                 <Root />
             </BrowserRouter>

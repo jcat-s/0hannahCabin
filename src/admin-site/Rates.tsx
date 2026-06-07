@@ -95,7 +95,7 @@ export default function PricingManager() {
         } catch (err: any) {
             console.error(err);
             setStatusMessage(`Failed to save: ${err.message || err}`);
-            alert(`Error saving to Firestore: ${err.message || err}. Kung local image ito, baka masyadong malaki ang file size.`);
+            alert(`Error saving to Firestore: ${err.message || err}. If this is a local image, it may be too large — compress it or use a direct image URL.`);
             setTimeout(() => setStatusMessage(null), 5000);
         } finally {
             setSaving(false);
@@ -106,17 +106,17 @@ export default function PricingManager() {
         if (!db) return;
         setSaving(true);
         try {
-            await setDoc(doc(db, "metadata", "pricing"), { pricing: defaultPricing, policies: defaultPolicies, rateCardImageUrl: "" }, { merge: true });
+            // Preserve any existing rateCardImageUrl — only reset pricing and policies.
+            await setDoc(doc(db, "metadata", "pricing"), { pricing: defaultPricing, policies: defaultPolicies }, { merge: true });
             setPricing(defaultPricing);
             setPolicies(defaultPolicies);
-            setRateCardImageUrl("");
-            setInputImageUrl("");
+            // Do not clear rateCardImageUrl or inputImageUrl so uploaded images remain available.
             setShowResetConfirmModal(false);
             setStatusMessage("Pricing matrices reset to system defaults.");
             setTimeout(() => setStatusMessage(null), 3000);
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            alert("Failed to reset pricing matrices.");
+            alert("Failed to reset pricing matrices: " + (err.message || err));
         } finally {
             setSaving(false);
         }
@@ -126,7 +126,7 @@ export default function PricingManager() {
         const file = e.target.files?.[0];
         if (file) {
             if (file.size > 850 * 1024) {
-                alert("Masyadong malaki ang file size ng picture! Ang Firestore ay may limit na 1MB para sa base64 upload. Paki-compress muna ang image o gumamit ng direct Image URL Link sa tabi.");
+                alert("Image file is too large. Please compress the image or use a direct image URL instead.");
                 return;
             }
             const reader = new FileReader();

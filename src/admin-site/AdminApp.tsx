@@ -9,7 +9,7 @@ import { db, auth } from "../shared/lib/firebase";
 import { Reservations } from "./Reservations";
 import { Analytics } from "./Analytics";
 import { CalendarView } from "./Calendar";
-import PricingManager from "./PricingManager"; // Imported new control component
+import PricingManager from "./Rates"; // Imported new control component
 import DiscountManager from "./Discount";
 
 export default function AdminApp() {

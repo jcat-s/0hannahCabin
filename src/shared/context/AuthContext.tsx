@@ -13,11 +13,15 @@ import {
   signInWithPopup,
   signOut,
 } from "firebase/auth";
-import { auth, googleProvider } from "../lib/firebase";
+import { auth, googleProvider, db } from "../lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
+  profile: any | null;
+  profileLoaded: boolean;
+  profileExists: boolean;
   loginWithEmail: (email: string, password: string) => Promise<void>;
   signupWithEmail: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
@@ -30,6 +34,8 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<any | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
   useEffect(() => {
     if (!auth) {
@@ -39,7 +45,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
-      setLoading(false);
+      // Reset profile state while we determine if a Firestore profile exists
+      setProfile(null);
+      setProfileLoaded(false);
+
+      if (firebaseUser && db) {
+        (async () => {
+          try {
+            const snap = await getDoc(doc(db, "users", firebaseUser.uid));
+            if (snap.exists()) {
+              setProfile(snap.data());
+            } else {
+              setProfile(null);
+            }
+          } catch (err) {
+            console.error("Failed to fetch user profile:", err);
+            setProfile(null);
+          } finally {
+            setProfileLoaded(true);
+            setLoading(false);
+          }
+        })();
+      } else {
+        setProfile(null);
+        setProfileLoaded(true);
+        setLoading(false);
+      }
     });
 
     return unsubscribe;
@@ -101,6 +132,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthContextValue = {
     user,
     loading,
+    profile,
+    profileLoaded,
+    profileExists: Boolean(profile && profileLoaded),
     loginWithEmail,
     signupWithEmail,
     loginWithGoogle,

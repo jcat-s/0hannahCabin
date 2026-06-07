@@ -9,7 +9,7 @@ interface HeaderProps {
 }
 
 export function Header({ onNavigate, currentPage }: HeaderProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, profileExists } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
@@ -62,12 +62,21 @@ export function Header({ onNavigate, currentPage }: HeaderProps) {
         <div className="flex items-center gap-4">
           <div className="relative">
             {user ? (
-              <button onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} className="flex items-center gap-2 p-2 rounded-full hover:bg-zinc-100 transition-all">
-                <CircleUser size={24} strokeWidth={1.5} className="text-zinc-800" />
-                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">
-                  {user.displayName?.split(' ')[0]}
-                </span>
-              </button>
+              // If user is authenticated but doesn't have a Firestore profile yet,
+              // prompt them to complete their profile first.
+              !profileExists ? (
+                <button onClick={() => onNavigate('auth')} className="flex items-center gap-2 px-4 py-2 rounded-full border border-zinc-200 bg-yellow-50 hover:bg-yellow-100 transition-all">
+                  <CircleUser size={20} strokeWidth={1.2} className="text-zinc-800" />
+                  <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">Complete Profile</span>
+                </button>
+              ) : (
+                <button onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} className="flex items-center gap-2 p-2 rounded-full hover:bg-zinc-100 transition-all">
+                  <CircleUser size={24} strokeWidth={1.5} className="text-zinc-800" />
+                  <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">
+                    {user.displayName?.split(' ')[0]}
+                  </span>
+                </button>
+              )
             ) : (
               <button className="flex items-center gap-2 px-6 py-2.5 rounded-full border border-black/20 hover:bg-black hover:text-white transition-all group" onClick={() => onNavigate('auth')}>
                 <User size={14} />

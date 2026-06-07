@@ -55,14 +55,14 @@ export const PrintBookingItem = ({
         <div className={`h-full w-full p-1.5 flex flex-col justify-between overflow-hidden ${PRINT_COLORS[booking.color] || 'bg-zinc-200'} border-l-4 border-black/20`}>
             <div className="flex flex-col gap-0.5 relative z-10">
 
-                {/* PANGALAN (Hindi na naka-All Caps) */}
+                {/* PANGALAN */}
                 {(renderMode === "full" || renderMode === "header") && (
                     <span className={`${isCompact ? 'text-[8px]' : 'text-[10px]'} font-black text-black leading-tight break-words line-clamp-2`}>
                         {booking.customerName}
                     </span>
                 )}
 
-                {/* TIMING, DATE RANGE, & DISCOUNT TAG */}
+                {/* TIMING & DATE RANGE */}
                 {isSingleDayType ? (
                     !hideDateRange && (
                         <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 text-black">
@@ -72,13 +72,6 @@ export const PrintBookingItem = ({
                                     {stayRange}
                                 </span>
                             </div>
-                            {/* Discount Tag sa Tabi ng Date Range */}
-                            {(booking.discount || booking.discountCode) && (
-                                <div className="flex items-center gap-0.5 text-rose-900 font-black tracking-tight">
-                                    <Tag size={isCompact ? 7 : 8} strokeWidth={3} className="text-rose-700" />
-                                    <span className="text-[6.5px] uppercase">{booking.discount || booking.discountCode}</span>
-                                </div>
-                            )}
                         </div>
                     )
                 ) : (
@@ -98,18 +91,11 @@ export const PrintBookingItem = ({
                                     {stayRange}
                                 </span>
                             </div>
-                            {/* Discount Tag sa Tabi ng Date Range */}
-                            {(booking.discount || booking.discountCode) && (
-                                <div className="flex items-center gap-0.5 text-rose-900 font-black tracking-tight">
-                                    <Tag size={isCompact ? 7 : 8} strokeWidth={3} className="text-rose-700" />
-                                    <span className="text-[6.5px] uppercase">{booking.discount || booking.discountCode}</span>
-                                </div>
-                            )}
                         </div>
                     </>
                 )}
 
-                {/* OCCASION ONLY (Hindi na naka-All Caps at walang Discount Code sa ilalim) */}
+                {/* OCCASION ONLY */}
                 {(renderMode === "full" || renderMode === "details") && booking.specialOccasion && (
                     <div className="flex items-center gap-1 text-blue-900 mt-0.5">
                         <PartyPopper size={isCompact ? 7 : 9} strokeWidth={3} />
@@ -120,23 +106,33 @@ export const PrintBookingItem = ({
                 )}
             </div>
 
-            {/* PAX METADATA */}
+            {/* PAX METADATA & DISCOUNT TAG */}
             {(renderMode === "full" || renderMode === "details") && (
-                <div className={`border-t border-black/20 pt-1 flex flex-wrap gap-x-2 mt-auto relative z-10 ${isCompact ? 'text-[7px]' : 'text-[8.5px]'}`}>
-                    <div className="flex items-center gap-0.5 text-black">
-                        <Users size={isCompact ? 8 : 10} strokeWidth={3} />
-                        <span className="font-black">{booking.guests || booking.pax}</span>
-                    </div>
-                    {booking.kids > 0 && (
+                <div className={`border-t border-black/20 pt-1 flex items-center justify-between mt-auto relative z-10 ${isCompact ? 'text-[5px]' : 'text-[8px]'}`}>
+                    <div className="flex flex-wrap gap-x-2">
                         <div className="flex items-center gap-0.5 text-black">
-                            <Baby size={isCompact ? 8 : 10} strokeWidth={3} />
-                            <span className="font-black">{booking.kids}K</span>
+                            <Users size={isCompact ? 8 : 10} strokeWidth={3} />
+                            <span className="font-black">{booking.guests || booking.pax}</span>
                         </div>
-                    )}
-                    {booking.pets > 0 && (
-                        <div className="flex items-center gap-0.5 text-black">
-                            <Dog size={isCompact ? 8 : 10} strokeWidth={3} />
-                            <span className="font-black">{booking.pets}P</span>
+                        {booking.kids > 0 && (
+                            <div className="flex items-center gap-0.5 text-black">
+                                <Baby size={isCompact ? 8 : 10} strokeWidth={3} />
+                                <span className="font-black">{booking.kids}K</span>
+                            </div>
+                        )}
+                        {booking.pets > 0 && (
+                            <div className="flex items-center gap-0.5 text-black">
+                                <Dog size={isCompact ? 8 : 10} strokeWidth={3} />
+                                <span className="font-black">{booking.pets}P</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Discount Tag on the right side of Pax Metadata */}
+                    {(booking.discount || booking.discountCode) && (
+                        <div className="flex items-center gap-0.5 text-rose-700 ml-auto">
+                            <Tag size={isCompact ? 8 : 10} strokeWidth={3} />
+                            <span className="font-black">{booking.discount}Discounted</span>
                         </div>
                     )}
                 </div>
@@ -384,7 +380,6 @@ export function CalendarView({ bookings }: { bookings: any[] }) {
                 </div>
             )}
 
-            {/* CANVAS DISPLAY */}
             {/* CANVAS DISPLAY */}
             <div className="fixed-canvas-container py-12 print:p-0">
                 <div id="print-content" className="print-canvas bg-white p-8 print:p-0 flex flex-col shadow-2xl print:shadow-none mx-auto">

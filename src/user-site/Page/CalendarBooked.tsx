@@ -120,6 +120,46 @@ export function CalendarBooked({
     const selectedCheckIn = checkIn ? parseISO(checkIn) : null;
     const selectedCheckOut = checkOut ? parseISO(checkOut) : null;
 
+    // Helper to evaluate middle range blockage dynamically
+    const checkHasMiddleOverlap = (startDate: Date, endDate: Date) => {
+        let hasMiddleOverlap = false;
+        const targetInterval = { start: startDate, end: endDate };
+
+        for (const b of confirmedBookings) {
+            const bStart = startOfDay(parseISO(b.checkInDate || b.checkIn));
+            const bEnd = startOfDay(parseISO(b.checkOutDate || b.checkOut));
+            const { inTime, outTime } = getSlotMarkers(b);
+
+            const daysInBooking = eachDayOfInterval({ start: bStart, end: bEnd });
+
+            for (const day of daysInBooking) {
+                if (isWithinInterval(day, targetInterval)) {
+                    const isFirstDayOfRange = isSameDay(day, targetInterval.start);
+                    const isLastDayOfRange = isSameDay(day, targetInterval.end);
+
+                    if (isSameDay(day, bStart) && isSameDay(day, bEnd)) {
+                        if (String(b.stayType).toLowerCase() === 'evening') {
+                            if (!isFirstDayOfRange) hasMiddleOverlap = true;
+                        } else {
+                            if (!isLastDayOfRange) hasMiddleOverlap = true;
+                        }
+                    } else if (isSameDay(day, bStart)) {
+                        if (inTime === "9AM" && !isLastDayOfRange) hasMiddleOverlap = true;
+                        if (inTime === "3PM" && !isLastDayOfRange) hasMiddleOverlap = true;
+                        if (inTime === "8PM" && !isLastDayOfRange) hasMiddleOverlap = true;
+                    } else if (isSameDay(day, bEnd)) {
+                        if (outTime === "5PM" && !isFirstDayOfRange) hasMiddleOverlap = true;
+                        if (outTime === "12NN" && !isFirstDayOfRange) hasMiddleOverlap = true;
+                    } else {
+                        hasMiddleOverlap = true;
+                    }
+                }
+            }
+            if (hasMiddleOverlap) break;
+        }
+        return hasMiddleOverlap;
+    };
+
     const handleDayClick = (date: Date) => {
         const iso = format(date, "yyyy-MM-dd");
 
@@ -141,47 +181,6 @@ export function CalendarBooked({
             if (date <= parsedCheckIn) {
                 setCheckIn(iso);
                 setCheckOut("");
-                return;
-            }
-
-            let hasMiddleOverlap = false;
-            const targetInterval = { start: parsedCheckIn, end: date };
-
-            for (const b of confirmedBookings) {
-                const bStart = startOfDay(parseISO(b.checkInDate || b.checkIn));
-                const bEnd = startOfDay(parseISO(b.checkOutDate || b.checkOut));
-                const { inTime, outTime } = getSlotMarkers(b);
-
-                const daysInBooking = eachDayOfInterval({ start: bStart, end: bEnd });
-
-                for (const day of daysInBooking) {
-                    if (isWithinInterval(day, targetInterval)) {
-                        const isFirstDayOfRange = isSameDay(day, targetInterval.start);
-                        const isLastDayOfRange = isSameDay(day, targetInterval.end);
-
-                        if (isSameDay(day, bStart) && isSameDay(day, bEnd)) {
-                            if (String(b.stayType).toLowerCase() === 'evening') {
-                                if (!isFirstDayOfRange) hasMiddleOverlap = true;
-                            } else {
-                                if (!isLastDayOfRange) hasMiddleOverlap = true;
-                            }
-                        } else if (isSameDay(day, bStart)) {
-                            if (inTime === "9AM" && !isLastDayOfRange) hasMiddleOverlap = true;
-                            if (inTime === "3PM" && !isLastDayOfRange) hasMiddleOverlap = true;
-                            if (inTime === "8PM" && !isLastDayOfRange) hasMiddleOverlap = true;
-                        } else if (isSameDay(day, bEnd)) {
-                            if (outTime === "5PM" && !isFirstDayOfRange) hasMiddleOverlap = true;
-                            if (outTime === "12NN" && !isFirstDayOfRange) hasMiddleOverlap = true;
-                        } else {
-                            hasMiddleOverlap = true;
-                        }
-                    }
-                }
-                if (hasMiddleOverlap) break;
-            }
-
-            if (hasMiddleOverlap) {
-                alert("Cannot complete selection. Your range overlaps with an existing booking in between those dates!");
                 return;
             }
 
@@ -331,6 +330,16 @@ export function CalendarBooked({
                                     slotOccupied = dayState.top.occupied || dayState.bottom.occupied;
                                 } else if (fullStayOption === "3PM-12NN") {
                                     slotOccupied = dayState.top.occupied;
+                                }
+
+                                // Prevent selecting a checkout date that leaps over an already confirmed range
+                                if (!slotOccupied && selectedCheckIn) {
+                                    if (currentIterationDay <= selectedCheckIn) {
+                                        // Handled separately inside handleDayClick to reset check-in, 
+                                        // but visually allowed to avoid locking out previous dates completely.
+                                    } else {
+                                        slotOccupied = checkHasMiddleOverlap(selectedCheckIn, currentIterationDay);
+                                    }
                                 }
                             }
                         }

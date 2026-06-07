@@ -220,10 +220,7 @@ export function BookingCategory({
                                     placeholder="Birthday, Anniversary, etc."
                                     className="w-full p-5 pr-14 rounded-2xl bg-zinc-50 border-none text-[11px] font-bold outline-none placeholder:text-zinc-300"
                                 />
-                                {/* Subtle character counter sa gilid para alam ng guest ang limit */}
-                                <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[9px] font-black text-zinc-300 uppercase tracking-wider select-none">
-                                    {specialOccasion.length}/30
-                                </span>
+
                             </div>
                         </div>
                     </div>

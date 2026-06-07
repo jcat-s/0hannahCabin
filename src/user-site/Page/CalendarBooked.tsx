@@ -120,7 +120,6 @@ export function CalendarBooked({
     const selectedCheckIn = checkIn ? parseISO(checkIn) : null;
     const selectedCheckOut = checkOut ? parseISO(checkOut) : null;
 
-    // Helper to evaluate middle range blockage dynamically
     const checkHasMiddleOverlap = (startDate: Date, endDate: Date) => {
         let hasMiddleOverlap = false;
         const targetInterval = { start: startDate, end: endDate };
@@ -281,7 +280,6 @@ export function CalendarBooked({
                     <button
                         type="button"
                         onClick={() => setActiveField("checkOut")}
-                        disabled={stayType !== "full"}
                         className={`rounded-full px-4 py-3 text-[10px] font-black uppercase tracking-[0.3em] transition ${activeField === "checkOut" ? 'bg-[#D4AF37] text-white shadow-md' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'} ${stayType !== "full" ? 'opacity-40 cursor-not-allowed' : ''}`}
                     >
                         Check-out
@@ -332,11 +330,9 @@ export function CalendarBooked({
                                     slotOccupied = dayState.top.occupied;
                                 }
 
-                                // Prevent selecting a checkout date that leaps over an already confirmed range
                                 if (!slotOccupied && selectedCheckIn) {
                                     if (currentIterationDay <= selectedCheckIn) {
-                                        // Handled separately inside handleDayClick to reset check-in, 
-                                        // but visually allowed to avoid locking out previous dates completely.
+                                        // Visually allowed
                                     } else {
                                         slotOccupied = checkHasMiddleOverlap(selectedCheckIn, currentIterationDay);
                                     }
@@ -351,7 +347,7 @@ export function CalendarBooked({
 
                         let containerStyles = "border-zinc-100 bg-white";
                         if (isSelectedCheckIn || isSelectedCheckOut) {
-                            containerStyles = "ring-2 ring-[#D4AF37] ring-offset-2 scale-105 z-20 shadow-lg bg-white border-transparent";
+                            containerStyles = "ring-2 ring-[#D4AF37] ring-offset-1 scale-[1.02] z-10 shadow-md bg-white border-transparent";
                         } else if (isInSelectedRange) {
                             containerStyles = "bg-[#D4AF37]/5 border-[#D4AF37]/20";
                         } else if (isPast) {
@@ -368,30 +364,38 @@ export function CalendarBooked({
                                 type="button"
                                 onClick={() => isSelectable && handleDayClick(currentIterationDay)}
                                 disabled={!isSelectable && !isSelectedCheckIn && !isSelectedCheckOut}
-                                className={`h-16 relative overflow-hidden flex flex-col rounded-[1.2rem] border transition-all ${containerStyles}`}
+                                className={`h-16 relative flex flex-col rounded-[1.2rem] border transition-all select-none overflow-hidden ${containerStyles}`}
                             >
-                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
-                                    <span className={`w-[22px] h-[22px] flex items-center justify-center rounded-full text-[11px] font-black shadow-sm ${isInSelectedRange || isSelectedCheckIn || isSelectedCheckOut ? 'bg-[#D4AF37] text-white' : 'bg-white/90 text-zinc-800'
+                                {/* FIXED: Solid bg-white at extended padding settings para hindi tumagos ang slot background colors */}
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                                    <span className={`w-[24px] h-[24px] flex items-center justify-center rounded-full text-[11px] font-black shadow-sm border ${isInSelectedRange || isSelectedCheckIn || isSelectedCheckOut
+                                            ? 'bg-[#D4AF37] text-white border-transparent'
+                                            : 'bg-white text-zinc-800 border-zinc-100'
                                         }`}>
                                         {format(d, "d")}
                                     </span>
                                 </div>
 
+                                {/* HOLIDAY INDICATOR DOT */}
                                 {isHighRate && !dayState.top.occupied && !dayState.bottom.occupied && (
                                     <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#D4AF37] z-20" />
                                 )}
 
-                                <div className={`flex-1 w-full flex items-start justify-center pt-1 ${dayState.top.occupied ? dayState.top.color : ''} ${isInSelectedRange && !dayState.top.occupied ? 'bg-[#D4AF37]/10' : ''}`}>
+                                {/* TOP ZONE DISPLAY (Day Lounge / Morning Slots) */}
+                                <div className={`flex-1 w-full flex items-start justify-center pt-1 px-1 overflow-hidden min-h-[50%] max-h-[50%] text-center relative ${dayState.top.occupied ? dayState.top.color : ''} ${isInSelectedRange && !dayState.top.occupied ? 'bg-[#D4AF37]/10' : ''}`}>
+                                    {/* FIXED: Dynamic padding logic plus higher internal spacing blocks when text exists */}
                                     {dayState.top.label && (
-                                        <span className="text-[5px] tracking-widest uppercase font-black px-1.5 py-0.5 rounded-sm z-20 bg-black/20 text-current">
+                                        <span className="text-[5px] tracking-widest uppercase font-black px-1 py-0.5 rounded-sm z-10 bg-black/10 text-current truncate max-w-[85%] mt-0.5">
                                             {dayState.top.label}
                                         </span>
                                     )}
                                 </div>
 
-                                <div className={`flex-1 w-full flex items-end justify-center pb-1 ${dayState.bottom.occupied ? dayState.bottom.color : ''} ${isInSelectedRange && !dayState.bottom.occupied ? 'bg-[#D4AF37]/10' : ''}`}>
+                                {/* BOTTOM ZONE DISPLAY (Evening Chill / Night Slots) */}
+                                <div className={`flex-1 w-full flex items-end justify-center pb-1 px-1 overflow-hidden min-h-[50%] max-h-[50%] text-center relative ${dayState.bottom.occupied ? dayState.bottom.color : ''} ${isInSelectedRange && !dayState.bottom.occupied ? 'bg-[#D4AF37]/10' : ''}`}>
+                                    {/* FIXED: Added clear boundary targets using max-w percentage locks */}
                                     {dayState.bottom.label && (
-                                        <span className="text-[5px] tracking-widest uppercase font-black px-1.5 py-0.5 rounded-sm z-20 bg-black/20 text-current">
+                                        <span className="text-[5px] tracking-widest uppercase font-black px-1 py-0.5 rounded-sm z-10 bg-black/10 text-current truncate max-w-[85%] mb-0.5">
                                             {dayState.bottom.label}
                                         </span>
                                     )}

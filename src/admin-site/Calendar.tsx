@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
     format, startOfMonth, endOfMonth, eachDayOfInterval,
     parseISO, subMonths, addMonths, isSameDay, getDaysInMonth,
@@ -144,8 +144,22 @@ export const PrintBookingItem = ({
 // --- MAIN COMPONENT: CALENDAR VIEW ---
 export function CalendarView({ bookings }: { bookings: any[] }) {
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [selectedCabin, setSelectedCabin] = useState<"ohannah" | "dream">("ohannah");
+    const [selectedCabin, setSelectedCabin] = useState<"ohannah" | "dream" | any>("ohannah");
     const [showPicker, setShowPicker] = useState(false);
+
+    // Block native shortcut command prints on smaller mobile sizes
+    useEffect(() => {
+        const handleBeforePrint = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+                if (window.innerWidth < 768) {
+                    e.preventDefault();
+                    alert("Printing is disabled on mobile devices to prevent layout distortion. Please use a desktop/laptop browser.");
+                }
+            }
+        };
+        window.addEventListener('keydown', handleBeforePrint);
+        return () => window.removeEventListener('keydown', handleBeforePrint);
+    }, []);
 
     const filteredBookings = useMemo(() => {
         return bookings.filter(b =>
@@ -320,8 +334,8 @@ export function CalendarView({ bookings }: { bookings: any[] }) {
 
     return (
         <div className="min-h-screen bg-zinc-100 print:bg-white font-sans overflow-x-auto selection-wrapper">
-            {/* CONTROLS */}
-            <div className="p-4 bg-zinc-950 flex items-center justify-between print:hidden sticky top-0 z-[100] min-w-[1120px] w-full">
+            {/* CONTROLS NAVBAR - Adjusted padding and z-index orchestration */}
+            <div className="p-4 bg-zinc-950 flex items-center justify-between print:hidden sticky top-0 z-40 min-w-[1120px] w-full">
                 <div className="flex gap-2">
                     {["ohannah", "dream"].map((c) => (
                         <button key={c} onClick={() => setSelectedCabin(c as any)}
@@ -338,14 +352,15 @@ export function CalendarView({ bookings }: { bookings: any[] }) {
                     </button>
                     <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="hover:scale-125 transition-transform"><ChevronRight size={24} /></button>
                 </div>
-                <button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-2 rounded-lg font-black text-[12px] flex items-center gap-2 transition-colors">
+                {/* Print Button handles desktop view display only */}
+                <button onClick={() => window.print()} className="hidden md:flex bg-blue-600 hover:bg-blue-500 text-white px-8 py-2 rounded-lg font-black text-[12px] items-center gap-2 transition-colors">
                     <Printer size={16} /> PRINT CALENDAR
                 </button>
             </div>
 
-            {/* QUICK PICKER MODAL */}
+            {/* QUICK PICKER MODAL - Upgraded z-index to fully layer over header structure */}
             {showPicker && (
-                <div className="fixed inset-0 z-[200] bg-zinc-950/80 backdrop-blur-md flex items-center justify-center p-6 print:hidden">
+                <div className="fixed inset-0 z-50 bg-zinc-950/80 backdrop-blur-md flex items-center justify-center p-6 print:hidden">
                     <div className="bg-white rounded-[2.5rem] w-full max-w-2xl p-8 shadow-2xl relative animate-in fade-in zoom-in duration-300">
                         <button onClick={() => setShowPicker(false)} className="absolute top-6 right-6 p-2 hover:bg-zinc-100 rounded-full transition-colors"><X size={24} /></button>
                         <div className="flex items-center gap-3 mb-8 border-b border-zinc-100 pb-6">

@@ -120,12 +120,10 @@ export function PriceSummary({
         return discountRules.find((rule) => rule.active && rule.code === normalized) || null;
     }, [discountCode, discountRules]);
 
-    // FIXED LOGIC FOR PUBLIC vs PRIVATE COUPONS
     const isUserEligibleForDiscount = useMemo(() => {
         if (!selectedDiscount) return false;
         if (!user) return false;
 
-        // Kung walang nakalistang restricted users, ibig sabihin PUBLIC ito. Eligible ang lahat!
         if (!selectedDiscount.allowedRecipients || selectedDiscount.allowedRecipients.length === 0) {
             return true;
         }
@@ -180,7 +178,8 @@ export function PriceSummary({
     };
 
     return (
-        <div className="bg-zinc-950 rounded-[2.5rem] md:rounded-[3.5rem] p-6 md:p-10 text-white sticky top-32 border border-white/5 shadow-[0_40px_100px_rgba(0,0,0,0.6)] font-sans">
+        /* FIXED: Dynamically reduces z-index to 10 when modal is active so it falls behind the backdrop */
+        <div className={`bg-zinc-950 rounded-[2.5rem] md:rounded-[3.5rem] p-6 md:p-10 text-white sticky top-32 border border-white/5 shadow-[0_40px_100px_rgba(0,0,0,0.6)] font-sans ${showModal ? 'z-10' : 'z-30'}`}>
             <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-6">
                 <div className="flex items-center gap-3">
                     <Receipt size={22} className="text-[#D4AF37]" />
@@ -302,27 +301,47 @@ export function PriceSummary({
                 </p>
             )}
 
+            {/* FIXED: Increased backdrop z-index to z-[9999] to ensure absolute dominance over everything */}
             {showModal && (
-                <div className="fixed inset-0 z-[500] bg-zinc-950/40 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowModal(false)}>
-                    <div className="max-w-4xl w-full rounded-[2.5rem] bg-white p-6 md:p-10 border border-zinc-200/50 shadow-[0_50px_100px_rgba(0,0,0,0.25)] relative text-zinc-900 my-8 max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
-                        <button type="button" onClick={() => setShowModal(false)} className="absolute top-6 right-6 text-zinc-400 hover:text-zinc-900 transition-colors bg-zinc-100 hover:bg-zinc-200 p-2.5 rounded-full z-10">
+                <div className="fixed inset-0 z-[9999] bg-zinc-950/80 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setShowModal(false)}>
+                    <div
+                        className="max-w-4xl w-full rounded-[2.5rem] bg-white border border-zinc-200 shadow-[0_50px_100px_rgba(0,0,0,0.5)] relative text-zinc-900 flex flex-col max-h-[90vh] overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => setShowModal(false)}
+                            className="absolute top-6 right-6 text-zinc-400 hover:text-zinc-900 transition-colors bg-zinc-100 hover:bg-zinc-200 p-2.5 rounded-full z-[10000] shadow-sm"
+                        >
                             <X size={16} />
                         </button>
-                        <div className="text-center mb-8 border-b border-zinc-100 pb-5 w-full">
-                            <h4 className="text-2xl md:text-3xl font-serif italic tracking-tight text-zinc-950">Rates & Inclusions</h4>
-                            <p className="text-[10px] uppercase tracking-[0.4em] text-zinc-400 font-bold mt-1.5">Official Reference Matrix</p>
+
+                        <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-6">
+
+                            {/* PICTURE NG PRICE NASA UNA */}
+                            <div className="w-full flex justify-center items-center overflow-hidden rounded-2xl bg-zinc-50 border border-zinc-100 p-2 relative min-h-[250px]">
+                                {rateCardImageUrl ? (
+                                    <img
+                                        src={rateCardImageUrl}
+                                        alt="Rate Matrix"
+                                        className="w-full h-auto object-contain max-h-[50vh] select-none rounded-xl"
+                                        loading="lazy"
+                                    />
+                                ) : (
+                                    <div className="flex flex-col items-center gap-3 text-zinc-400 p-8 text-center">
+                                        <ImageIcon size={36} className="stroke-[1.2] text-[#D4AF37] animate-pulse" />
+                                        <p className="text-xs tracking-widest uppercase font-black text-zinc-700">Loading Rate Matrix Asset...</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="text-center pb-2">
+                                <h4 className="text-2xl md:text-3xl font-serif italic tracking-tight text-zinc-950">Rates & Inclusions</h4>
+                                <p className="text-[10px] uppercase tracking-[0.4em] text-zinc-400 font-bold mt-1.5">Official Reference Matrix</p>
+                            </div>
                         </div>
-                        <div className="w-full flex justify-center items-center overflow-hidden rounded-2xl bg-zinc-50 border border-zinc-100 relative min-h-[350px] p-2">
-                            {rateCardImageUrl ? (
-                                <img src={rateCardImageUrl} alt="Rate Matrix" className="w-full h-auto object-contain max-h-[55vh] select-none rounded-xl" loading="lazy" />
-                            ) : (
-                                <div className="flex flex-col items-center gap-3 text-zinc-400 p-8 text-center">
-                                    <ImageIcon size={36} className="stroke-[1.2] text-[#D4AF37] animate-pulse" />
-                                    <p className="text-xs tracking-widest uppercase font-black text-zinc-700">Loading Rate Matrix Asset...</p>
-                                </div>
-                            )}
-                        </div>
-                        <div className="mt-6 text-[9px] text-zinc-400 text-center uppercase tracking-[0.2em] font-bold w-full border-t border-zinc-100 pt-4">
+
+                        <div className="bg-zinc-50 border-t border-zinc-100 px-8 py-4 text-[9px] text-zinc-400 text-center uppercase tracking-[0.2em] font-bold shrink-0 rounded-b-[2.5rem]">
                             Rates scale automatically based on selected dates and weekend blocks.
                         </div>
                     </div>

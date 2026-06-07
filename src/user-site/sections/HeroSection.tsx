@@ -15,10 +15,11 @@ export function HeroSection({ onBookClick }: HeroSectionProps) {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 md:py-12 relative z-10 w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 sm:gap-12 lg:gap-16 items-center">
+        {/* Binago natin mula grid patungong flex layout para mas sumunod sa Desktop Site feature ng mobile browsers */}
+        <div className="flex flex-col md:flex-row gap-10 sm:gap-12 lg:gap-16 items-center justify-between">
 
           {/* Left Content */}
-          <div className="space-y-6 sm:space-y-8 lg:space-y-10 z-20">
+          <div className="space-y-6 sm:space-y-8 lg:space-y-10 z-20 flex-1 w-full md:max-w-[50%]">
             <div className="space-y-2 sm:space-y-3">
               <div className="flex items-center gap-3 sm:gap-4">
                 <div className="h-[1px] sm:h-[2px] w-12 sm:w-16 bg-black"></div>
@@ -43,7 +44,7 @@ export function HeroSection({ onBookClick }: HeroSectionProps) {
               Philippines.
             </p>
 
-            <div className="pt-2 sm:pt-4 flex flex-col gap-4 sm:gap-6 items-start sm:items-center">
+            <div className="pt-2 sm:pt-4 flex flex-col gap-4 sm:gap-6 items-start sm:items-center md:items-start">
               <button
                 onClick={onBookClick}
                 className="group inline-flex items-center justify-center px-6 sm:px-8 lg:px-10 py-3 sm:py-4 lg:py-5 bg-black text-white rounded-none border-[2px] sm:border-[3px] border-[#D4AF37] hover:border-black hover:bg-[#D4AF37] hover:text-black transition-all duration-300 uppercase tracking-wider sm:tracking-widest text-[10px] sm:text-xs lg:text-xs font-bold shadow-lg hover:shadow-2xl w-full sm:w-auto"
@@ -65,12 +66,13 @@ export function HeroSection({ onBookClick }: HeroSectionProps) {
           </div>
 
           {/* Right Content */}
-          <div className="relative flex justify-center lg:justify-end items-center mt-8 sm:mt-10 lg:mt-0 z-10 w-full">
+          <div className="relative flex justify-center md:justify-end items-center mt-8 sm:mt-10 md:mt-0 z-10 flex-1 w-full md:max-w-[50%]">
             <div className="hidden lg:block absolute -bottom-16 -right-10 text-[20rem] font-serif italic text-zinc-100 opacity-80 pointer-events-none -z-20 select-none" style={{ fontFamily: "'Playfair Display', serif" }}>
               O
             </div>
 
-            <div className="relative z-10 p-2 sm:p-3 lg:p-4 bg-white shadow-[0_20px_60px_-10px_rgba(0,0,0,0.1)] sm:shadow-[0_35px_80px_-15px_rgba(0,0,0,0.15)] lg:shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] transform hover:scale-105 sm:hover:scale-100 lg:rotate-3 lg:hover:rotate-0 transition-transform duration-700 ease-out border-[8px] sm:border-[10px] lg:border-[14px] border-white max-w-[280px] sm:max-w-[400px] lg:max-w-[550px] w-full rounded-[1.5rem]">
+            {/* Inayos ang max-width classes upang hindi mag-collapse ang picture kapag pinuwersa sa desktop mode */}
+            <div className="relative z-10 p-2 sm:p-3 lg:p-4 bg-white shadow-[0_20px_60px_-10px_rgba(0,0,0,0.1)] sm:shadow-[0_35px_80px_-15px_rgba(0,0,0,0.15)] lg:shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] transform hover:scale-105 sm:hover:scale-100 md:rotate-3 md:hover:rotate-0 transition-transform duration-700 ease-out border-[8px] sm:border-[10px] lg:border-[14px] border-white min-w-[280px] sm:min-w-[350px] md:w-full rounded-[1.5rem]">
               <div className="p-1 bg-zinc-100 shadow-inner rounded-xl">
                 <div className="aspect-[4/3] overflow-hidden bg-zinc-200 shadow-inner rounded-xl">
                   <img

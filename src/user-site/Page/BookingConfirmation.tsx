@@ -4,7 +4,7 @@ import { db } from "../../shared/lib/firebase";
 import {
     User, Smartphone, MapPin, X, Upload,
     Check, Clock, ChevronLeft, CalendarDays, Users2,
-    PartyPopper, Baby, Dog, Moon, Tag
+    PartyPopper, Baby, Dog, Moon, Tag, AlertCircle
 } from "lucide-react";
 import { calculateTotal } from "../../shared/lib/bookingPricing";
 
@@ -44,9 +44,16 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
 
     // --- ACTUAL FIREBASE SAVING ---
     const handleFinalConfirm = async () => {
+        // Validation: Harangin kapag walang receipt
+        if (!receipt) {
+            alert("Please upload your proof of payment (screenshot) before confirming your booking.");
+            fileInputRef.current?.click(); // Awtomatikong bubuksan ang file selector para sa user
+            return;
+        }
+
         setIsSaving(true);
         try {
-            const base64Image = receipt ? await convertToBase64(receipt) : "";
+            const base64Image = await convertToBase64(receipt);
 
             await addDoc(collection(db!, "bookings"), {
                 // Customer Info
@@ -79,7 +86,7 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
 
                 // Payment & Tech
                 paymentMethod: activeTab,
-                receiptUrl: base64Image || "",
+                receiptUrl: base64Image,
                 status: "Pending",
                 createdAt: serverTimestamp(),
             });
@@ -164,7 +171,7 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
 
                         {/* UPLOAD AREA */}
                         <div className={`border-2 border-dashed rounded-[2.5rem] p-8 transition-all flex flex-col items-center justify-center cursor-pointer min-h-[160px]
-                            ${receipt ? "border-green-500 bg-green-50/20" : "border-zinc-200 bg-zinc-50/50 hover:border-[#D4AF37]"}`}
+                            ${receipt ? "border-green-500 bg-green-50/20" : "border-rose-300 bg-rose-50/10 hover:border-rose-400"}`}
                             onClick={() => fileInputRef.current?.click()}>
                             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
                             {receipt ? (
@@ -174,9 +181,11 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
                                 </div>
                             ) : (
                                 <div className="flex flex-col items-center gap-2">
-                                    <div className="w-14 h-14 bg-white rounded-3xl flex items-center justify-center text-zinc-400 border border-zinc-100 shadow-sm"><Upload size={24} /></div>
-                                    <p className="text-[10px] font-black uppercase text-zinc-900 tracking-widest">Click to upload proof</p>
-                                    <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-tighter italic">Optional — Max 1MB (Screenshots preferred)</p>
+                                    <div className="w-14 h-14 bg-white rounded-3xl flex items-center justify-center text-rose-500 border border-rose-100 shadow-sm"><Upload size={24} /></div>
+                                    <p className="text-[10px] font-black uppercase text-zinc-900 tracking-widest flex items-center gap-1.5">
+                                        Upload Proof of Payment <span className="text-rose-500 text-[8px] bg-rose-50 px-1.5 py-0.5 rounded font-black">* Required</span>
+                                    </p>
+                                    <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-tighter italic">Max 1MB (Screenshots preferred)</p>
                                 </div>
                             )}
                         </div>

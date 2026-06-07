@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MapPin, Phone, Mail, Clock, Send, Check, ArrowRight } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, Check, ArrowRight } from "lucide-react";
 
 export function ContactSection() {
   const [name, setName] = useState("");
@@ -11,11 +11,8 @@ export function ContactSection() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-
     const emailSubject = `[WEBSITE INQUIRY] ${subject}`;
     const emailBody = `Name: ${name}%0D%0AEmail: ${email}%0D%0A%0D%0AMessage:%0D%0A${message}`;
-
-
     const mailtoLink = `https://mail.google.com/mail/?view=cm&fs=1&to=ohannahcabin@gmail.com&su=${encodeURIComponent(emailSubject)}&body=${emailBody}`;
 
     window.open(mailtoLink, "_blank");
@@ -38,29 +35,29 @@ export function ContactSection() {
   ];
 
   return (
-    <section id="contact" className="py-24 bg-[#FAFAFA] scroll-mt-20">
-      <div className="max-w-7xl mx-auto px-6">
+    <section id="contact" className="py-20 sm:py-24 bg-[#FAFAFA] scroll-mt-20">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
 
         {/* Header Area */}
-        <div className="mb-20">
+        <div className="mb-12 sm:mb-16">
           <div className="flex items-center gap-3 mb-4">
             <span className="h-[1px] w-12 bg-[#D4AF37]"></span>
             <span className="text-[10px] uppercase tracking-[0.5em] text-zinc-400 font-bold">Connect</span>
           </div>
-          <h2 className="text-4xl md:text-5xl font-serif italic text-zinc-900" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif italic text-zinc-900" style={{ fontFamily: "'Playfair Display', serif" }}>
             Begin Your <span className="not-italic">Escape</span>
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
 
           {/* Left Side: Contact Info */}
-          <div className="lg:col-span-4 space-y-12">
-            <p className="text-zinc-500 font-light leading-relaxed">
+          <div className="lg:col-span-4 space-y-10">
+            <p className="text-zinc-500 font-light leading-relaxed text-base sm:text-lg">
               Whether you have questions about our amenities or want to book a private event, our team is here to assist you.
             </p>
 
-            <div className="space-y-8">
+            <div className="space-y-6 sm:space-y-8">
               {contactInfo.map((info, idx) => (
                 <div key={idx} className="group flex items-start gap-5">
                   <div className="mt-1">
@@ -68,7 +65,7 @@ export function ContactSection() {
                   </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold mb-1">{info.label}</p>
-                    <p className="text-zinc-800 font-medium">{info.value}</p>
+                    <p className="text-zinc-800 font-medium text-sm sm:text-base">{info.value}</p>
                   </div>
                 </div>
               ))}
@@ -77,17 +74,17 @@ export function ContactSection() {
 
           {/* Right Side: Minimalist Form */}
           <div className="lg:col-span-8">
-            <div className="bg-white p-8 md:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.04)] border border-zinc-100 rounded-2xl">
+            <div className="bg-white p-6 sm:p-8 md:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.04)] border border-zinc-100 rounded-3xl">
               {isSubmitted ? (
-                <div className="py-20 text-center animate-in fade-in zoom-in duration-500">
+                <div className="py-16 text-center">
                   <div className="w-20 h-20 bg-[#D4AF37]/10 rounded-full flex items-center justify-center mx-auto mb-6">
                     <Check className="w-10 h-10 text-[#D4AF37]" />
                   </div>
                   <h3 className="text-2xl font-serif italic mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>Message Received</h3>
-                  <p className="text-zinc-500">We will get back to you shortly. Warm regards.</p>
+                  <p className="text-zinc-500 text-sm sm:text-base">We will get back to you shortly. Warm regards.</p>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                   <div className="space-y-1 border-b border-zinc-100 focus-within:border-[#D4AF37] transition-colors pb-2">
                     <label className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold">Full Name</label>
                     <input
@@ -127,7 +124,7 @@ export function ContactSection() {
                   <div className="md:col-span-2 space-y-1 border-b border-zinc-100 focus-within:border-[#D4AF37] transition-colors pb-2">
                     <label className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold">Message</label>
                     <textarea
-                      rows={4}
+                      rows={5}
                       placeholder="How can our team assist you today?"
                       className="w-full bg-transparent border-none focus:ring-0 px-0 py-2 text-zinc-800 placeholder:text-zinc-300 resize-none"
                       value={message}
@@ -139,7 +136,7 @@ export function ContactSection() {
                   <div className="md:col-span-2 pt-4">
                     <button
                       type="submit"
-                      className="group relative flex items-center justify-center gap-3 w-full md:w-auto px-10 py-4 bg-zinc-900 text-white text-[11px] uppercase tracking-[0.3em] font-bold hover:bg-black transition-all overflow-hidden"
+                      className="group relative flex items-center justify-center gap-3 w-full md:w-auto px-8 sm:px-10 py-4 bg-zinc-900 text-white text-[11px] uppercase tracking-[0.3em] font-bold hover:bg-black transition-all overflow-hidden"
                     >
                       <span className="relative z-10">Send Message</span>
                       <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1 relative z-10" />

@@ -137,7 +137,7 @@ export function AuthPage() {
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-2">Contact Number</h3>
                 <input
                   type="tel" value={mobile} onChange={(e) => setMobile(e.target.value)}
-                  placeholder="0917 123 4567" className="w-full p-5 rounded-2xl bg-zinc-50 border-none outline-none text-sm font-medium focus:ring-1 ring-[#D4AF37]/20"
+                  placeholder="Enter Mobile Number" className="w-full p-5 rounded-2xl bg-zinc-50 border-none outline-none text-sm font-medium focus:ring-1 ring-[#D4AF37]/20"
                 />
               </div>
 

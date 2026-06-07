@@ -30,11 +30,11 @@ export function AmenitiesSection() {
   ];
 
   return (
-    <section id="amenities" className="py-24 bg-[#FCFCFC] scroll-mt-20">
-      <div className="max-w-7xl mx-auto px-6">
+    <section id="amenities" className="py-20 sm:py-24 bg-[#FCFCFC] scroll-mt-20">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
 
         {/* Section Header */}
-        <div className="text-center max-w-2xl mx-auto mb-20 space-y-4">
+        <div className="text-center max-w-2xl mx-auto mb-16 sm:mb-20 space-y-4">
           <div className="flex items-center justify-center gap-3">
             <span className="h-[1px] w-8 bg-[#D4AF37]"></span>
             <span className="text-[10px] uppercase tracking-[0.4em] text-zinc-400 font-bold">
@@ -42,25 +42,25 @@ export function AmenitiesSection() {
             </span>
             <span className="h-[1px] w-8 bg-[#D4AF37]"></span>
           </div>
-          <h2 className="text-4xl md:text-5xl font-serif italic text-zinc-900" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif italic text-zinc-900" style={{ fontFamily: "'Playfair Display', serif" }}>
             Ohannah Cabin <span className="not-italic">Amenities</span>
           </h2>
-          <p className="text-zinc-500 font-light tracking-wide">
+          <p className="text-zinc-500 font-light tracking-wide text-sm sm:text-base">
             Everything you need for a soulful and comfortable stay.
           </p>
         </div>
 
         {/* Amenities Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-10">
           {amenities.map((item) => (
             <div
               key={item.title}
-              className="group relative flex flex-col items-start space-y-4 transition-all duration-300"
+              className="group relative flex flex-col items-start gap-4 rounded-3xl bg-white p-6 sm:p-8 border border-zinc-200 shadow-sm transition-all duration-300 hover:-translate-y-1"
             >
               {/* Icon with Gold Accent */}
               <div className="relative">
-                <div className="absolute -inset-2 bg-[#D4AF37]/5 rounded-full scale-0 group-hover:scale-100 transition-transform duration-500"></div>
-                <item.icon className="w-7 h-7 text-zinc-800 group-hover:text-[#D4AF37] transition-colors duration-300" strokeWidth={1.2} />
+                <div className="absolute -inset-2 bg-[#D4AF37]/10 rounded-full scale-0 group-hover:scale-100 transition-transform duration-500"></div>
+                <item.icon className="w-8 h-8 text-zinc-800 group-hover:text-[#D4AF37] transition-colors duration-300" strokeWidth={1.2} />
               </div>
 
               <div className="space-y-2">
@@ -68,7 +68,7 @@ export function AmenitiesSection() {
                   {item.title}
                 </h3>
                 <div className="h-[1px] w-8 bg-zinc-200 group-hover:w-16 group-hover:bg-[#D4AF37] transition-all duration-500"></div>
-                <p className="text-zinc-500 text-sm leading-relaxed font-light max-w-[280px]">
+                <p className="text-zinc-500 text-sm leading-relaxed font-light max-w-full">
                   {item.details}
                 </p>
               </div>
@@ -77,7 +77,7 @@ export function AmenitiesSection() {
         </div>
 
         {/* Decorative Bottom Accent */}
-        <div className="mt-24 flex justify-center">
+        <div className="mt-20 sm:mt-24 flex justify-center">
           <div className="w-24 h-[1px] bg-gradient-to-r from-transparent via-zinc-300 to-transparent"></div>
         </div>
       </div>

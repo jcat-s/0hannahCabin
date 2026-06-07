@@ -15,27 +15,22 @@ export function GallerySection() {
     { src: "/gallery/nightstand.jpg", alt: "Nightstand Details", category: "Interior" },
     { src: "/gallery/bedroom2.jpg", alt: "Bedroom 2", category: "Interior" },
     { src: "/gallery/loftview.jpg", alt: "Interior View of the Pool", category: "Interior" },
-
     { src: "/gallery/cr.jpg", alt: "Comfort Room", category: "Interior" },
     { src: "/gallery/cr2.jpg", alt: "Comfort Room", category: "Interior" },
-
     { src: "/gallery/diningarea.jpg", alt: "Dining Room", category: "Interior" },
     { src: "/gallery/livingroom.jpg", alt: "Living Room", category: "Interior" },
-
-    { src: "/gallery/petfriendly.jpg", alt: "Pet-friendly", category: "" },
+    { src: "/gallery/petfriendly.jpg", alt: "Pet-friendly", category: "Lifestyle" },
     { src: "/gallery/firepit.jpg", alt: "Firepit", category: "Outdoor" },
     { src: "/gallery/swimmingpool.jpg", alt: "Swimming Pool", category: "Outdoor" },
     { src: "/gallery/aerialview.jpg", alt: "Aerial View", category: "Outdoor" },
-
-
   ];
 
   return (
-    <section id="gallery" className="py-24 bg-white scroll-mt-20">
-      <div className="max-w-7xl mx-auto px-6">
+    <section id="gallery" className="py-20 sm:py-24 bg-white scroll-mt-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
 
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 sm:mb-16 gap-6">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <span className="h-[1px] w-8 bg-[#D4AF37]"></span>
@@ -43,46 +38,46 @@ export function GallerySection() {
                 Visual Journey
               </span>
             </div>
-            <h2 className="text-4xl md:text-5xl font-serif italic text-zinc-900" style={{ fontFamily: "'Playfair Display', serif" }}>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif italic text-zinc-900" style={{ fontFamily: "'Playfair Display', serif" }}>
               Capturing <span className="not-italic text-zinc-400">the</span> Moments
             </h2>
           </div>
-          <p className="text-zinc-500 font-light max-w-xs text-sm leading-relaxed">
+          <p className="text-zinc-500 font-light max-w-full md:max-w-xs text-sm sm:text-base leading-relaxed">
             A glimpse into the serene architecture and soulful interiors of Ohannah Cabin.
           </p>
         </div>
 
         {/* GALLERY GRID - Dynamic Editorial Layout */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
           {images.map((image, index) => (
-            <div
+            <button
               key={index}
-              className={`group relative overflow-hidden bg-zinc-100 cursor-pointer ${index === 0 || index === 4 ? "lg:row-span-1" : ""
-                }`}
+              type="button"
+              className="group relative overflow-hidden bg-zinc-100 rounded-3xl shadow-sm focus:outline-none"
               onClick={() => setSelectedImage(image)}
             >
-              {/* Image with subtle zoom */}
-              <img
-                src={image.src}
-                alt={image.alt}
-                className="w-full h-full object-cover transition-transform duration-[1.5s] ease-out group-hover:scale-110 grayscale-[30%] group-hover:grayscale-0"
-              />
+              <div className="aspect-[4/3] sm:aspect-[5/4] overflow-hidden">
+                <img
+                  src={image.src}
+                  alt={image.alt}
+                  className="w-full h-full object-cover transition-transform duration-[1.5s] ease-out group-hover:scale-110 grayscale-[30%] group-hover:grayscale-0"
+                />
+              </div>
 
-              {/* Sophisticated Overlay */}
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-8">
+              <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6 sm:p-8">
                 <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
                   <p className="text-[#D4AF37] text-[10px] uppercase tracking-[0.3em] font-bold mb-2">
-                    {image.category}
+                    {image.category || "Preview"}
                   </p>
-                  <h3 className="text-white text-xl font-serif italic" style={{ fontFamily: "'Playfair Display', serif" }}>
+                  <h3 className="text-white text-lg sm:text-xl font-serif italic" style={{ fontFamily: "'Playfair Display', serif" }}>
                     {image.alt}
                   </h3>
-                  <div className="mt-4 flex items-center gap-2 text-white/60 text-[10px] uppercase tracking-widest">
+                  <div className="mt-4 inline-flex items-center gap-2 text-white/80 text-[10px] uppercase tracking-widest">
                     <Maximize2 size={12} /> View Full
                   </div>
                 </div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       </div>
@@ -90,27 +85,25 @@ export function GallerySection() {
       {/* FULLSCREEN MODAL - Luxury Lightbox */}
       {selectedImage && (
         <div
-          className="fixed inset-0 bg-zinc-950/95 flex flex-col items-center justify-center z-[100] animate-in fade-in duration-500"
+          className="fixed inset-0 bg-zinc-950/95 flex flex-col items-center justify-center z-[100]"
           onClick={() => setSelectedImage(null)}
         >
-          {/* Close Button */}
-          <button className="absolute top-8 right-8 text-white/50 hover:text-white transition-colors">
+          <button className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors">
             <X size={32} strokeWidth={1} />
           </button>
 
-          <div className="relative max-w-5xl w-full px-4">
+          <div className="relative max-w-5xl w-full px-4 sm:px-6">
             <img
               src={selectedImage.src}
               alt={selectedImage.alt}
-              className="w-full h-auto max-h-[75vh] object-contain shadow-2xl border-t border-b border-white/10"
+              className="w-full h-auto max-h-[75vh] object-contain rounded-3xl shadow-2xl border border-white/10"
             />
 
-            {/* Modal Info Overlay */}
-            <div className="mt-8 text-center space-y-2">
+            <div className="mt-6 sm:mt-8 text-center space-y-2">
               <p className="text-[#D4AF37] text-xs uppercase tracking-[0.5em] font-bold">
-                {selectedImage.category}
+                {selectedImage.category || "Preview"}
               </p>
-              <h3 className="text-white text-3xl font-serif italic" style={{ fontFamily: "'Playfair Display', serif" }}>
+              <h3 className="text-white text-2xl sm:text-3xl font-serif italic" style={{ fontFamily: "'Playfair Display', serif" }}>
                 {selectedImage.alt}
               </h3>
             </div>

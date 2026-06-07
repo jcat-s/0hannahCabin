@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { auth, db } from "../../shared/lib/firebase";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { Chrome, User, Smartphone, MapPin, ArrowRight } from "lucide-react";
+import { Chrome, ArrowRight } from "lucide-react";
 
 export function AuthPage() {
   const [loading, setLoading] = useState(false);
@@ -11,11 +11,18 @@ export function AuthPage() {
   // Legal Identity Fields
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+
+  // Dynamic Contact Fields for International Support
+  const [dialCode, setDialCode] = useState("+63");
   const [mobile, setMobile] = useState("");
-  const [address, setAddress] = useState("");
+
+  // Flexible Address Fields (No hardcoding)
+  const [country, setCountry] = useState("Philippines");
+  const [stateProvince, setStateProvince] = useState("");
+  const [city, setCity] = useState("");
+  const [streetAddress, setStreetAddress] = useState("");
 
   const handleGoogleLogin = async () => {
-    // TypeScript Safety Check: Pinapatunayan na initialized ang Firebase
     if (!auth || !db) {
       alert("Firebase is not properly initialized. Please check your connection.");
       return;
@@ -30,11 +37,10 @@ export function AuthPage() {
       const userDoc = await getDoc(doc(db, "users", user.uid));
 
       if (userDoc.exists()) {
-        window.location.reload(); // Pasok agad kung registered na
+        window.location.reload();
       } else {
         setUserAuth(user);
 
-        // Auto-split Google display name para sa convenience ng guest
         if (user.displayName) {
           const names = user.displayName.split(" ");
           setFirstName(names[0] || "");
@@ -49,14 +55,33 @@ export function AuthPage() {
     }
   };
 
+  // Restrict mobile input to numbers only, allowing up to 15 digits (International Standard)
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/\D/g, "");
+    if (rawValue.length <= 15) {
+      setMobile(rawValue);
+    }
+  };
+
+  // Allow dynamic dial codes (e.g., +1, +82, +44)
+  const handleDialCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Only allow '+' and numbers
+    if (/^[+0-9]*$/.test(value) && value.length <= 5) {
+      setDialCode(value);
+    }
+  };
+
   const handleFinalSubmit = async () => {
+    const fullAddress = `${streetAddress}, ${city}, ${stateProvince}, ${country}`;
+    const fullMobile = `${dialCode}${mobile}`;
+
     // Basic validation
-    if (!firstName || !lastName || !mobile || !address) {
-      alert("Please provide all legal information.");
+    if (!firstName || !lastName || !mobile || !country || !stateProvince || !city || !streetAddress) {
+      alert("Please complete all legal information correctly.");
       return;
     }
 
-    // TypeScript Safety Check
     if (!db || !userAuth) return;
 
     setLoading(true);
@@ -67,9 +92,9 @@ export function AuthPage() {
         lastName,
         fullName: `${firstName} ${lastName}`,
         email: userAuth.email,
-        mobile,
-        address,
-        photoURL: userAuth.photoURL, // Image URL mula sa Google
+        mobile: fullMobile,
+        address: fullAddress,
+        photoURL: userAuth.photoURL,
         role: "guest",
         createdAt: serverTimestamp(),
       });
@@ -113,7 +138,6 @@ export function AuthPage() {
               {/* Section: Legal Identity */}
               <div className="space-y-4">
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37] ml-2">Legal Identity</h3>
-
                 <div className="space-y-2">
                   <div className="grid grid-cols-2 gap-4 ml-2">
                     <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400">First Name</label>
@@ -135,26 +159,67 @@ export function AuthPage() {
               {/* Section: Contact */}
               <div className="space-y-2">
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-2">Contact Number</h3>
-                <input
-                  type="tel" value={mobile} onChange={(e) => setMobile(e.target.value)}
-                  placeholder="Enter Mobile Number" className="w-full p-5 rounded-2xl bg-zinc-50 border-none outline-none text-sm font-medium focus:ring-1 ring-[#D4AF37]/20"
-                />
+                <div className="flex items-center bg-zinc-50 rounded-2xl focus-within:ring-1 ring-[#D4AF37]/20 overflow-hidden">
+                  <input
+                    type="text"
+                    value={dialCode}
+                    onChange={handleDialCodeChange}
+                    placeholder="+63"
+                    className="w-20 pl-5 py-5 pr-2 bg-transparent border-r border-zinc-200 outline-none text-sm font-medium text-zinc-500 text-center"
+                  />
+                  <input
+                    type="tel"
+                    value={mobile}
+                    onChange={handlePhoneChange}
+                    placeholder="000 000 0000"
+                    className="w-full py-5 px-4 bg-transparent border-none outline-none text-sm font-medium"
+                  />
+                </div>
               </div>
 
               {/* Section: Address */}
-              <div className="space-y-2">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-2">Permanent Address</h3>
-                <textarea
-                  value={address} onChange={(e) => setAddress(e.target.value)}
-                  placeholder="House No., Street, City, Province"
-                  className="w-full p-5 rounded-2xl bg-zinc-50 border-none outline-none text-sm font-medium min-h-[100px] resize-none focus:ring-1 ring-[#D4AF37]/20"
-                />
+              <div className="space-y-4">
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-2 mt-2">Permanent Address</h3>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <input
+                    type="text"
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                    placeholder="Country"
+                    className="w-full p-5 rounded-2xl bg-zinc-50 border-none outline-none text-sm font-medium focus:ring-1 ring-[#D4AF37]/20"
+                  />
+                  <input
+                    type="text"
+                    value={stateProvince}
+                    onChange={(e) => setStateProvince(e.target.value)}
+                    placeholder="State / Province"
+                    className="w-full p-5 rounded-2xl bg-zinc-50 border-none outline-none text-sm font-medium focus:ring-1 ring-[#D4AF37]/20"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <input
+                    type="text"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="City / Municipality"
+                    className="w-full p-5 rounded-2xl bg-zinc-50 border-none outline-none text-sm font-medium focus:ring-1 ring-[#D4AF37]/20"
+                  />
+                  <input
+                    type="text"
+                    value={streetAddress}
+                    onChange={(e) => setStreetAddress(e.target.value)}
+                    placeholder="Street, House No."
+                    className="w-full p-5 rounded-2xl bg-zinc-50 border-none outline-none text-sm font-medium focus:ring-1 ring-[#D4AF37]/20"
+                  />
+                </div>
               </div>
 
               <button
                 disabled={loading}
                 onClick={handleFinalSubmit}
-                className="w-full py-6 mt-4 rounded-[2rem] bg-zinc-950 text-white text-[11px] font-black uppercase tracking-[0.4em] hover:bg-[#D4AF37] transition-all disabled:opacity-50 active:scale-95"
+                className="w-full py-6 mt-6 rounded-[2rem] bg-zinc-950 text-white text-[11px] font-black uppercase tracking-[0.4em] hover:bg-[#D4AF37] transition-all disabled:opacity-50 active:scale-95"
               >
                 {loading ? "Establishing Profile..." : "Establish Profile"}
               </button>

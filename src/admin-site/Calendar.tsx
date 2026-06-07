@@ -394,7 +394,7 @@ export function CalendarView({ bookings }: { bookings: any[] }) {
 
                         {/* THE GRID POSITIONING SLOT LEGEND */}
                         <div className="flex flex-col items-end gap-1 border-2 border-black/40 rounded-xl p-2 bg-zinc-50/50">
-                            <span className="text-[7px] font-black text-zinc-400 uppercase tracking-widest block mb-0.5 border-b border-zinc-200 w-full text-right pb-0.5">Grid Guide</span>
+                            <span className="text-[7px] font-black text-zinc-400 uppercase tracking-widest block mb-0.5 border-b border-zinc-200 w-full text-center pb-0.5">Grid Guide</span>
                             <div className="flex items-center gap-1.5">
                                 <span className="w-2 h-2 bg-zinc-300/40 rounded border border-dashed border-black/20"></span>
                                 <span className="text-[7.5px] font-black text-zinc-700 uppercase">Top Block: Day Lounge (9AM - 5PM / Checkout 12NN, 5PM)</span>

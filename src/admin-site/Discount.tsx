@@ -43,6 +43,7 @@ export default function DiscountManager() {
     const [discounts, setDiscounts] = useState<DiscountRule[]>(defaultDiscounts);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
     const [bookings, setBookings] = useState<any[]>([]);
+    const [users, setUsers] = useState<any[]>([]);
 
     // States para sa Filtering, User Restriction Modal, at Delete Confirmation
     const [searchQuery, setSearchQuery] = useState("");
@@ -85,6 +86,16 @@ export default function DiscountManager() {
         return () => unsubscribeBookings();
     }, []);
 
+    // 3. Listen sa registered users para lumabas pati non-booking profiles
+    useEffect(() => {
+        if (!db) return;
+        const usersQuery = query(collection(db, "users"));
+        const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
+            setUsers(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+        });
+        return () => unsubscribeUsers();
+    }, []);
+
     // Helper to auto-sync back into Firestore whenever state mutates
     async function saveToFirestore(updatedDiscounts: DiscountRule[]) {
         if (!db) return;
@@ -105,21 +116,32 @@ export default function DiscountManager() {
     // Combined email and names for selection suggestions
     const suggestedRecipients = React.useMemo(() => {
         const uniqueMap = new Map<string, string>();
-        bookings.forEach((booking) => {
-            const email = String(booking.userEmail || booking.email || "").trim();
-            const name = String(booking.customerName || booking.fullName || "").trim();
+
+        const ingestRecipient = (entry: any) => {
+            const email = String(entry.userEmail || entry.email || "").trim();
+            const name = String(entry.customerName || entry.fullName || entry.name || "").trim();
 
             if (email && name) {
                 const combinedFormat = `${email} - ${name}`;
                 uniqueMap.set(combinedFormat.toLowerCase(), combinedFormat);
-            } else if (email) {
+                return;
+            }
+
+            if (email) {
                 uniqueMap.set(email.toLowerCase(), email);
-            } else if (name) {
+                return;
+            }
+
+            if (name) {
                 uniqueMap.set(name.toLowerCase(), name);
             }
-        });
+        };
+
+        bookings.forEach(ingestRecipient);
+        users.forEach(ingestRecipient);
+
         return Array.from(uniqueMap.values()).sort((a, b) => a.localeCompare(b));
-    }, [bookings]);
+    }, [bookings, users]);
 
     // Live search computation filter
     const filteredDiscounts = React.useMemo(() => {
@@ -417,7 +439,7 @@ export default function DiscountManager() {
                                                             </button>
                                                         ))}
                                                     {!suggestedRecipients.some((recipient) => recipient.toLowerCase().includes(recipientDraft.toLowerCase()) && !targetedDiscountForModal.allowedRecipients.includes(recipient)) && (
-                                                        <div className="px-3 py-2 text-xs text-zinc-400 italic">No matches discovered in bookings logs.</div>
+                                                        <div className="px-3 py-2 text-xs text-zinc-400 italic">No matches discovered in user directory.</div>
                                                     )}
                                                 </div>
                                             </div>

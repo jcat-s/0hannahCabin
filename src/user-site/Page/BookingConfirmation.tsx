@@ -4,7 +4,7 @@ import { db } from "../../shared/lib/firebase";
 import {
     User, Smartphone, MapPin, X, Upload,
     Check, Clock, ChevronLeft, CalendarDays, Users2,
-    PartyPopper, Baby, Dog, Moon, Tag, AlertCircle
+    PartyPopper, Baby, Dog, Moon
 } from "lucide-react";
 import { calculateTotal } from "../../shared/lib/bookingPricing";
 
@@ -18,32 +18,14 @@ const paymentOptions = {
         label: "GCash",
         image: "/payment/gcash.jpg",
         instructions: [
-            "Open your GCash app and scan the QR code.",
-            "If you prefer not to scan, use the app's Send Money or QR Pay feature to pay using the account details shown in the image."
-        ],
-    },
-    maya: {
-        label: "Maya",
-        image: "/payment/maya.svg",
-        instructions: [
-            "Open your Maya app and scan the QR code.",
-            "If you prefer not to scan, open the app's transfer or QR Pay option and follow the on-screen steps."
+            "Open your GCash app and scan the QR code to pay."
         ],
     },
     bdo: {
         label: "BDO",
         image: "/payment/bdo.jpg",
         instructions: [
-            "Open your BDO app and scan the QR code.",
-            "If you prefer not to scan, use the app's Send Money or Pay Bills option and follow the account details shown in the image."
-        ],
-    },
-    unionbank: {
-        label: "UnionBank",
-        image: "/payment/unionbank.svg",
-        instructions: [
-            "Open your UnionBank app and scan the QR code.",
-            "If you prefer not to scan, open the app's transfer or QR Pay option and use the account details shown in the image."
+            "Open your BDO app and scan the QR code to pay."
         ],
     },
 } as const;
@@ -79,10 +61,9 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
 
     // --- ACTUAL FIREBASE SAVING ---
     const handleFinalConfirm = async () => {
-        // Validation: Harangin kapag walang receipt
         if (!receipt) {
             alert("Please upload your proof of payment (screenshot) before confirming your booking.");
-            fileInputRef.current?.click(); // Awtomatikong bubuksan ang file selector para sa user
+            fileInputRef.current?.click();
             return;
         }
 
@@ -91,7 +72,6 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
             const base64Image = await convertToBase64(receipt);
 
             await addDoc(collection(db!, "bookings"), {
-                // Customer Info
                 customerName: bookingData.customerName,
                 mobile: bookingData.mobile,
                 address: bookingData.address,
@@ -99,27 +79,19 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
                 userEmail: bookingData.userEmail || bookingData.email || "",
                 userPhotoURL: bookingData.userPhotoURL || "",
                 cabin: bookingData.cabin,
-
-                // Dates & Stay
                 checkIn: bookingData.checkIn,
                 checkOut: bookingData.checkOut,
                 duration: bookingData.duration,
                 stayType: bookingData.stayType,
                 fullStayOption: bookingData.fullStayOption || "",
-
-                // Pax & Details
                 guests: bookingData.guests,
                 kids: bookingData.kids,
                 pets: bookingData.pets,
                 specialOccasion: bookingData.specialOccasion || "Not Specified",
-
-                // Color & Pricing
                 color: bookingData.color,
                 isHighRate: bookingData.isHighRate,
                 totalPrice: bookingData.totalPrice || 0,
                 discountCode: bookingData.discountCode || "",
-
-                // Payment & Tech
                 paymentMethod: activeTab,
                 receiptUrl: base64Image,
                 status: "Pending",
@@ -183,11 +155,7 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
                                     const isActive = activeTab === key;
                                     const activeClasses = key === 'gcash'
                                         ? 'bg-[#007DFE] text-white shadow-lg shadow-blue-200'
-                                        : key === 'maya'
-                                            ? 'bg-[#00FF5E] text-zinc-900 shadow-lg shadow-green-100'
-                                            : key === 'bdo'
-                                                ? 'bg-[#003366] text-white shadow-lg shadow-slate-200'
-                                                : 'bg-[#014f86] text-white shadow-lg shadow-slate-200';
+                                        : 'bg-[#003366] text-white shadow-lg shadow-slate-200';
 
                                     return (
                                         <button
@@ -204,8 +172,8 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
                     </div>
 
                     {/* Right Side: Stay Details & Upload */}
-                    <div className="md:col-span-7 space-y-10">
-                        <div className="grid grid-cols-2 gap-8">
+                    <div className="md:col-span-7 space-y-6">
+                        <div className="grid grid-cols-2 gap-8 mb-4">
                             <div className="space-y-2">
                                 <p className="text-[9px] font-black text-zinc-300 uppercase tracking-widest flex items-center gap-2"><CalendarDays size={12} /> Date & Stay</p>
                                 <p className="text-[12px] font-bold text-zinc-800 leading-tight">
@@ -221,6 +189,13 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
                                     <p className="flex items-center gap-2 opacity-80"><Dog size={10} /> {bookingData.pets} Pets</p>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* INSTRUCTIONS ABOVE UPLOAD */}
+                        <div className="bg-zinc-50 p-4 rounded-3xl border border-zinc-100">
+                            <p className="text-[10px] uppercase tracking-wider text-zinc-600 leading-normal font-semibold italic text-center">
+                                Please select GCash or BDO as your payment method. Scan the QR code to settle your payment, then upload your receipt layout below.
+                            </p>
                         </div>
 
                         {/* UPLOAD AREA */}
@@ -291,23 +266,28 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
             {/* PAYMENT QR MODAL */}
             {showQR && (
                 <div className="fixed inset-0 z-[500] bg-zinc-950/40 backdrop-blur-md flex items-center justify-center p-6" onClick={() => setShowQR(false)}>
-                    <div className="bg-white rounded-[3.5rem] p-10 text-center shadow-3xl relative animate-in zoom-in-95 duration-200 max-w-2xl w-full" onClick={e => e.stopPropagation()}>
+                    <div className="bg-white rounded-[3.5rem] p-10 text-center shadow-3xl relative animate-in zoom-in-95 duration-200 max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <button onClick={() => setShowQR(false)} className="absolute top-6 right-8 text-zinc-400 hover:text-zinc-900"><X size={24} /></button>
-                        <div className="space-y-6">
+                        <div className="space-y-4">
                             <p className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37]">Scan to Pay via {paymentOptions[activeTab].label}</p>
-                            <div className="p-3 bg-zinc-50 rounded-[2.5rem] border-4 border-white shadow-inner">
+
+                            <div className="p-2 bg-zinc-50 rounded-[2rem] border-2 border-white shadow-inner inline-block mx-auto">
                                 {paymentOptions[activeTab].image ? (
-                                    <img src={paymentOptions[activeTab].image} className="mx-auto w-64 h-64 object-contain rounded-3xl" alt={`${paymentOptions[activeTab].label} QR Code`} />
+                                    <img
+                                        src={paymentOptions[activeTab].image}
+                                        className="w-[240px] h-[433px] object-cover rounded-2xl mx-auto shadow-sm"
+                                        alt={`${paymentOptions[activeTab].label} QR Code`}
+                                    />
                                 ) : (
-                                    <div className="w-64 h-64 flex items-center justify-center rounded-3xl bg-zinc-100 text-zinc-500 text-sm font-bold uppercase tracking-[0.2em]">QR image not available</div>
+                                    <div className="w-[240px] h-[433px] flex items-center justify-center rounded-2xl bg-zinc-100 text-zinc-500 text-sm font-bold uppercase tracking-[0.2em]">QR image not available</div>
                                 )}
                             </div>
+
                             <h3 className="text-lg font-black text-zinc-900 uppercase">Ohannah Cabin</h3>
                             <div className="space-y-2 text-left text-sm text-zinc-600">
                                 {paymentOptions[activeTab].instructions.map((line, index) => (
-                                    <p key={index} className="leading-snug">{line}</p>
+                                    <p key={index} className="leading-snug text-center">{line}</p>
                                 ))}
-                                <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">If you prefer not to use QR, open your banking app and follow the app's transfer or QR pay flow using the account details shown on the screen.</p>
                             </div>
                         </div>
                     </div>

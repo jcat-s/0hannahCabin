@@ -1,0 +1,87 @@
+
+## Step-by-step notes: Access and control your website
+
+### 1. Run the website locally
+
+1. Open a terminal in 0hannahCabin
+2. Install dependencies if not already installed:
+   - `npm install`
+3. Start the public site:
+   - `npm run dev`
+4. Open the browser at the URL shown by Vite (usually `http://localhost:5173`)
+
+### 2. Access the public user site
+
+- The main site is served from index.html
+- On the public site, users can:
+  - view the home page
+  - browse sections: Hero, About, Amenities, Gallery, Contact
+  - start booking via the booking flow
+  - log in or access profile page via the app navigation
+
+### 3. Run the admin site locally
+
+1. From the same folder:
+   - `npm run dev:admin`
+2. This opens the admin interface at admin.html
+3. If it does not automatically open, manually visit:
+   - `http://localhost:5173/admin.html`
+
+### 4. Admin login and access control
+
+- The admin interface is in AdminAuth.tsx
+- Admin login requires:
+  - a valid Firebase Authentication email/password account
+  - a Firestore document in the `admins` collection for that user UID
+  - `role` must be `"admin"`
+
+If both checks pass, the admin UI loads.
+
+### 5. What the admin dashboard controls
+
+The admin dashboard is AdminApp.tsx.
+
+It provides these tabs:
+- `Bookings`
+  - view all booking records from Firestore
+  - update booking status
+  - delete bookings
+- `Calendar`
+  - view booking dates
+- `Analytics`
+  - see booking analytics
+- `Rates`
+  - manage cabin pricing
+- `Discounts`
+  - manage discount settings
+
+### 6. How admin access is enforced
+
+- main.tsx watches Firebase auth state
+- It only renders `AdminApp` when:
+  - a user is signed in
+  - `admins/{uid}` exists
+  - the stored `role` is `"admin"`
+
+Otherwise it shows the login screen.
+
+### 7. Deploying to Firebase
+
+Your firebase.json has two hosting targets:
+- `main-site` with public folder dist
+- `admin-site` with public folder dist-admin
+
+Use these commands when deploying:
+- public site: `firebase deploy --only hosting:main-site`
+- admin site: `firebase deploy --only hosting:admin-site`
+- or both: `firebase deploy --only hosting`
+
+### 8. Quick control summary
+
+- `npm run dev` → public site
+- `npm run dev:admin` → admin site
+- admin.html → admin entry page
+- `admins` Firestore doc + Firebase auth user → required for admin access
+- `AdminApp` tabs → control bookings, calendar, analytics, rates, discounts
+
+If you want, I can also write this as a one-page note file in the repo.

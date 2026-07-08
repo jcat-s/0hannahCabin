@@ -13,6 +13,41 @@ interface ConfirmationProps {
     onBack: () => void;
 }
 
+const paymentOptions = {
+    gcash: {
+        label: "GCash",
+        image: "/payment/gcash.jpg",
+        instructions: [
+            "Open your GCash app and scan the QR code.",
+            "If you prefer not to scan, use the app's Send Money or QR Pay feature to pay using the account details shown in the image."
+        ],
+    },
+    maya: {
+        label: "Maya",
+        image: "/payment/maya.svg",
+        instructions: [
+            "Open your Maya app and scan the QR code.",
+            "If you prefer not to scan, open the app's transfer or QR Pay option and follow the on-screen steps."
+        ],
+    },
+    bdo: {
+        label: "BDO",
+        image: "/payment/bdo.jpg",
+        instructions: [
+            "Open your BDO app and scan the QR code.",
+            "If you prefer not to scan, use the app's Send Money or Pay Bills option and follow the account details shown in the image."
+        ],
+    },
+    unionbank: {
+        label: "UnionBank",
+        image: "/payment/unionbank.svg",
+        instructions: [
+            "Open your UnionBank app and scan the QR code.",
+            "If you prefer not to scan, open the app's transfer or QR Pay option and use the account details shown in the image."
+        ],
+    },
+} as const;
+
 // --- HELPER: CONVERT IMAGE TO BASE64 ---
 const convertToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -24,7 +59,7 @@ const convertToBase64 = (file: File): Promise<string> => {
 };
 
 export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) {
-    const [activeTab, setActiveTab] = useState<'gcash' | 'maya'>('gcash');
+    const [activeTab, setActiveTab] = useState<keyof typeof paymentOptions>('gcash');
     const [showQR, setShowQR] = useState(false);
     const [receipt, setReceipt] = useState<File | null>(null);
     const [showFinalModal, setShowFinalModal] = useState(false);
@@ -143,8 +178,27 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
                         <div className="bg-zinc-50 p-6 rounded-[2.5rem] border border-zinc-100 space-y-4">
                             <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Payment Mode</p>
                             <div className="grid grid-cols-2 gap-2">
-                                <button onClick={() => { setActiveTab('gcash'); setShowQR(true); }} className={`py-4 rounded-2xl text-[9px] font-black uppercase transition-all ${activeTab === 'gcash' ? 'bg-[#007DFE] text-white shadow-lg shadow-blue-200' : 'bg-white text-zinc-400 border border-zinc-100'}`}>GCash</button>
-                                <button onClick={() => { setActiveTab('maya'); setShowQR(true); }} className={`py-4 rounded-2xl text-[9px] font-black uppercase transition-all ${activeTab === 'maya' ? 'bg-[#00FF5E] text-zinc-900 shadow-lg shadow-green-100' : 'bg-white text-zinc-400 border border-zinc-100'}`}>Maya</button>
+                                {(Object.keys(paymentOptions) as Array<keyof typeof paymentOptions>).map((key) => {
+                                    const option = paymentOptions[key];
+                                    const isActive = activeTab === key;
+                                    const activeClasses = key === 'gcash'
+                                        ? 'bg-[#007DFE] text-white shadow-lg shadow-blue-200'
+                                        : key === 'maya'
+                                            ? 'bg-[#00FF5E] text-zinc-900 shadow-lg shadow-green-100'
+                                            : key === 'bdo'
+                                                ? 'bg-[#003366] text-white shadow-lg shadow-slate-200'
+                                                : 'bg-[#014f86] text-white shadow-lg shadow-slate-200';
+
+                                    return (
+                                        <button
+                                            key={key}
+                                            onClick={() => { setActiveTab(key); setShowQR(true); }}
+                                            className={`py-4 rounded-2xl text-[9px] font-black uppercase transition-all ${isActive ? activeClasses : 'bg-white text-zinc-400 border border-zinc-100'}`}
+                                        >
+                                            {option.label}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
@@ -237,14 +291,24 @@ export function BookingConfirmation({ bookingData, onBack }: ConfirmationProps) 
             {/* PAYMENT QR MODAL */}
             {showQR && (
                 <div className="fixed inset-0 z-[500] bg-zinc-950/40 backdrop-blur-md flex items-center justify-center p-6" onClick={() => setShowQR(false)}>
-                    <div className="bg-white rounded-[3.5rem] p-10 text-center shadow-3xl relative animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                    <div className="bg-white rounded-[3.5rem] p-10 text-center shadow-3xl relative animate-in zoom-in-95 duration-200 max-w-2xl w-full" onClick={e => e.stopPropagation()}>
                         <button onClick={() => setShowQR(false)} className="absolute top-6 right-8 text-zinc-400 hover:text-zinc-900"><X size={24} /></button>
                         <div className="space-y-6">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37]">Scan to Pay via {activeTab}</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37]">Scan to Pay via {paymentOptions[activeTab].label}</p>
                             <div className="p-3 bg-zinc-50 rounded-[2.5rem] border-4 border-white shadow-inner">
-                                <img src={activeTab === 'gcash' ? "/section/gcash-qr.jpg" : "/section/maya-qr.jpg"} className="w-64 h-64 object-contain rounded-3xl" alt="QR Code" />
+                                {paymentOptions[activeTab].image ? (
+                                    <img src={paymentOptions[activeTab].image} className="mx-auto w-64 h-64 object-contain rounded-3xl" alt={`${paymentOptions[activeTab].label} QR Code`} />
+                                ) : (
+                                    <div className="w-64 h-64 flex items-center justify-center rounded-3xl bg-zinc-100 text-zinc-500 text-sm font-bold uppercase tracking-[0.2em]">QR image not available</div>
+                                )}
                             </div>
                             <h3 className="text-lg font-black text-zinc-900 uppercase">Ohannah Cabin</h3>
+                            <div className="space-y-2 text-left text-sm text-zinc-600">
+                                {paymentOptions[activeTab].instructions.map((line, index) => (
+                                    <p key={index} className="leading-snug">{line}</p>
+                                ))}
+                                <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">If you prefer not to use QR, open your banking app and follow the app's transfer or QR pay flow using the account details shown on the screen.</p>
+                            </div>
                         </div>
                     </div>
                 </div>

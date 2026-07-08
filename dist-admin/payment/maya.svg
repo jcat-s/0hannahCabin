@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="520" viewBox="0 0 520 520">
+  <rect width="520" height="520" rx="44" fill="#0041D5" />
+  <rect x="38" y="38" width="444" height="444" rx="36" fill="#FFFFFF" />
+  <text x="260" y="220" text-anchor="middle" font-family="Arial, sans-serif" font-size="36" fill="#0041D5" font-weight="bold">Maya QR</text>
+  <text x="260" y="280" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#374151">Placeholder image</text>
+  <text x="260" y="320" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#6B7280">Use your Maya app to scan or enter details.</text>
+</svg>
